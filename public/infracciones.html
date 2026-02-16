@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infracciones - Sistema de Gestión Municipal</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/expedientes.css">
+</head>
+
+<body class="dashboard">
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div>
+            <h1>Actas de Infracción</h1>
+            <p style="font-size: 14px; opacity: 0.9;">Gestión de actas y sanciones</p>
+        </div>
+        <div class="user-info">
+            <span class="user-name" id="userName">Cargando...</span>
+            <button class="btn-logout" id="btnLogout">Cerrar Sesión</button>
+        </div>
+    </header>
+
+    <!-- Navegación -->
+    <nav class="breadcrumb">
+        <a href="dashboard.html">Dashboard</a>
+        <span>›</span>
+        <span>Infracciones</span>
+    </nav>
+
+    <!-- Contenido Principal -->
+    <main class="dashboard-main">
+        <!-- Barra de acciones -->
+        <div class="actions-bar">
+            <button class="btn-primary" id="btnNuevo">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                        clip-rule="evenodd" />
+                </svg>
+                Nueva Acta
+            </button>
+
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Buscar por acta, nombre, DNI...">
+                <button class="btn-filter" id="btnFiltros">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Filtros
+                </button>
+            </div>
+        </div>
+
+        <!-- Panel de filtros -->
+        <div class="filters-panel" id="filtersPanel" style="display: none;">
+            <div class="filter-grid">
+                <div class="filter-item">
+                    <label>Fecha desde</label>
+                    <input type="date" id="filterFechaDesde">
+                </div>
+                <div class="filter-item">
+                    <label>Fecha hasta</label>
+                    <input type="date" id="filterFechaHasta">
+                </div>
+                <!-- Futuro: Filtro por estado si se implementa -->
+                <div class="filter-item">
+                    <button class="btn-secondary" id="btnAplicarFiltros">Aplicar</button>
+                    <button class="btn-text" id="btnLimpiarFiltros">Limpiar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="table-container">
+            <div id="loadingTable" class="loading-state">
+                <div class="loader"></div>
+                <p>Cargando actas...</p>
+            </div>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <p>No hay infracciones registradas con estos criterios</p>
+                <button class="btn-primary" onclick="document.getElementById('btnNuevo').click()">
+                    Crear primera acta
+                </button>
+            </div>
+
+            <table id="infraccionesTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Nro. Acta</th>
+                        <th>Infractor</th>
+                        <th>Dirección</th>
+                        <th>Motivo</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="infraccionesTableBody">
+                    <!-- Datos dinámicos -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginación -->
+        <div id="paginacionContainer" class="pagination-container"></div>
+    </main>
+
+    <script src="js/barrios-utils.js"></script>
+    <script src="js/infracciones.js"></script>
+</body>
+
+</html>

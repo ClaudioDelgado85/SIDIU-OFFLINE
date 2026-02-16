@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tablero de Control - Sistema de Gestión Municipal</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .dashboard-grid {
+            display: grid;
+            gap: 24px;
+            padding: 20px;
+        }
+
+        /* KPIs */
+        .kpi-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .kpi-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: transform 0.2s;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .kpi-info h3 {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-info .kpi-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        /* Colores KPI */
+        .kpi-blue {
+            background: #eff6ff;
+            color: #3b82f6;
+        }
+
+        /* Expedientes */
+        .kpi-red {
+            background: #fef2f2;
+            color: #ef4444;
+        }
+
+        /* Vencidas */
+        .kpi-purple {
+            background: #f3e8ff;
+            color: #a855f7;
+        }
+
+        /* Reclamos */
+        .kpi-orange {
+            background: #fff7ed;
+            color: #f97316;
+        }
+
+        /* Infracciones */
+
+        /* Charts y Tablas */
+        .charts-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+
+        .section-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .action-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .action-table th {
+            text-align: left;
+            font-size: 12px;
+            color: #64748b;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .action-table td {
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+        }
+
+        .action-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .bg-danger {
+            background: #fef2f2;
+            color: #ef4444;
+        }
+
+        .bg-warning {
+            background: #fffbeb;
+            color: #d97706;
+        }
+
+        @media (max-width: 1024px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body class="dashboard">
+    <header class="dashboard-header">
+        <div>
+            <h1>Tablero de Control</h1>
+            <p style="font-size: 14px; opacity: 0.9;">Municipalidad de Clorinda</p>
+        </div>
+        <div class="user-info">
+            <span class="user-name" id="userName">Usuario</span>
+            <button class="btn-logout" id="btnLogout">Salir</button>
+        </div>
+    </header>
+
+    <main class="dashboard-main">
+        <div class="dashboard-grid">
+
+            <!-- 1. KPIs -->
+            <div class="kpi-container">
+                <div class="kpi-card" onclick="window.location.href='expedientes.html'">
+                    <div class="kpi-info">
+                        <h3>Expedientes (Mes)</h3>
+                        <div class="kpi-value" id="kpiExpedientes">-</div>
+                    </div>
+                    <div class="kpi-icon kpi-blue">📁</div>
+                </div>
+
+                <div class="kpi-card" onclick="window.location.href='intimaciones.html'">
+                    <div class="kpi-info">
+                        <h3>Intimaciones Vencidas</h3>
+                        <div class="kpi-value" id="kpiIntimaciones">-</div>
+                        <div style="font-size: 13px; color: #f59e0b; margin-top: 4px;">
+                            ⚠️ <span id="kpiIntimacionesProximas">-</span> Próximas a vencer
+                        </div>
+                    </div>
+                    <div class="kpi-icon kpi-red">⚠️</div>
+                </div>
+
+                <div class="kpi-card" onclick="window.location.href='reclamos.html'">
+                    <div class="kpi-info">
+                        <h3>Reclamos Nuevos</h3>
+                        <div class="kpi-value" id="kpiReclamos">-</div>
+                        <div style="font-size: 13px; color: #64748b; margin-top: 4px;">
+                            🔄 <span id="kpiReclamosProceso">-</span> En gestión
+                        </div>
+                    </div>
+                    <div class="kpi-icon kpi-purple">📢</div>
+                </div>
+
+                <div class="kpi-card" onclick="window.location.href='infracciones.html'">
+                    <div class="kpi-info">
+                        <h3>Infracciones (Mes)</h3>
+                        <div class="kpi-value" id="kpiInfracciones">-</div>
+                    </div>
+                    <div class="kpi-icon kpi-orange">🚨</div>
+                </div>
+            </div>
+
+            <!-- 2. Gráficos y Tablas -->
+            <div class="charts-container">
+                <!-- Gráfico Principal -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title">Distribución de Reclamos</div>
+                    </div>
+                    <div style="height: 300px;">
+                        <canvas id="reclamosChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Alertas / Acciones -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title">🚨 Próximos Vencimientos</div>
+                    </div>
+                    <table class="action-table" id="tablaVencimientos">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Contribuyente</th>
+                                <th>Vence en</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- JS -->
+                        </tbody>
+                    </table>
+                    <div style="margin-top: 16px; text-align: center;">
+                        <a href="intimaciones.html" style="font-size: 13px; color: #3b82f6; text-decoration: none;">Ver
+                            todas las intimaciones →</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Segunda Fila (Estado Intimaciones + Actividad Reciente) -->
+            <div class="charts-container">
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title">Estado de Intimaciones</div>
+                    </div>
+                    <div style="height: 250px; display: flex; justify-content: center;">
+                        <canvas id="intimacionesChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-header">
+                        <div class="section-title">📝 Última Actividad</div>
+                    </div>
+                    <table class="action-table" id="tablaActividad">
+                        <tbody>
+                            <!-- JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Accesos Rápidos (Botones viejos pero estilizados) -->
+            <div class="section-card">
+                <div class="section-title" style="margin-bottom: 16px;">Accesos Directos</div>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <a href="busqueda.html" class="btn-primary" style="text-decoration:none;">🔍 Búsqueda Global</a>
+                    <a href="relevamientos.html" class="btn-secondary" style="text-decoration:none;">📍 Nuevo
+                        Relevamiento</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="js/dashboard.js"></script>
+</body>
+
+</html>

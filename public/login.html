@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sistema de Gestión Municipal</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-box">
+            <!-- Logo -->
+            <div class="logo-container">
+                <div class="logo-placeholder">
+                    <svg width="80" height="80" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="#FF8C00" opacity="0.2"/>
+                        <path d="M50 20 L50 50 L70 70" stroke="#FF8C00" stroke-width="8" fill="none" stroke-linecap="round"/>
+                        <circle cx="50" cy="50" r="35" fill="none" stroke="#4BA3D0" stroke-width="6"/>
+                    </svg>
+                </div>
+                <h1>Municipalidad de Clorinda</h1>
+                <p class="subtitle">Sistema de Gestión Municipal</p>
+            </div>
+
+            <!-- Formulario de Login -->
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="usuario">Usuario</label>
+                    <input 
+                        type="text" 
+                        id="usuario" 
+                        name="usuario" 
+                        required 
+                        autocomplete="username"
+                        placeholder="Ingrese su usuario"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        required 
+                        autocomplete="current-password"
+                        placeholder="Ingrese su contraseña"
+                    >
+                </div>
+
+                <!-- Mensaje de error -->
+                <div id="errorMessage" class="error-message" style="display: none;">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    <span id="errorText"></span>
+                </div>
+
+                <!-- Botón de login -->
+                <button type="submit" class="btn-login" id="btnLogin">
+                    <span id="btnText">Ingresar</span>
+                    <span id="btnLoader" class="loader" style="display: none;"></span>
+                </button>
+            </form>
+
+            <!-- Información adicional -->
+            <div class="login-footer">
+                <p class="help-text">Usuario por defecto: <strong>admin</strong> / Contraseña: <strong>admin123</strong></p>
+                <p class="version">v1.0.0</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/login.js"></script>
+</body>
+</html>

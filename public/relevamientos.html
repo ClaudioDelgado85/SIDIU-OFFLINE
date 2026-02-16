@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relevamientos - Sistema de Gestión Municipal</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/expedientes.css">
+    <style>
+        /* Estilos específicos para Relevamientos */
+
+        .type-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .type-baldio {
+            background: #FFF3E0;
+            color: #E65100;
+            border: 1px solid #FFE0B2;
+        }
+
+        .type-obra {
+            background: #E3F2FD;
+            color: #1565C0;
+            border: 1px solid #BBDEFB;
+        }
+
+        .type-ocupacion {
+            background: #E8F5E9;
+            color: #2E7D32;
+            border: 1px solid #C8E6C9;
+        }
+
+        .type-comercio {
+            background: #F3E5F5;
+            color: #7B1FA2;
+            border: 1px solid #E1BEE7;
+        }
+
+        .type-varios {
+            background: #ECEFF1;
+            color: #546E7A;
+            border: 1px solid #CFD8DC;
+        }
+
+        .form-section {
+            border-top: 1px solid var(--gray-200);
+            margin-top: 16px;
+            padding-top: 16px;
+        }
+
+        .form-section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--gray-700);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Ocultar campos específicos según tipo */
+        .campo-especifico {
+            display: none;
+        }
+    </style>
+</head>
+
+<body class="dashboard">
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div>
+            <h1>Relevamientos de Campo</h1>
+            <p style="font-size: 14px; opacity: 0.9;">Inspecciones oculares y detección de infracciones</p>
+        </div>
+        <div class="user-info">
+            <span class="user-name" id="userName">Cargando...</span>
+            <button class="btn-logout" id="btnLogout">Cerrar Sesión</button>
+        </div>
+    </header>
+
+    <!-- Navegación -->
+    <nav class="breadcrumb">
+        <a href="dashboard.html">Dashboard</a>
+        <span>›</span>
+        <span>Relevamientos</span>
+    </nav>
+
+    <!-- Contenido Principal -->
+    <main class="dashboard-main">
+        <!-- Barra de acciones -->
+        <div class="actions-bar">
+            <button class="btn-primary" id="btnNuevo">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                        clip-rule="evenodd" />
+                </svg>
+                Nuevo Relevamiento
+            </button>
+
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Buscar por N°, ubicación, responsable...">
+                <button class="btn-filter" id="btnFiltros">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Filtros
+                </button>
+            </div>
+        </div>
+
+        <!-- Panel de filtros -->
+        <div class="filters-panel" id="filtersPanel" style="display: none;">
+            <div class="filter-grid">
+                <div class="filter-item">
+                    <label>Tipo</label>
+                    <select id="filterTipo">
+                        <option value="">Todos</option>
+                        <option value="baldio">Baldío</option>
+                        <option value="obra">Obra</option>
+                        <option value="ocupacion">Ocupación Esp. Público</option>
+                        <option value="comercio">Comercio</option>
+                        <option value="varios">Varios</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label>Zona / Barrio</label>
+                    <input type="text" id="filterZona" placeholder="Ej: Centro">
+                </div>
+                <div class="filter-item">
+                    <label>Fecha desde</label>
+                    <input type="date" id="filterFechaDesde">
+                </div>
+                <div class="filter-item">
+                    <label>Fecha hasta</label>
+                    <input type="date" id="filterFechaHasta">
+                </div>
+                <div class="filter-item">
+                    <button class="btn-secondary" id="btnAplicarFiltros">Aplicar</button>
+                    <button class="btn-text" id="btnLimpiarFiltros">Limpiar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-value" id="statTotal">0</div>
+                <div class="stat-label">Total Relevamientos</div>
+            </div>
+            <!-- Se llenarán dinámicamente -->
+        </div>
+
+        <!-- Tabla -->
+        <div class="table-container">
+            <div id="loadingTable" class="loading-state">
+                <div class="loader"></div>
+                <p>Cargando relevamientos...</p>
+            </div>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <p>No hay relevamientos registrados con estos criterios</p>
+                <button class="btn-primary" onclick="document.getElementById('btnNuevo').click()">
+                    Cargar primero
+                </button>
+            </div>
+
+            <table id="relevamientosTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>N° Relevamiento</th>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Ubicación</th>
+                        <th>Zona</th>
+                        <th>Responsable</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="relevamientosTableBody">
+                    <!-- Datos dinámicos -->
+                </tbody>
+            </table>
+
+        </div>
+    </main>
+
+    <script src="js/barrios-utils.js"></script>
+    <script src="js/relevamientos.js"></script>
+</body>
+
+</html>
