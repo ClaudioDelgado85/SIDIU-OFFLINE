@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogos - Sistema de Gestión Municipal</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/expedientes.css">
+    <link rel="stylesheet" href="css/catalogos.css">
+</head>
+
+<body class="dashboard">
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div>
+            <h1>⚙️ Catálogos</h1>
+            <p style="font-size: 14px; opacity: 0.9;">Administración de listas desplegables del sistema</p>
+        </div>
+        <div class="user-info">
+            <span class="user-name" id="userName">Cargando...</span>
+            <button class="btn-logout" id="btnLogout">Cerrar Sesión</button>
+        </div>
+    </header>
+
+    <!-- Navegación -->
+    <nav class="breadcrumb">
+        <a href="dashboard.html">Dashboard</a>
+        <span>›</span>
+        <span>Catálogos</span>
+    </nav>
+
+    <!-- Contenido Principal -->
+    <main class="dashboard-main">
+        <!-- Tabs de categorías -->
+        <div class="cat-tabs" id="catTabs">
+            <!-- Se generan dinámicamente -->
+        </div>
+
+        <!-- Contenido de la categoría seleccionada -->
+        <div class="cat-content">
+            <!-- Barra de acciones -->
+            <div class="cat-actions">
+                <h2 id="catTitle">Seleccione una categoría</h2>
+                <button class="btn-primary" id="btnNuevaOpcion" style="display:none">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Nueva Opción
+                </button>
+            </div>
+
+            <!-- Tabla de opciones -->
+            <div class="table-container">
+                <div id="loadingCat" class="loading-state" style="display:none">
+                    <div class="loader"></div>
+                    <p>Cargando opciones...</p>
+                </div>
+
+                <div id="emptyCat" class="empty-state" style="display:none">
+                    <p>No hay opciones en esta categoría</p>
+                </div>
+
+                <table id="catTable" style="display:none">
+                    <thead>
+                        <tr>
+                            <th>Orden</th>
+                            <th>Valor (interno)</th>
+                            <th>Etiqueta (visible)</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="catTableBody">
+                        <!-- Datos dinámicos -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/navbar.js"></script>
+    <script src="js/catalogos.js"></script>
+</body>
+
+</html>

@@ -119,15 +119,15 @@ function mostrarIntimaciones() {
                 <div style="font-size:12px; color:#666">DNI: ${item.dni}</div>
             </td>
             <td>${item.direccion}</td>
+            <td style="text-align:center"><span class="badge">#${item.numero_intimacion}</span></td>
+            <td style="text-align:center">${item.plazo_dias}d</td>
             <td>
-                ${item.plazo_dias} días
-                <div style="font-size:11px; color:#888">Intimación #${item.numero_intimacion}</div>
-                <div style="font-size:10px; color:${item.estado === 'vencida' ? '#dc3545' : item.estado === 'proxima_vencer' ? '#ff8c00' : '#28a745'}">
-                    Vence: ${formatearFecha(item.fecha_vencimiento)}
-                </div>
+                <span style="color:${item.estado === 'vencida' ? '#dc3545' : item.estado === 'proxima_vencer' ? '#ff8c00' : '#28a745'}; font-weight:500">
+                    ${formatearFecha(item.fecha_vencimiento)}
+                </span>
             </td>
             <td><span class="badge badge-${item.estado}">${item.estado.replace('_', ' ')}</span></td>
-            <td>
+            <td class="col-extra">
                 ${item.infraccion_realizada
                 ? `<span class="badge badge-vencida">🚨 INFRACCIONADO</span>
                        <div style="font-size:11px; color:#666; margin-top:4px;">
@@ -137,7 +137,7 @@ function mostrarIntimaciones() {
                 : '<span style="color:#999">-</span>'
             }
             </td>
-            <td>
+            <td class="col-extra">
                 <div class="action-buttons">
                     <button class="btn-icon btn-edit" data-id="${item.id}" title="Editar">✏️</button>
                     ${!item.dio_cumplimiento ?
@@ -149,6 +149,7 @@ function mostrarIntimaciones() {
                     <button class="btn-icon btn-delete" data-id="${item.id}" title="Eliminar">🗑️</button>
                 </div>
             </td>
+            <td class="col-toggle"></td>
         `;
         tbody.appendChild(tr);
     });
@@ -189,9 +190,7 @@ function abrirModal() {
                             <div class="form-group-modal">
                                 <label>Tipo *</label>
                                 <select id="tipo" required onchange="cambiarTipoFormulario(this.value)">
-                                    <option value="general">General</option>
-                                    <option value="baldio">Terreno Baldío</option>
-                                    <option value="vehiculo">Vehículo Abandonado</option>
+                                    <option value="">-- Cargando... --</option>
                                 </select>
                             </div>
                             <div class="form-group-modal">
@@ -232,7 +231,13 @@ function abrirModal() {
 
                             <div class="form-group-modal form-grid-full">
                                 <label>Intimación por</label>
-                                <input type="text" id="tipo_obstruccion" placeholder="Escombros, arena, etc.">
+                                <select id="tipo_obstruccion">
+                                    <option value="">-- Cargando... --</option>
+                                </select>
+                            </div>
+                            <div class="form-group-modal form-grid-full" id="grupoIntimacionPorDetalle" style="display:none">
+                                <label>Detalle (especifique)</label>
+                                <input type="text" id="tipo_obstruccion_detalle" placeholder="Describa el motivo de la intimación">
                             </div>
 
                             <!-- Campos de Infracción (para TODOS los tipos) -->
@@ -333,6 +338,25 @@ function abrirModal() {
     // Cargar barrios en el select
     cargarSelectBarrios('barrio_id', intimacionEditando?.barrio_id);
 
+    // Cargar catálogos dinámicos
+    cargarSelectCatalogo('tipo', 'tipo_intimacion', intimacionEditando?.tipo || 'general', { incluirVacio: false }).then(() => {
+        // Después de cargar, disparar cambio para mostrar/ocultar campos según tipo
+        if (intimacionEditando) cambiarTipoFormulario(intimacionEditando.tipo);
+    });
+    cargarSelectCatalogo('tipo_obstruccion', 'intimacion_por', null, { incluirVacio: true, textoVacio: '-- Seleccionar --' }).then(() => {
+        if (intimacionEditando) {
+            _setTipoObstruccionDesdeEdicion(intimacionEditando.tipo_obstruccion);
+        }
+    });
+
+    // Listener para "Otros" en intimación por
+    document.getElementById('tipo_obstruccion').addEventListener('change', (e) => {
+        const grupoDetalle = document.getElementById('grupoIntimacionPorDetalle');
+        if (grupoDetalle) {
+            grupoDetalle.style.display = e.target.value === 'otros' ? '' : 'none';
+        }
+    });
+
     // Event Listeners
     document.getElementById('btnCerrarModal').addEventListener('click', cerrarModal);
     document.getElementById('btnCancelarModal').addEventListener('click', cerrarModal);
@@ -367,13 +391,18 @@ async function guardarIntimacion(e) {
     e.preventDefault();
     const sesion = verificarAutenticacion();
 
+    // Calcular valor final de tipo_obstruccion (con lógica "Otros")
+    const tipoObstruccionSelect = document.getElementById('tipo_obstruccion').value;
+    const tipoObstruccionDetalle = document.getElementById('tipo_obstruccion_detalle')?.value || '';
+    const tipoObstruccionFinal = tipoObstruccionSelect === 'otros' ? `Otros: ${tipoObstruccionDetalle}` : tipoObstruccionSelect;
+
     const formData = {
         tipo: document.getElementById('tipo').value,
         fecha: document.getElementById('fecha').value,
         nombre_apellido: document.getElementById('nombre_apellido').value,
         dni: document.getElementById('dni').value,
         direccion: document.getElementById('direccion').value,
-        tipo_obstruccion: document.getElementById('tipo_obstruccion').value,
+        tipo_obstruccion: tipoObstruccionFinal,
         plazo_dias: document.getElementById('plazo_dias').value,
         numero_intimacion: document.getElementById('numero_intimacion').value,
         observaciones: document.getElementById('observaciones').value,
@@ -436,7 +465,7 @@ function cargarDatosFormulario() {
     document.getElementById('nombre_apellido').value = i.nombre_apellido;
     document.getElementById('dni').value = i.dni;
     document.getElementById('direccion').value = i.direccion;
-    document.getElementById('tipo_obstruccion').value = i.tipo_obstruccion || '';
+    // tipo_obstruccion se carga en el callback de cargarSelectCatalogo via _setTipoObstruccionDesdeEdicion
     document.getElementById('plazo_dias').value = i.plazo_dias;
     document.getElementById('numero_intimacion').value = i.numero_intimacion;
     document.getElementById('observaciones').value = i.observaciones || '';
@@ -474,6 +503,37 @@ function formatearFecha(fecha) {
     const fechaStr = String(fecha).substring(0, 10);
     const parts = fechaStr.split('-');
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+// Helper: setear el valor de tipo_obstruccion al editar (maneja valor de catálogo o "Otros: xxx")
+function _setTipoObstruccionDesdeEdicion(valor) {
+    if (!valor) return;
+
+    const select = document.getElementById('tipo_obstruccion');
+    if (!select) return;
+
+    // Verificar si el valor coincide con alguna opción del select
+    const opciones = Array.from(select.options).map(o => o.value);
+
+    if (valor.startsWith('Otros:') || valor.startsWith('otros:')) {
+        // Es un valor "Otros" con detalle
+        select.value = 'otros';
+        const detalle = valor.substring(6).trim();
+        const inputDetalle = document.getElementById('tipo_obstruccion_detalle');
+        if (inputDetalle) inputDetalle.value = detalle;
+        const grupoDetalle = document.getElementById('grupoIntimacionPorDetalle');
+        if (grupoDetalle) grupoDetalle.style.display = '';
+    } else if (opciones.includes(valor)) {
+        // Valor directo del catálogo
+        select.value = valor;
+    } else {
+        // Valor antiguo que no está en el catálogo → tratarlo como "Otros"
+        select.value = 'otros';
+        const inputDetalle = document.getElementById('tipo_obstruccion_detalle');
+        if (inputDetalle) inputDetalle.value = valor;
+        const grupoDetalle = document.getElementById('grupoIntimacionPorDetalle');
+        if (grupoDetalle) grupoDetalle.style.display = '';
+    }
 }
 
 function mostrarPaginacion() {
@@ -516,6 +576,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sesion) document.getElementById('userName').textContent = sesion.usuario.nombre_completo;
 
     cargarIntimaciones();
+
+    // Cargar filtro tipo desde catálogo
+    cargarSelectCatalogo('filterTipo', 'tipo_intimacion', null, { incluirVacio: true, textoVacio: 'Todos' });
+
+    // Toggle columnas extra (Infracción + Acciones)
+    document.getElementById('btnToggleCols').addEventListener('click', () => {
+        const table = document.getElementById('intimacionesTable');
+        table.classList.toggle('show-extra');
+        document.getElementById('toggleIcon').textContent = table.classList.contains('show-extra') ? '−' : '＋';
+    });
 
     // Event Listeners Globales
     document.getElementById('btnNuevo').addEventListener('click', () => {
@@ -600,7 +670,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('nombre_apellido').value = original.nombre_apellido;
             document.getElementById('dni').value = original.dni;
             document.getElementById('direccion').value = original.direccion;
-            document.getElementById('tipo_obstruccion').value = original.tipo_obstruccion || '';
+            _setTipoObstruccionDesdeEdicion(original.tipo_obstruccion);
             document.getElementById('plazo_dias').value = original.plazo_dias; // Mismo plazo por defecto
 
             // Incrementar número

@@ -1,0 +1,231 @@
+/* ============================================
+   ESTILOS: Página de administración de catálogos
+   ============================================ */
+
+/* Tabs de categorías */
+.cat-tabs {
+    display: flex;
+    gap: 0;
+    background: white;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    overflow-x: auto;
+    margin: 0 20px;
+}
+
+.cat-tab {
+    padding: 14px 24px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 500;
+    color: #64748b;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cat-tab:hover {
+    color: #334155;
+    background: #f8fafc;
+}
+
+.cat-tab.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+    font-weight: 600;
+}
+
+.cat-tab .tab-count {
+    background: #e2e8f0;
+    color: #64748b;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.cat-tab.active .tab-count {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+/* Contenido */
+.cat-content {
+    margin: 0 20px 20px;
+    background: white;
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+}
+
+.cat-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.cat-actions h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0;
+}
+
+/* Estado de las opciones */
+.estado-activo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.estado-inactivo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* Botones de acción en tabla */
+.cat-content .action-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.cat-content .btn-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.cat-content .btn-icon:hover {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.cat-content .btn-icon.btn-reactivar {
+    color: #16a34a;
+}
+
+.cat-content .btn-icon.btn-reactivar:hover {
+    background: #dcfce7;
+}
+
+.cat-content .btn-icon.btn-delete {
+    color: #dc2626;
+}
+
+.cat-content .btn-icon.btn-delete:hover {
+    background: #fef2f2;
+}
+
+/* Modal de editar/crear */
+.cat-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.cat-modal {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.cat-modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cat-modal-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.cat-modal-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.cat-modal-body .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cat-modal-body .form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.cat-modal-body .form-group input {
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.cat-modal-body .form-group input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.cat-modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* Valor interno (gris, monospace) */
+td .valor-interno {
+    font-family: monospace;
+    font-size: 13px;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 4px;
+}

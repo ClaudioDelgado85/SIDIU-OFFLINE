@@ -104,6 +104,10 @@ app.use('/api/dashboard', dashboardRoutes);
 const barriosRoutes = require('./routes/barriosRoutes');
 app.use('/api/barrios', barriosRoutes);
 
+// Rutas Catálogos (genérico)
+const catalogosRoutes = require('./routes/catalogosRoutes');
+app.use('/api/catalogos', catalogosRoutes);
+
 // Rutas de búsqueda unificada
 const busquedaRoutes = require('./routes/busquedaRoutes');
 app.use('/api/busqueda', busquedaRoutes);

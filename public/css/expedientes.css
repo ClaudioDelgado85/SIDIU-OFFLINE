@@ -250,7 +250,7 @@
     background: var(--white);
     border-radius: 12px;
     box-shadow: var(--shadow-sm);
-    overflow: hidden;
+    overflow-x: auto;
 }
 
 .loading-state,
@@ -306,12 +306,80 @@ tbody tr:hover {
 }
 
 tbody td {
-    padding: 16px;
-    font-size: 14px;
+    padding: 12px 10px;
+    font-size: 13px;
     color: var(--gray-700);
 }
 
+/* Columnas compactas para tablas con muchas columnas (ej: intimaciones) */
+table {
+    table-layout: auto;
+}
+
+thead th {
+    white-space: nowrap;
+}
+
+/* Acciones siempre visibles */
+.action-buttons {
+    flex-wrap: nowrap;
+}
+
+td:last-child {
+    white-space: nowrap;
+}
+
+/* Tabla con scroll horizontal */
+.table-container {
+    overflow-x: auto;
+}
+
 /* Badge de estado */
+
+/* ---- Columnas colapsables ---- */
+.col-extra {
+    display: none;
+}
+
+table.show-extra .col-extra {
+    display: table-cell;
+}
+
+.col-toggle {
+    width: 36px;
+    padding: 4px !important;
+    text-align: center;
+}
+
+.btn-toggle-cols {
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--gray-300);
+    border-radius: 50%;
+    background: var(--white);
+    color: var(--gray-500);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.btn-toggle-cols:hover {
+    border-color: var(--primary-blue);
+    color: var(--primary-blue);
+    background: #eef6ff;
+}
+
+table.show-extra .btn-toggle-cols {
+    border-color: var(--primary-blue);
+    background: var(--primary-blue);
+    color: var(--white);
+}
+
+/* ---- Fin columnas colapsables ---- */
 .badge {
     display: inline-block;
     padding: 4px 12px;

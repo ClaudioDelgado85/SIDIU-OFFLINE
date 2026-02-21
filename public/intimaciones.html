@@ -116,9 +116,6 @@
                     <label>Tipo</label>
                     <select id="filterTipo">
                         <option value="">Todos</option>
-                        <option value="general">General</option>
-                        <option value="baldio">Baldío</option>
-                        <option value="vehiculo">Vehículo</option>
                     </select>
                 </div>
                 <div class="filter-item">
@@ -196,10 +193,17 @@
                         <th>Tipo</th>
                         <th>Nombre / DNI</th>
                         <th>Dirección</th>
+                        <th>Nº</th>
                         <th>Plazo</th>
+                        <th>Vence</th>
                         <th>Estado</th>
-                        <th>Infracción</th>
-                        <th>Acciones</th>
+                        <th class="col-extra">Infracción</th>
+                        <th class="col-extra">Acciones</th>
+                        <th class="col-toggle">
+                            <button class="btn-toggle-cols" id="btnToggleCols" title="Mostrar/ocultar columnas">
+                                <span id="toggleIcon">＋</span>
+                            </button>
+                        </th>
                     </tr>
                 </thead>
                 <tbody id="intimacionesTableBody">
@@ -209,7 +213,9 @@
         </div>
     </main>
 
+    <script src="js/navbar.js"></script>
     <script src="js/barrios-utils.js"></script>
+    <script src="js/catalogos-utils.js"></script>
     <script src="js/intimaciones.js"></script>
 </body>
 

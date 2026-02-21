@@ -8,11 +8,11 @@ async function cargarSelectBarrios(selectId, valorSeleccionado) {
     if (!select) return;
 
     try {
-        const sesion = JSON.parse(localStorage.getItem('sesion'));
-        if (!sesion) return;
+        const token = localStorage.getItem('token');
+        if (!token) return;
 
         const response = await fetch('/api/barrios', {
-            headers: { 'Authorization': `Bearer ${sesion.token}` }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
 
         const result = await response.json();

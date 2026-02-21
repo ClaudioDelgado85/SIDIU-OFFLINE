@@ -284,18 +284,8 @@ function editarExpediente(id) {
     if (expediente.direccion) document.getElementById('direccion').value = expediente.direccion;
     if (expediente.numero_partida) document.getElementById('numero_partida').value = expediente.numero_partida;
 
-    // Motivo: intentar matchear con la lista, si no → "otros"
-    const motivosValidos = ['habilitacion', 'reempadronamiento', 'ampliacion_rubro', 'cambio_rubro', 'traslado_local', 'cambio_titular', 'cancelacion', 'reclamos', 'aprobacion_plano', 'oficio_juzgado', 'otros'];
-    const motivoLower = (expediente.motivo || '').toLowerCase();
-    const motivoMatch = motivosValidos.find(m => motivoLower === m || motivoLower.startsWith('otros:'));
-    if (motivoMatch && motivoMatch !== 'otros' && !motivoLower.startsWith('otros:')) {
-        document.getElementById('motivo').value = motivoMatch;
-    } else {
-        document.getElementById('motivo').value = 'otros';
-        const detalle = motivoLower.startsWith('otros:') ? expediente.motivo.substring(7).trim() : expediente.motivo;
-        document.getElementById('motivo_detalle').value = detalle;
-        document.getElementById('grupoMotivoDetalle').style.display = '';
-    }
+    // Motivo se carga en el callback de cargarSelectCatalogo via _setMotivoDesdeEdicion
+    // (ya se maneja en abrirModal)
 
     document.getElementById('estado').value = expediente.estado;
 
@@ -421,18 +411,7 @@ function abrirModal() {
                             <div class="form-group-modal">
                                 <label>Motivo *</label>
                                 <select id="motivo" required>
-                                    <option value="">-- Seleccionar --</option>
-                                    <option value="habilitacion">Habilitación</option>
-                                    <option value="reempadronamiento">Reempadronamiento</option>
-                                    <option value="ampliacion_rubro">Ampliación de rubro</option>
-                                    <option value="cambio_rubro">Cambio de rubro</option>
-                                    <option value="traslado_local">Traslado de local</option>
-                                    <option value="cambio_titular">Cambio de titular</option>
-                                    <option value="cancelacion">Cancelación</option>
-                                    <option value="reclamos">Reclamos</option>
-                                    <option value="aprobacion_plano">Aprobación de plano</option>
-                                    <option value="oficio_juzgado">Oficio del juzgado</option>
-                                    <option value="otros">Otros</option>
+                                    <option value="">-- Cargando... --</option>
                                 </select>
                             </div>
                             <div class="form-group-modal" id="grupoMotivoDetalle" style="display:none">
@@ -460,6 +439,13 @@ function abrirModal() {
 
     // Cargar barrios en el select
     cargarSelectBarrios('barrio_id', expedienteEditando?.barrio_id);
+
+    // Cargar motivos desde catálogo
+    cargarSelectCatalogo('motivo', 'motivo_expediente', expedienteEditando?.motivo || null).then(() => {
+        if (expedienteEditando) {
+            _setMotivoDesdeEdicion(expedienteEditando.motivo);
+        }
+    });
 
     // Establecer fecha actual por defecto si es nuevo
     if (!expedienteEditando) {
@@ -609,21 +595,49 @@ function formatearEstado(estado) {
 }
 
 function formatearMotivo(motivo) {
-    const motivos = {
-        'habilitacion': 'Habilitación',
-        'reempadronamiento': 'Reempadronamiento',
-        'ampliacion_rubro': 'Ampliación de rubro',
-        'cambio_rubro': 'Cambio de rubro',
-        'traslado_local': 'Traslado de local',
-        'cambio_titular': 'Cambio de titular',
-        'cancelacion': 'Cancelación',
-        'reclamos': 'Reclamos',
-        'aprobacion_plano': 'Aprobación de plano',
-        'oficio_juzgado': 'Oficio del juzgado'
-    };
-    if (motivos[motivo]) return motivos[motivo];
+    // Intentar usar el caché de catálogo si está disponible
+    if (_cacheLabelMotivos && _cacheLabelMotivos[motivo]) return _cacheLabelMotivos[motivo];
     if (motivo && motivo.startsWith('Otros:')) return motivo;
     return motivo || '-';
+}
+
+// Caché de labels de motivo cargados del catálogo
+let _cacheLabelMotivos = null;
+
+// Helper: cargar caché de labels de motivo
+async function _cargarCacheMotivos() {
+    try {
+        const datos = await obtenerCatalogo('motivo_expediente');
+        _cacheLabelMotivos = {};
+        datos.forEach(d => { _cacheLabelMotivos[d.valor] = d.label; });
+    } catch (e) {
+        console.error('Error cargando caché de motivos:', e);
+    }
+}
+
+// Helper: setear el valor de motivo al editar (maneja valor de catálogo o "Otros: xxx")
+function _setMotivoDesdeEdicion(valor) {
+    if (!valor) return;
+
+    const select = document.getElementById('motivo');
+    if (!select) return;
+
+    const opciones = Array.from(select.options).map(o => o.value);
+    const valorLower = valor.toLowerCase();
+
+    if (valorLower.startsWith('otros:')) {
+        select.value = 'otros';
+        const detalle = valor.substring(6).trim();
+        document.getElementById('motivo_detalle').value = detalle;
+        document.getElementById('grupoMotivoDetalle').style.display = '';
+    } else if (opciones.includes(valorLower) || opciones.includes(valor)) {
+        select.value = opciones.includes(valorLower) ? valorLower : valor;
+    } else {
+        // Valor no reconocido → tratarlo como "Otros"
+        select.value = 'otros';
+        document.getElementById('motivo_detalle').value = valor;
+        document.getElementById('grupoMotivoDetalle').style.display = '';
+    }
 }
 
 // ============================================
@@ -773,6 +787,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cargar datos
     cargarExpedientes();
     cargarEstadisticas();
+
+    // Cargar caché de motivos para formatear labels en la tabla
+    _cargarCacheMotivos();
+
+    // Cargar filtro de motivos desde catálogo
+    cargarSelectCatalogo('filterMotivo', 'motivo_expediente', null, { incluirVacio: true, textoVacio: 'Todos' });
 
     // Event listeners
     document.getElementById('btnNuevo').addEventListener('click', () => {
