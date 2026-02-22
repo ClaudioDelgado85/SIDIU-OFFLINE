@@ -122,13 +122,13 @@ function mostrarExpedientes() {
         tr.setAttribute('data-estado', exp.estado);
 
         tr.innerHTML = `
-            <td><span class="exp-numero">${exp.numero_expediente}</span></td>
+            <td><span class="celda-numero">${exp.numero_expediente}</span></td>
             <td>${formatearFecha(exp.fecha)}</td>
             <td>
-                <div class="exp-nombre">${exp.nombre_apellido}</div>
-                <div class="exp-dni">${exp.dni}</div>
+                <div class="celda-nombre">${exp.nombre_apellido}</div>
+                <div class="celda-sub">${exp.dni}</div>
             </td>
-            <td><span class="exp-motivo" title="${formatearMotivo(exp.motivo)}">${formatearMotivo(exp.motivo)}</span></td>
+            <td><span class="celda-tag" title="${formatearMotivo(exp.motivo)}">${formatearMotivo(exp.motivo)}</span></td>
             <td><span class="estado-badge estado-${exp.estado}">${formatearEstado(exp.estado)}</span></td>
             <td>
                 <div class="action-buttons">

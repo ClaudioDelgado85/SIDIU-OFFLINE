@@ -111,42 +111,59 @@ function mostrarIntimaciones() {
 
     intimaciones.forEach(item => {
         const tr = document.createElement('tr');
+        tr.setAttribute('data-estado', item.estado);
         tr.innerHTML = `
             <td>${formatearFecha(item.fecha)}</td>
-            <td><span class="badge">${item.tipo.toUpperCase()}</span></td>
+            <td><span class="celda-tag">${item.tipo.toUpperCase()}</span></td>
             <td>
-                <div style="font-weight:bold">${item.nombre_apellido}</div>
-                <div style="font-size:12px; color:#666">DNI: ${item.dni}</div>
+                <div class="celda-nombre">${item.nombre_apellido}</div>
+                <div class="celda-sub">DNI: ${item.dni}</div>
             </td>
             <td>${item.direccion}</td>
-            <td style="text-align:center"><span class="badge">#${item.numero_intimacion}</span></td>
+            <td style="text-align:center"><span class="celda-numero">#${item.numero_intimacion}</span></td>
             <td style="text-align:center">${item.plazo_dias}d</td>
             <td>
-                <span style="color:${item.estado === 'vencida' ? '#dc3545' : item.estado === 'proxima_vencer' ? '#ff8c00' : '#28a745'}; font-weight:500">
+                <span style="color:${item.estado === 'vencida' ? 'var(--si-red)' : item.estado === 'proxima_vencer' ? 'var(--si-amber)' : 'var(--si-green)'}; font-weight:500">
                     ${formatearFecha(item.fecha_vencimiento)}
                 </span>
             </td>
-            <td><span class="badge badge-${item.estado}">${item.estado.replace('_', ' ')}</span></td>
+            <td><span class="estado-badge estado-${item.estado}">${item.estado.replace('_', ' ')}</span></td>
             <td class="col-extra">
                 ${item.infraccion_realizada
-                ? `<span class="badge badge-vencida">🚨 INFRACCIONADO</span>
-                       <div style="font-size:11px; color:#666; margin-top:4px;">
+                ? `<span class="estado-badge estado-vencida">🚨 INFRACCIONADO</span>
+                       <div style="font-size:11px; color:var(--si-text-muted); margin-top:4px;">
                            ${item.numero_infraccion ? 'Nº ' + item.numero_infraccion : ''}
                            ${item.fecha_infraccion ? ' - ' + formatearFecha(item.fecha_infraccion) : ''}
                        </div>`
-                : '<span style="color:#999">-</span>'
+                : '<span style="color:var(--si-text-muted)">-</span>'
             }
             </td>
             <td class="col-extra">
                 <div class="action-buttons">
-                    <button class="btn-icon btn-edit" data-id="${item.id}" title="Editar">✏️</button>
+                    <button class="btn-icon btn-edit" data-id="${item.id}" title="Editar">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                        </svg>
+                    </button>
                     ${!item.dio_cumplimiento ?
-                `<button class="btn-icon btn-next" data-id="${item.id}" title="Generar Siguiente Instancia" style="color: #4BA3D0;">➡️</button>`
+                `<button class="btn-icon btn-next" data-id="${item.id}" title="Generar Siguiente Instancia">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
+                            <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>`
                 : ''}
                     ${item.estado === 'vencida' && !item.dio_cumplimiento ?
-                `<button class="btn-icon btn-infraccion" data-id="${item.id}" title="Generar Infracción" style="color: #D32F2F;">🚨</button>`
+                `<button class="btn-icon btn-infraccion" data-id="${item.id}" title="Generar Infracción">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>`
                 : ''}
-                    <button class="btn-icon btn-delete" data-id="${item.id}" title="Eliminar">🗑️</button>
+                    <button class="btn-icon btn-delete" data-id="${item.id}" title="Eliminar">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
                 </div>
             </td>
             <td class="col-toggle"></td>
@@ -177,14 +194,14 @@ function actualizarEstadisticasVista() {
 
 function abrirModal() {
     const modalHTML = `
-        <div class="modal-overlay" id="modalOverlay">
-            <div class="modal">
-                <div class="modal-header">
+        <div class="panel-overlay" id="modalOverlay">
+            <div class="panel-lateral" id="panelLateral">
+                <div class="panel-header">
                     <h2 id="modalTitle">${intimacionEditando ? 'Editar' : 'Nueva'} Intimación</h2>
-                    <button class="btn-close" id="btnCerrarModal">×</button>
+                    <button class="btn-close-panel" id="btnCerrarModal">×</button>
                 </div>
                 <form id="formIntimacion">
-                    <div class="modal-body">
+                    <div class="panel-body">
                         <div class="form-grid">
                             <!-- Campos Comunes -->
                             <div class="form-group-modal">
@@ -240,7 +257,7 @@ function abrirModal() {
                                 <input type="text" id="tipo_obstruccion_detalle" placeholder="Describa el motivo de la intimación">
                             </div>
 
-                            <!-- Campos de Infracción (para TODOS los tipos) -->
+                            <!-- Campos de Infracción -->
                             <div class="form-grid-full form-section">
                                 <div class="form-section-title">Datos de Infracción (si aplica)</div>
                                 <div class="form-grid">
@@ -312,9 +329,8 @@ function abrirModal() {
                                 <textarea id="observaciones"></textarea>
                             </div>
                             
-                            <!-- Checkbox de cumplimiento (solo edición) -->
                             ${intimacionEditando ? `
-                            <div class="form-group-modal form-grid-full" style="background:#f5f5f5; padding:10px; border-radius:8px;">
+                            <div class="form-group-modal form-grid-full" style="background:var(--si-surface); padding:10px; border-radius:8px;">
                                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
                                     <input type="checkbox" id="dio_cumplimiento" style="width:auto;">
                                     <strong>¿Dio cumplimiento?</strong> (Marcar para cerrar el caso)
@@ -324,7 +340,7 @@ function abrirModal() {
 
                         </div>
                     </div>
-                    <div class="modal-footer">
+                    <div class="panel-footer">
                         <button type="button" class="btn-text" id="btnCancelarModal">Cancelar</button>
                         <button type="submit" class="btn-primary">Guardar</button>
                     </div>
@@ -335,12 +351,9 @@ function abrirModal() {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-    // Cargar barrios en el select
     cargarSelectBarrios('barrio_id', intimacionEditando?.barrio_id);
 
-    // Cargar catálogos dinámicos
     cargarSelectCatalogo('tipo', 'tipo_intimacion', intimacionEditando?.tipo || 'general', { incluirVacio: false }).then(() => {
-        // Después de cargar, disparar cambio para mostrar/ocultar campos según tipo
         if (intimacionEditando) cambiarTipoFormulario(intimacionEditando.tipo);
     });
     cargarSelectCatalogo('tipo_obstruccion', 'intimacion_por', null, { incluirVacio: true, textoVacio: '-- Seleccionar --' }).then(() => {
@@ -349,7 +362,6 @@ function abrirModal() {
         }
     });
 
-    // Listener para "Otros" en intimación por
     document.getElementById('tipo_obstruccion').addEventListener('change', (e) => {
         const grupoDetalle = document.getElementById('grupoIntimacionPorDetalle');
         if (grupoDetalle) {
@@ -357,12 +369,13 @@ function abrirModal() {
         }
     });
 
-    // Event Listeners
     document.getElementById('btnCerrarModal').addEventListener('click', cerrarModal);
     document.getElementById('btnCancelarModal').addEventListener('click', cerrarModal);
     document.getElementById('formIntimacion').addEventListener('submit', guardarIntimacion);
+    document.getElementById('modalOverlay').addEventListener('click', (e) => {
+        if (e.target.id === 'modalOverlay') cerrarModal();
+    });
 
-    // Inicializar fecha
     if (!intimacionEditando) {
         document.getElementById('fecha').valueAsDate = new Date();
     } else {
@@ -371,10 +384,18 @@ function abrirModal() {
 }
 
 function cerrarModal() {
-    const modal = document.getElementById('modalOverlay');
-    if (modal) modal.remove();
+    const panel = document.getElementById('panelLateral');
+    const overlay = document.getElementById('modalOverlay');
+    if (panel) {
+        panel.classList.add('cerrando');
+        setTimeout(() => { if (overlay) overlay.remove(); }, 200);
+    }
     intimacionEditando = null;
 }
+
+
+
+
 
 function cambiarTipoFormulario(tipo) {
     const balDio = document.getElementById('camposBaldio');
@@ -394,7 +415,7 @@ async function guardarIntimacion(e) {
     // Calcular valor final de tipo_obstruccion (con lógica "Otros")
     const tipoObstruccionSelect = document.getElementById('tipo_obstruccion').value;
     const tipoObstruccionDetalle = document.getElementById('tipo_obstruccion_detalle')?.value || '';
-    const tipoObstruccionFinal = tipoObstruccionSelect === 'otros' ? `Otros: ${tipoObstruccionDetalle}` : tipoObstruccionSelect;
+    const tipoObstruccionFinal = tipoObstruccionSelect === 'otros' ? `Otros: ${tipoObstruccionDetalle} ` : tipoObstruccionSelect;
 
     const formData = {
         tipo: document.getElementById('tipo').value,
@@ -430,7 +451,7 @@ async function guardarIntimacion(e) {
 
     try {
         const url = intimacionEditando
-            ? `${API_URL}/intimaciones/${intimacionEditando.id}`
+            ? `${API_URL} /intimaciones/${intimacionEditando.id} `
             : `${API_URL}/intimaciones`;
 
         const method = intimacionEditando ? 'PUT' : 'POST';

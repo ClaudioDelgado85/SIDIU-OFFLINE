@@ -106,17 +106,25 @@ function mostrarInfracciones() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${formatearFecha(item.fecha)}</td>
-            <td><span class="badge" style="background:#ddd; color:#333;">${item.numero_acta}</span></td>
+            <td><span class="celda-numero">${item.numero_acta}</span></td>
             <td>
-                <div style="font-weight:bold">${item.nombre_apellido}</div>
-                <div style="font-size:12px; color:#666">DNI: ${item.dni}</div>
+                <div class="celda-nombre">${item.nombre_apellido}</div>
+                <div class="celda-sub">DNI: ${item.dni}</div>
             </td>
             <td>${item.direccion}</td>
             <td>${item.motivo_infraccion}</td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn-icon btn-edit" data-id="${item.id}" title="Editar">✏️</button>
-                    <button class="btn-icon btn-delete" data-id="${item.id}" title="Eliminar">🗑️</button>
+                    <button class="btn-icon btn-edit" data-id="${item.id}" title="Editar">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                        </svg>
+                    </button>
+                    <button class="btn-icon btn-delete" data-id="${item.id}" title="Eliminar">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
                 </div>
             </td>
         `;
@@ -130,14 +138,14 @@ function mostrarInfracciones() {
 
 function abrirModal() {
     const modalHTML = `
-        <div class="modal-overlay" id="modalOverlay">
-            <div class="modal">
-                <div class="modal-header">
+        <div class="panel-overlay" id="modalOverlay">
+            <div class="panel-lateral" id="panelLateral">
+                <div class="panel-header">
                     <h2 id="modalTitle">${infraccionEditando ? 'Editar' : 'Nueva'} Acta de Infracción</h2>
-                    <button class="btn-close" id="btnCerrarModal">×</button>
+                    <button class="btn-close-panel" id="btnCerrarModal">×</button>
                 </div>
                 <form id="formInfraccion">
-                    <div class="modal-body">
+                    <div class="panel-body">
                         <div class="form-grid">
                             <div class="form-group-modal">
                                 <label>Fecha *</label>
@@ -175,7 +183,7 @@ function abrirModal() {
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer">
+                    <div class="panel-footer">
                         <button type="button" class="btn-text" id="btnCancelarModal">Cancelar</button>
                         <button type="submit" class="btn-primary">Guardar</button>
                     </div>
@@ -186,15 +194,15 @@ function abrirModal() {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-    // Cargar barrios en el select
     cargarSelectBarrios('barrio_id', infraccionEditando?.barrio_id);
 
-    // Event Listeners
     document.getElementById('btnCerrarModal').addEventListener('click', cerrarModal);
     document.getElementById('btnCancelarModal').addEventListener('click', cerrarModal);
     document.getElementById('formInfraccion').addEventListener('submit', guardarInfraccion);
+    document.getElementById('modalOverlay').addEventListener('click', (e) => {
+        if (e.target.id === 'modalOverlay') cerrarModal();
+    });
 
-    // Inicializar fecha
     if (!infraccionEditando) {
         document.getElementById('fecha').valueAsDate = new Date();
     } else {
@@ -203,8 +211,12 @@ function abrirModal() {
 }
 
 function cerrarModal() {
-    const modal = document.getElementById('modalOverlay');
-    if (modal) modal.remove();
+    const panel = document.getElementById('panelLateral');
+    const overlay = document.getElementById('modalOverlay');
+    if (panel) {
+        panel.classList.add('cerrando');
+        setTimeout(() => { if (overlay) overlay.remove(); }, 200);
+    }
     infraccionEditando = null;
 }
 

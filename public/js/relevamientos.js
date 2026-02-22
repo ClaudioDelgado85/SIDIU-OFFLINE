@@ -187,15 +187,25 @@ function renderizarTabla() {
 
     tbody.innerHTML = relevamientos.map(r => `
         <tr>
-            <td><strong>${r.numero_relevamiento}</strong></td>
+            <td><span class="celda-numero">${r.numero_relevamiento}</span></td>
             <td>${formatearFecha(r.fecha_relevamiento)}</td>
             <td><span class="type-badge type-${r.tipo_relevamiento}">${r.tipo_relevamiento}</span></td>
             <td>${r.ubicacion}</td>
             <td>${r.zona || '-'}</td>
             <td>${r.responsable_nombre || '-'}</td>
             <td>
-                <button class="btn-icon btn-edit" data-id="${r.id}" title="Editar">✏️</button>
-                <button class="btn-icon btn-delete" data-id="${r.id}" title="Eliminar">🗑️</button>
+                <div class="action-buttons">
+                    <button class="btn-icon btn-edit" data-id="${r.id}" title="Editar">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                        </svg>
+                    </button>
+                    <button class="btn-icon btn-delete" data-id="${r.id}" title="Eliminar">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                </div>
             </td>
         </tr>
     `).join('');
@@ -253,7 +263,6 @@ function mostrarPaginacion() {
 function abrirModal(datos = null) {
     const esNuevo = !datos;
 
-    // Si no hay datos, inicializamos con valores por defecto
     const r = datos || {
         fecha_relevamiento: new Date().toISOString().split('T')[0],
         tipo_relevamiento: 'baldio',
@@ -269,14 +278,14 @@ function abrirModal(datos = null) {
     };
 
     const modalHTML = `
-        <div class="modal-overlay" id="modalRelevamiento">
-            <div class="modal" style="max-width: 600px;">
-                <div class="modal-header">
+        <div class="panel-overlay" id="modalRelevamiento">
+            <div class="panel-lateral" id="panelLateral">
+                <div class="panel-header">
                     <h2>${esNuevo ? 'Nuevo Relevamiento' : `Editar ${r.numero_relevamiento}`}</h2>
-                    <button class="btn-close" onclick="document.getElementById('modalRelevamiento').remove()">×</button>
+                    <button class="btn-close-panel" id="btnCerrarPanel">×</button>
                 </div>
                 <form id="formRelevamiento">
-                    <div class="modal-body">
+                    <div class="panel-body">
                         
                         <div class="form-grid">
                             <div class="form-group-modal">
@@ -321,7 +330,6 @@ function abrirModal(datos = null) {
                             </div>
                         </div>
 
-                        <!-- CAMPOS OCUPACIÓN (Solo visible si tipo=ocupacion) -->
                         <div id="camposOcupacion" class="form-section campo-especifico" style="border-left: 3px solid #66BB6A; padding-left: 10px; display: none;">
                             <div class="form-section-title" style="color: #2E7D32;">Detalles de Ocupación</div>
                             <div class="form-grid">
@@ -352,8 +360,8 @@ function abrirModal(datos = null) {
                         </div>
 
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn-text" onclick="document.getElementById('modalRelevamiento').remove()">Cancelar</button>
+                    <div class="panel-footer">
+                        <button type="button" class="btn-text" id="btnCancelarPanel">Cancelar</button>
                         <button type="submit" class="btn-primary">Guardar</button>
                     </div>
                 </form>
@@ -363,17 +371,28 @@ function abrirModal(datos = null) {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-    // Cargar barrios en el select
     cargarSelectBarrios('barrio_id', r.barrio_id);
-
-    // Activar lógica de campos
     toggleCamposEspeciales();
 
-    // Submit handler
+    document.getElementById('btnCerrarPanel').addEventListener('click', cerrarPanelRelevamiento);
+    document.getElementById('btnCancelarPanel').addEventListener('click', cerrarPanelRelevamiento);
+    document.getElementById('modalRelevamiento').addEventListener('click', (e) => {
+        if (e.target.id === 'modalRelevamiento') cerrarPanelRelevamiento();
+    });
+
     document.getElementById('formRelevamiento').addEventListener('submit', async (e) => {
         e.preventDefault();
         await guardarRelevamiento(esNuevo, r.id);
     });
+}
+
+function cerrarPanelRelevamiento() {
+    const panel = document.getElementById('panelLateral');
+    const overlay = document.getElementById('modalRelevamiento');
+    if (panel) {
+        panel.classList.add('cerrando');
+        setTimeout(() => { if (overlay) overlay.remove(); }, 200);
+    }
 }
 
 function toggleCamposEspeciales() {
@@ -422,7 +441,7 @@ async function guardarRelevamiento(esNuevo, id) {
         const res = await response.json();
 
         if (res.success) {
-            document.getElementById('modalRelevamiento').remove();
+            cerrarPanelRelevamiento();
             cargarRelevamientos();
             alert(res.message);
         } else {

@@ -97,17 +97,27 @@ function renderizarTabla() {
     empty.style.display = 'none';
 
     tbody.innerHTML = reclamos.map(r => `
-        <tr>
-            <td><strong>${r.numero_reclamo}</strong></td>
+        <tr data-estado="${r.estado}">
+            <td><span class="celda-numero">${r.numero_reclamo}</span></td>
             <td>${formatearFecha(r.fecha_creacion)}</td>
-            <td>${formatearTipo(r.tipo_reclamo)}</td>
+            <td><span class="celda-tag">${formatearTipo(r.tipo_reclamo)}</span></td>
             <td>${r.direccion_incidente}</td>
             <td>${r.denunciado_nombre || '-'}</td>
             <td><span class="priority-${r.prioridad}">${formatearPrioridad(r.prioridad)}</span></td>
-            <td><span class="badge badge-${r.estado}">${formatearEstado(r.estado)}</span></td>
+            <td><span class="estado-badge estado-${r.estado}">${formatearEstado(r.estado)}</span></td>
             <td>
-                <button class="btn-icon btn-edit" data-id="${r.id}" title="Editar">✏️</button>
-                <button class="btn-icon btn-delete" data-id="${r.id}" title="Eliminar">🗑️</button>
+                <div class="action-buttons">
+                    <button class="btn-icon btn-edit" data-id="${r.id}" title="Editar">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                        </svg>
+                    </button>
+                    <button class="btn-icon btn-delete" data-id="${r.id}" title="Eliminar">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                </div>
             </td>
         </tr>
     `).join('');
@@ -181,11 +191,12 @@ function formatearTipo(tipo) {
 }
 
 function formatearPrioridad(prioridad) {
+    const dot = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor;margin-right:5px;vertical-align:middle;"></span>';
     const prioridades = {
-        baja: '🟢 Baja',
-        media: '🟡 Media',
-        alta: '🟠 Alta',
-        urgente: '🔴 Urgente'
+        baja: dot + 'Baja',
+        media: dot + 'Media',
+        alta: dot + 'Alta',
+        urgente: dot + 'Urgente'
     };
     return prioridades[prioridad] || prioridad;
 }
@@ -209,14 +220,14 @@ function abrirModal(reclamo = null) {
     const datos = reclamo || {};
 
     const modalHTML = `
-        <div class="modal-overlay" id="modalReclamo">
-            <div class="modal" style="max-width: 700px;">
-                <div class="modal-header">
+        <div class="panel-overlay" id="modalReclamo">
+            <div class="panel-lateral" id="panelLateral">
+                <div class="panel-header">
                     <h2>${esNuevo ? 'Nuevo Reclamo' : `Editar Reclamo ${datos.numero_reclamo}`}</h2>
-                    <button class="btn-close" onclick="document.getElementById('modalReclamo').remove()">×</button>
+                    <button class="btn-close-panel" id="btnCerrarPanel">×</button>
                 </div>
                 <form id="formReclamo">
-                    <div class="modal-body">
+                    <div class="panel-body">
                         <div class="form-grid">
                             <div class="form-group-modal">
                                 <label>Tipo de Reclamo *</label>
@@ -255,7 +266,6 @@ function abrirModal(reclamo = null) {
                             </div>
                         </div>
 
-                        <!-- Sección Denunciado -->
                         <div class="form-section">
                             <div class="form-section-title">Datos del Denunciado (si aplica)</div>
                             <div class="form-grid">
@@ -274,7 +284,6 @@ function abrirModal(reclamo = null) {
                             </div>
                         </div>
 
-                        <!-- Sección Denunciante -->
                         <div class="form-section">
                             <div class="form-section-title">Datos del Denunciante (opcional)</div>
                             <div class="form-grid">
@@ -290,7 +299,6 @@ function abrirModal(reclamo = null) {
                         </div>
 
                         ${!esNuevo ? `
-                        <!-- Sección Resolución (solo edición) -->
                         <div class="form-section">
                             <div class="form-section-title">Gestión / Resolución</div>
                             <div class="form-grid">
@@ -311,8 +319,8 @@ function abrirModal(reclamo = null) {
                         </div>
                         ` : ''}
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn-text" onclick="document.getElementById('modalReclamo').remove()">Cancelar</button>
+                    <div class="panel-footer">
+                        <button type="button" class="btn-text" id="btnCancelarPanel">Cancelar</button>
                         <button type="submit" class="btn-primary">Guardar</button>
                     </div>
                 </form>
@@ -322,21 +330,33 @@ function abrirModal(reclamo = null) {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-    // Cargar barrios en el select
     cargarSelectBarrios('barrio_id', datos.barrio_id);
 
-    // Pre-seleccionar valores si es edición
     if (!esNuevo) {
         document.getElementById('tipo_reclamo').value = datos.tipo_reclamo;
         document.getElementById('prioridad').value = datos.prioridad;
         document.getElementById('estado').value = datos.estado;
     }
 
-    // Submit Handler
+    document.getElementById('btnCerrarPanel').addEventListener('click', cerrarPanelReclamo);
+    document.getElementById('btnCancelarPanel').addEventListener('click', cerrarPanelReclamo);
+    document.getElementById('modalReclamo').addEventListener('click', (e) => {
+        if (e.target.id === 'modalReclamo') cerrarPanelReclamo();
+    });
+
     document.getElementById('formReclamo').addEventListener('submit', async (e) => {
         e.preventDefault();
         await guardarReclamo(esNuevo, datos.id);
     });
+}
+
+function cerrarPanelReclamo() {
+    const panel = document.getElementById('panelLateral');
+    const overlay = document.getElementById('modalReclamo');
+    if (panel) {
+        panel.classList.add('cerrando');
+        setTimeout(() => { if (overlay) overlay.remove(); }, 200);
+    }
 }
 
 async function guardarReclamo(esNuevo, id) {
@@ -375,6 +395,7 @@ async function guardarReclamo(esNuevo, id) {
 
         if (res.ok) {
             document.getElementById('modalReclamo').remove();
+            cerrarPanelReclamo();
             cargarReclamos();
             alert(esNuevo ? 'Reclamo registrado exitosamente' : 'Reclamo actualizado');
         } else {
