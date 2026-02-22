@@ -1,0 +1,541 @@
+/* ============================================
+   EXPEDIENTES V2 — Diseño Institucional
+   Scoped: .page-expedientes
+   ============================================ */
+
+/* --- Tokens institucionales --- */
+.page-expedientes {
+    --exp-blue: #2563EB;
+    --exp-blue-light: #EFF6FF;
+    --exp-amber: #D97706;
+    --exp-amber-light: #FFFBEB;
+    --exp-green: #059669;
+    --exp-green-light: #ECFDF5;
+    --exp-purple: #7C3AED;
+    --exp-purple-light: #F5F3FF;
+    --exp-red: #DC2626;
+    --exp-surface: #F8FAFC;
+    --exp-border: rgba(0, 0, 0, 0.06);
+    --exp-border-strong: rgba(0, 0, 0, 0.10);
+    --exp-text-primary: #0F172A;
+    --exp-text-secondary: #475569;
+    --exp-text-muted: #94A3B8;
+    --exp-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+
+/* --- Header institucional --- */
+.page-expedientes .dashboard-header {
+    background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%);
+    padding: 16px 32px;
+}
+
+.page-expedientes .dashboard-header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.page-expedientes .dashboard-header p {
+    font-size: 13px !important;
+    opacity: 0.7 !important;
+}
+
+/* --- Stats: contadores de despacho --- */
+.page-expedientes .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.page-expedientes .stat-card {
+    background: white;
+    border-radius: 10px;
+    padding: 16px 18px;
+    border-left: none;
+    border: 1px solid var(--exp-border);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.page-expedientes .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.page-expedientes .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    border-radius: 3px 0 0 3px;
+    background: var(--exp-text-muted);
+}
+
+.page-expedientes .stat-card.stat-primary::before {
+    background: var(--exp-blue);
+}
+
+.page-expedientes .stat-card.stat-warning::before {
+    background: var(--exp-amber);
+}
+
+.page-expedientes .stat-card.stat-success::before {
+    background: var(--exp-green);
+}
+
+.page-expedientes .stat-card.stat-info::before {
+    background: var(--exp-purple);
+}
+
+.page-expedientes .stat-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--exp-text-primary);
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.page-expedientes .stat-label {
+    font-size: 11px;
+    color: var(--exp-text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* --- Barra de acciones --- */
+.page-expedientes .actions-bar {
+    margin-bottom: 16px;
+}
+
+.page-expedientes .btn-primary {
+    background: var(--exp-blue);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+    border-radius: 8px;
+    font-size: 14px;
+    padding: 10px 20px;
+}
+
+.page-expedientes .btn-primary:hover {
+    background: #1D4ED8;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+    transform: translateY(-1px);
+}
+
+.page-expedientes .search-box input {
+    border: 1px solid var(--exp-border-strong);
+    border-radius: 8px;
+    font-size: 13px;
+    padding: 9px 14px;
+}
+
+.page-expedientes .search-box input:focus {
+    border-color: var(--exp-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+/* --- Tabla: filas tipo carátula --- */
+.page-expedientes .table-container {
+    border: 1px solid var(--exp-border);
+    border-radius: 10px;
+    overflow-x: auto;
+    background: white;
+}
+
+.page-expedientes table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.page-expedientes thead {
+    background: var(--exp-surface);
+}
+
+.page-expedientes thead th {
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--exp-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    border-bottom: 1px solid var(--exp-border-strong);
+    white-space: nowrap;
+}
+
+.page-expedientes tbody tr {
+    border-bottom: 1px solid var(--exp-border);
+    transition: background 0.12s;
+    position: relative;
+}
+
+.page-expedientes tbody tr:hover {
+    background: var(--exp-blue-light);
+}
+
+.page-expedientes tbody tr:last-child {
+    border-bottom: none;
+}
+
+.page-expedientes tbody td {
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--exp-text-secondary);
+    vertical-align: middle;
+}
+
+/* Número de expediente monoespaciado */
+.page-expedientes .exp-numero {
+    font-family: var(--exp-mono);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--exp-text-primary);
+    letter-spacing: -0.01em;
+}
+
+/* Celda nombre con jerarquía */
+.page-expedientes .exp-nombre {
+    font-weight: 600;
+    color: var(--exp-text-primary);
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+.page-expedientes .exp-dni {
+    font-size: 11px;
+    color: var(--exp-text-muted);
+    margin-top: 1px;
+}
+
+/* Badge de estado tipo sello */
+.page-expedientes .estado-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+.page-expedientes .estado-badge.estado-ingreso {
+    background: var(--exp-blue-light);
+    color: var(--exp-blue);
+}
+
+.page-expedientes .estado-badge.estado-en_inspeccion {
+    background: var(--exp-amber-light);
+    color: var(--exp-amber);
+}
+
+.page-expedientes .estado-badge.estado-plazo_otorgado {
+    background: var(--exp-purple-light);
+    color: var(--exp-purple);
+}
+
+.page-expedientes .estado-badge.estado-salida {
+    background: var(--exp-green-light);
+    color: var(--exp-green);
+}
+
+/* Motivo como label sutil */
+.page-expedientes .exp-motivo {
+    font-size: 12px;
+    color: var(--exp-text-secondary);
+    background: var(--exp-surface);
+    padding: 3px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Botones de acción compactos */
+.page-expedientes .action-buttons {
+    gap: 4px;
+    flex-wrap: nowrap;
+}
+
+.page-expedientes .btn-icon {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    color: var(--exp-text-muted);
+}
+
+.page-expedientes .btn-icon:hover {
+    background: var(--exp-surface);
+}
+
+.page-expedientes .btn-icon.btn-edit:hover {
+    color: var(--exp-blue);
+    background: var(--exp-blue-light);
+}
+
+.page-expedientes .btn-icon.btn-delete:hover {
+    color: var(--exp-red);
+    background: #FEF2F2;
+}
+
+/* Indicador de estado lateral (borde izquierdo caratula) */
+.page-expedientes tbody tr[data-estado="ingreso"] {
+    box-shadow: inset 3px 0 0 var(--exp-blue);
+}
+
+.page-expedientes tbody tr[data-estado="en_inspeccion"] {
+    box-shadow: inset 3px 0 0 var(--exp-amber);
+}
+
+.page-expedientes tbody tr[data-estado="plazo_otorgado"] {
+    box-shadow: inset 3px 0 0 var(--exp-purple);
+}
+
+.page-expedientes tbody tr[data-estado="salida"] {
+    box-shadow: inset 3px 0 0 var(--exp-green);
+}
+
+/* --- Panel lateral slide-in --- */
+.panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.3);
+    z-index: 1000;
+    animation: panelFadeIn 0.2s ease;
+}
+
+@keyframes panelFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.panel-lateral {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 520px;
+    max-width: 90vw;
+    height: 100vh;
+    background: white;
+    box-shadow: -8px 0 30px rgba(0, 0, 0, 0.12);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    animation: panelSlideIn 0.25s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@keyframes panelSlideIn {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+.panel-lateral.cerrando {
+    animation: panelSlideOut 0.2s ease forwards;
+}
+
+@keyframes panelSlideOut {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(100%);
+    }
+}
+
+.panel-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--exp-border-strong);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.panel-header h2 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--exp-text-primary);
+    margin: 0;
+}
+
+.panel-header .btn-close-panel {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    color: var(--exp-text-muted);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.panel-header .btn-close-panel:hover {
+    background: var(--exp-surface);
+    color: var(--exp-text-primary);
+}
+
+.panel-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Form must participate in flex layout for scroll to work */
+.panel-lateral form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.panel-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--exp-border-strong);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+/* Form dentro del panel */
+.panel-body .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.panel-body .form-grid-full {
+    grid-column: 1 / -1;
+}
+
+.panel-body .form-group-modal label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--exp-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 6px;
+}
+
+.panel-body .form-group-modal input,
+.panel-body .form-group-modal select,
+.panel-body .form-group-modal textarea {
+    padding: 9px 12px;
+    border: 1px solid var(--exp-border-strong);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--exp-text-primary);
+    background: var(--exp-surface);
+    transition: all 0.15s;
+}
+
+.panel-body .form-group-modal input:focus,
+.panel-body .form-group-modal select:focus,
+.panel-body .form-group-modal textarea:focus {
+    outline: none;
+    border-color: var(--exp-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+    background: white;
+}
+
+/* Footer buttons */
+.panel-footer .btn-text {
+    padding: 9px 18px;
+    font-size: 13px;
+    border-radius: 6px;
+}
+
+.panel-footer .btn-primary {
+    padding: 9px 18px;
+    font-size: 13px;
+}
+
+/* --- Filtros --- */
+.page-expedientes .filters-panel {
+    border: 1px solid var(--exp-border);
+    border-radius: 10px;
+    background: white;
+    box-shadow: none;
+}
+
+.page-expedientes .btn-filter {
+    border: 1px solid var(--exp-border-strong);
+    border-radius: 8px;
+    font-size: 13px;
+    padding: 9px 14px;
+}
+
+.page-expedientes .btn-filter.active {
+    background: var(--exp-blue);
+    border-color: var(--exp-blue);
+}
+
+/* --- Paginación --- */
+.page-expedientes .pagination-container {
+    border-top: 1px solid var(--exp-border);
+}
+
+.page-expedientes .btn-page-num.active {
+    background: var(--exp-blue);
+    border-color: var(--exp-blue);
+}
+
+/* --- Empty state --- */
+.page-expedientes .empty-state svg {
+    color: var(--exp-text-muted);
+    opacity: 0.4;
+}
+
+.page-expedientes .empty-state p {
+    color: var(--exp-text-muted);
+    font-size: 14px;
+}
+
+/* --- Responsive --- */
+@media (max-width: 1024px) {
+    .page-expedientes .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .page-expedientes .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .panel-lateral {
+        width: 100vw;
+        max-width: 100vw;
+    }
+}
