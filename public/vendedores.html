@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendedores Ambulantes - Sistema de Gestión Municipal</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/expedientes.css">
+    <link rel="stylesheet" href="css/sistema-v2.css">
+</head>
+
+<body class="dashboard page-modulo">
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div>
+            <h1>Relevamiento de Vendedores Ambulantes</h1>
+            <p style="font-size: 14px; opacity: 0.9;">Planilla de carga — Vendedores de vía pública</p>
+        </div>
+        <div class="user-info">
+            <span class="user-name" id="userName">Cargando...</span>
+            <button class="btn-logout" id="btnLogout">Cerrar Sesión</button>
+        </div>
+    </header>
+
+    <!-- Navegación -->
+    <nav class="breadcrumb">
+        <a href="dashboard.html">Dashboard</a>
+        <span>›</span>
+        <span>Vendedores Ambulantes</span>
+    </nav>
+
+    <!-- Contenido Principal -->
+    <main class="dashboard-main">
+        <!-- Estadísticas -->
+        <div class="stats-grid" id="stats-container">
+            <div class="stat-card">
+                <div class="stat-value" id="statTotal">0</div>
+                <div class="stat-label">Total Vendedores</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statAutorizados" style="color: var(--success)">0</div>
+                <div class="stat-label">Autorizados</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statNoAutorizados" style="color: var(--warning)">0</div>
+                <div class="stat-label">No Autorizados</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statPagaronCanon" style="color: var(--primary)">0</div>
+                <div class="stat-label">Pagaron Canon</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statCanonVencido" style="color: var(--danger)">0</div>
+                <div class="stat-label">Canon Vencido</div>
+            </div>
+        </div>
+
+        <!-- Barra de acciones -->
+        <div class="actions-bar">
+            <div class="search-box">
+                <input type="text" id="filtro-busqueda" placeholder="Buscar vendedor, DNI, ubicación, rubro...">
+                <button class="btn-filter" id="btnFiltros">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Filtros
+                </button>
+            </div>
+        </div>
+
+        <!-- Panel de filtros -->
+        <div class="filters-panel" id="filtersPanel" style="display: none;">
+            <div class="filter-grid">
+                <div class="filter-item">
+                    <label>Autorización</label>
+                    <select id="filtro-autorizacion">
+                        <option value="">Todos</option>
+                        <option value="1">Autorizado</option>
+                        <option value="0">No autorizado</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label>Canon</label>
+                    <select id="filtro-canon">
+                        <option value="">Todos</option>
+                        <option value="1">Pagó canon</option>
+                        <option value="0">No pagó</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label>Barrio</label>
+                    <select id="filtro-barrio">
+                        <option value="">Todos los barrios</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label>Fecha desde</label>
+                    <input type="date" id="filtro-desde">
+                </div>
+                <div class="filter-item">
+                    <label>Fecha hasta</label>
+                    <input type="date" id="filtro-hasta">
+                </div>
+                <div class="filter-item">
+                    <button class="btn-secondary" onclick="cargarVendedores()">Aplicar</button>
+                    <button class="btn-text" onclick="limpiarFiltros()">Limpiar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla planilla -->
+        <div class="table-container">
+            <div id="loadingTable" class="loading-state" style="display: none;">
+                <div class="loader"></div>
+                <p>Cargando vendedores...</p>
+            </div>
+
+            <div class="planilla-container" style="margin:0; border:none; border-radius:0;">
+                <table class="planilla-grid" id="tabla-vendedores">
+                    <thead>
+                        <tr>
+                            <th style="width:110px">Fecha</th>
+                            <th style="width:180px">Vendedor</th>
+                            <th style="width:110px">DNI</th>
+                            <th style="width:200px">Ubicación</th>
+                            <th style="width:130px">Rubro</th>
+                            <th style="width:70px;text-align:center">Autoriz.</th>
+                            <th style="width:70px;text-align:center">Canon</th>
+                            <th style="width:110px">Nº Recibo</th>
+                            <th style="width:110px">Venc. Canon</th>
+                            <th style="width:120px">Barrio</th>
+                            <th style="width:160px">Observaciones</th>
+                            <th style="width:50px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-body">
+                        <!-- Filas se renderizan dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/navbar.js"></script>
+    <script src="js/vendedores.js"></script>
+</body>
+
+</html>

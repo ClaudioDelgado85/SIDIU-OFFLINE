@@ -112,6 +112,14 @@ app.use('/api/catalogos', catalogosRoutes);
 const busquedaRoutes = require('./routes/busquedaRoutes');
 app.use('/api/busqueda', busquedaRoutes);
 
+// Rutas de comercios
+const comerciosRoutes = require('./routes/comerciosRoutes');
+app.use('/api/comercios', comerciosRoutes);
+
+// Rutas de vendedores ambulantes
+const vendedoresRoutes = require('./routes/vendedoresRoutes');
+app.use('/api/vendedores', vendedoresRoutes);
+
 // ============================================
 // RUTAS DEL FRONTEND
 // ============================================

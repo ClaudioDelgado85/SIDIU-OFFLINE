@@ -38,6 +38,151 @@
             outline: none;
         }
 
+        .search-hero input:focus {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        /* ============================
+           FICHA DEL CONTRIBUYENTE
+           ============================ */
+        .ficha-contribuyente {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px 28px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .ficha-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 26px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .ficha-info {
+            flex: 1;
+        }
+
+        .ficha-nombre {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .ficha-dni {
+            font-size: 14px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .ficha-resumen {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .ficha-badge {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .ficha-badge-expediente {
+            background: #DBEAFE;
+            color: #1D4ED8;
+        }
+
+        .ficha-badge-intimacion {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .ficha-badge-infraccion {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .ficha-badge-reclamo {
+            background: #EDE9FE;
+            color: #5B21B6;
+        }
+
+        .ficha-badge-relevamiento {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .ficha-badge-comercio {
+            background: #E0E7FF;
+            color: #3730A3;
+        }
+
+        .ficha-badge-vendedor_ambulante {
+            background: #FFF7ED;
+            color: #9A3412;
+        }
+
+        /* ============================
+           FILTROS POR TIPO (CHIPS)
+           ============================ */
+        .tipo-chips {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .tipo-chip {
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #475569;
+        }
+
+        .tipo-chip:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .tipo-chip.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .tipo-chip .chip-count {
+            display: inline-block;
+            margin-left: 4px;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 1px 7px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+
+        .tipo-chip.active .chip-count {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
         /* ============================
            RESUMEN
            ============================ */
@@ -53,162 +198,155 @@
         }
 
         /* ============================
-           COLUMNAS KANBAN
+           TIMELINE LIST
            ============================ */
-        .columns-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 16px;
-            align-items: start;
-        }
-
-        .result-column {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            overflow: hidden;
+        .timeline-list {
             display: flex;
             flex-direction: column;
-            min-height: 200px;
+            gap: 0;
         }
 
-        .column-header {
-            padding: 14px 16px;
-            color: white;
-            font-weight: 700;
-            font-size: 14px;
-            display: flex;
+        .timeline-row {
+            display: grid;
+            grid-template-columns: 100px 140px 1fr auto auto;
+            gap: 16px;
             align-items: center;
-            justify-content: space-between;
-            letter-spacing: 0.3px;
-        }
-
-        .column-header .col-icon {
-            font-size: 18px;
-            margin-right: 6px;
-        }
-
-        .column-header .col-count {
-            background: rgba(255, 255, 255, 0.25);
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        /* Colores por tipo */
-        .col-expediente .column-header {
-            background: #3b82f6;
-        }
-
-        .col-intimacion .column-header {
-            background: #f59e0b;
-        }
-
-        .col-infraccion .column-header {
-            background: #ef4444;
-        }
-
-        .col-reclamo .column-header {
-            background: #8b5cf6;
-        }
-
-        .col-relevamiento .column-header {
-            background: #10b981;
-        }
-
-        .column-body {
-            padding: 12px;
-            max-height: 500px;
-            overflow-y: auto;
-            flex: 1;
-        }
-
-        .column-body::-webkit-scrollbar {
-            width: 5px;
-        }
-
-        .column-body::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-
-        /* ============================
-           TARJETAS
-           ============================ */
-        .result-card {
+            padding: 14px 20px;
             background: white;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 14px;
-            margin-bottom: 10px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-            transition: transform 0.15s, box-shadow 0.15s;
+            border-bottom: none;
+            transition: background 0.15s, box-shadow 0.15s;
         }
 
-        .result-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+        .timeline-row:first-child {
+            border-radius: 10px 10px 0 0;
         }
 
-        .result-card:last-child {
-            margin-bottom: 0;
+        .timeline-row:last-child {
+            border-bottom: 1px solid #e2e8f0;
+            border-radius: 0 0 10px 10px;
         }
 
-        .card-date {
+        .timeline-row:only-child {
+            border-radius: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .timeline-row:hover {
+            background: #f8fafc;
+            box-shadow: inset 3px 0 0 var(--primary-color);
+        }
+
+        .tl-fecha {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .tl-tipo {
+            display: inline-block;
+        }
+
+        .tl-tipo-badge {
             font-size: 11px;
-            color: #94a3b8;
-            font-weight: 600;
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .card-title {
-            font-size: 14px;
+            padding: 4px 10px;
+            border-radius: 4px;
             font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 6px;
-            line-height: 1.3;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
         }
 
-        .card-title a {
+        /* Type colors */
+        .tl-badge-expediente {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .tl-badge-intimacion {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .tl-badge-infraccion {
+            background: #ef4444;
+            color: white;
+        }
+
+        .tl-badge-reclamo {
+            background: #8b5cf6;
+            color: white;
+        }
+
+        .tl-badge-relevamiento {
+            background: #10b981;
+            color: white;
+        }
+
+        .tl-badge-comercio {
+            background: #6366f1;
+            color: white;
+        }
+
+        .tl-badge-vendedor_ambulante {
+            background: #f97316;
+            color: white;
+        }
+
+        .tl-info {
+            min-width: 0;
+        }
+
+        .tl-titulo {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tl-titulo a {
             text-decoration: none;
             color: inherit;
         }
 
-        .card-title a:hover {
+        .tl-titulo a:hover {
             text-decoration: underline;
+            color: var(--primary-color);
         }
 
-        .card-desc {
-            font-size: 13px;
-            color: #64748b;
-            margin-bottom: 8px;
-            line-height: 1.4;
-            /* Limitar a 2 renglones */
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            line-clamp: 2;
-            -webkit-box-orient: vertical;
+        .tl-desc {
+            font-size: 12px;
+            color: #94a3b8;
+            white-space: nowrap;
             overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .card-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .card-status {
+        .tl-estado {
             font-size: 11px;
-            padding: 3px 8px;
+            padding: 3px 10px;
             border-radius: 4px;
             font-weight: 600;
             text-transform: capitalize;
+            white-space: nowrap;
         }
 
-        /* Estados por color */
+        .tl-link {
+            font-size: 12px;
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .tl-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Status colors */
         .status-vigente,
         .status-ingreso,
         .status-pendiente,
@@ -219,13 +357,15 @@
 
         .status-cumplida,
         .status-resuelto,
-        .status-salida {
+        .status-salida,
+        .status-realizado {
             background: #D1FAE5;
             color: #065F46;
         }
 
         .status-vencida,
-        .status-anulado {
+        .status-anulado,
+        .status-registrada {
             background: #FEE2E2;
             color: #991B1B;
         }
@@ -235,47 +375,65 @@
             color: #1E40AF;
         }
 
-        .card-link {
-            font-size: 12px;
-            color: #3b82f6;
-            text-decoration: none;
-            font-weight: 600;
+        .status-habilitado {
+            background: #D1FAE5;
+            color: #065F46;
         }
 
-        .card-link:hover {
-            text-decoration: underline;
+        .status-no_habilitado,
+        .status-no_autorizado {
+            background: #FEE2E2;
+            color: #991B1B;
         }
 
+        .status-autorizado {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        /* Empty */
         .column-empty {
             text-align: center;
-            padding: 30px 10px;
+            padding: 40px 10px;
             color: #94a3b8;
-            font-size: 13px;
+            font-size: 14px;
             font-style: italic;
         }
 
         /* ============================
            RESPONSIVE
            ============================ */
-        @media (max-width: 1200px) {
-            .columns-grid {
-                grid-template-columns: repeat(3, 1fr);
+        @media (max-width: 900px) {
+            .timeline-row {
+                grid-template-columns: 80px 100px 1fr auto;
+                gap: 10px;
+                padding: 12px 14px;
+            }
+
+            .tl-link {
+                display: none;
+            }
+
+            .ficha-contribuyente {
+                flex-direction: column;
+                text-align: center;
             }
         }
 
-        @media (max-width: 768px) {
-            .columns-grid {
+        @media (max-width: 600px) {
+            .timeline-row {
                 grid-template-columns: 1fr;
+                gap: 6px;
             }
 
             .search-hero {
-                padding: 24px 16px;
+                padding: 20px 16px;
             }
         }
     </style>
 </head>
 
-<body class="dashboard">
+<body class="dashboard page-modulo">
     <!-- Header -->
     <header class="dashboard-header">
         <div>
@@ -308,11 +466,26 @@
             <p>Buscando en todos los registros...</p>
         </div>
 
+        <!-- Ficha del contribuyente (se muestra si se detecta un DNI/nombre) -->
+        <div id="fichaContribuyente" class="ficha-contribuyente" style="display: none;">
+            <div class="ficha-avatar" id="fichaAvatar">?</div>
+            <div class="ficha-info">
+                <div class="ficha-nombre" id="fichaNombre">—</div>
+                <div class="ficha-dni" id="fichaDni">—</div>
+            </div>
+            <div class="ficha-resumen" id="fichaResumen">
+                <!-- Badges resumen -->
+            </div>
+        </div>
+
+        <!-- Resumen -->
         <div id="searchSummary" class="search-summary" style="display: none;"></div>
 
-        <div id="resultsContainer" class="columns-grid" style="display: none;">
-            <!-- Las 5 columnas se generan dinámicamente -->
-        </div>
+        <!-- Chips de filtro por tipo -->
+        <div id="tipoChips" class="tipo-chips" style="display: none;"></div>
+
+        <!-- Lista cronológica -->
+        <div id="resultsTimeline" class="timeline-list" style="display: none;"></div>
 
         <div id="emptyState" class="empty-state" style="display: none; margin-top: 40px;">
             <p>No se encontraron registros coincidentes.</p>

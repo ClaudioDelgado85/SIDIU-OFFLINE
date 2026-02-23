@@ -36,6 +36,16 @@
             icon: '<svg viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>'
         },
         {
+            href: 'comercios.html',
+            label: 'Comercios',
+            icon: '<svg viewBox="0 0 24 24"><path d="M3 3h18v4H3zM4 7v12a1 1 0 001 1h14a1 1 0 001-1V7"/><path d="M10 12h4m-2-2v4"/></svg>'
+        },
+        {
+            href: 'vendedores.html',
+            label: 'Vendedores',
+            icon: '<svg viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0z"/><path d="M12 14c-4.418 0-8 1.79-8 4v2h16v-2c0-2.21-3.582-4-8-4z"/></svg>'
+        },
+        {
             href: 'busqueda.html',
             label: 'Búsqueda',
             icon: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>'

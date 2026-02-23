@@ -783,3 +783,302 @@
         font-size: 10px;
     }
 }
+
+/* ============================================
+   PLANILLA EDITABLE — Grilla tipo Excel
+   ============================================ */
+
+.page-modulo .planilla-container {
+    overflow-x: auto;
+    margin: 0 24px 24px;
+    border: 1px solid var(--si-border);
+    border-radius: 8px;
+    background: #fff;
+}
+
+.page-modulo .planilla-grid {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.page-modulo .planilla-grid thead th {
+    background: var(--si-surface);
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--si-text-secondary);
+    border-bottom: 1px solid var(--si-border);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: nowrap;
+}
+
+.page-modulo .planilla-grid tbody td {
+    padding: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    vertical-align: middle;
+    height: 40px;
+}
+
+.page-modulo .planilla-grid tbody tr:hover {
+    background: rgba(37, 99, 235, 0.02);
+}
+
+/* Inputs dentro de celdas */
+.page-modulo .planilla-grid .celda-input {
+    width: 100%;
+    height: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--si-text-primary);
+    outline: none;
+    box-sizing: border-box;
+}
+
+.page-modulo .planilla-grid .celda-input:focus {
+    background: rgba(37, 99, 235, 0.04);
+    box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+
+.page-modulo .planilla-grid .celda-input::placeholder {
+    color: var(--si-text-muted);
+    font-style: italic;
+    opacity: 0.6;
+}
+
+/* Select dentro de celdas */
+.page-modulo .planilla-grid .celda-select {
+    width: 100%;
+    height: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--si-text-primary);
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+.page-modulo .planilla-grid .celda-select:focus {
+    background: rgba(37, 99, 235, 0.04);
+    box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+
+/* Checkbox dentro de celdas */
+.page-modulo .planilla-grid .celda-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 8px 12px;
+}
+
+.page-modulo .planilla-grid .celda-check input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--si-blue);
+}
+
+/* Fila nueva (última fila vacía) */
+.page-modulo .planilla-grid .fila-nueva {
+    background: rgba(37, 99, 235, 0.015);
+    border-bottom: 2px solid rgba(37, 99, 235, 0.08);
+}
+
+.page-modulo .planilla-grid .fila-nueva td {
+    border-bottom: none;
+}
+
+.page-modulo .planilla-grid .fila-nueva .celda-input::placeholder {
+    opacity: 0.4;
+    font-style: italic;
+}
+
+/* Indicadores de estado de fila */
+.page-modulo .planilla-grid .fila-guardando {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.page-modulo .planilla-grid .fila-guardada {
+    animation: flashGuardado 1.5s ease-out;
+}
+
+@keyframes flashGuardado {
+    0% {
+        background: rgba(16, 185, 129, 0.12);
+    }
+
+    100% {
+        background: transparent;
+    }
+}
+
+/* Celda de acciones */
+.page-modulo .planilla-grid .celda-acciones {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px 8px;
+    height: 100%;
+}
+
+.page-modulo .planilla-grid .btn-planilla {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--si-text-muted);
+    transition: all 0.15s;
+}
+
+.page-modulo .planilla-grid .btn-planilla:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--si-text-primary);
+}
+
+.page-modulo .planilla-grid .btn-planilla.btn-eliminar:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--si-red);
+}
+
+/* Indicador guardado ✓ */
+.page-modulo .guardado-ok {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--si-green);
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.page-modulo .guardado-ok.visible {
+    opacity: 1;
+}
+
+/* Stats compactos para planilla */
+.page-modulo .planilla-stats {
+    display: flex;
+    gap: 16px;
+    padding: 16px 24px;
+    flex-wrap: wrap;
+}
+
+.page-modulo .planilla-stat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--si-surface);
+    border: 1px solid var(--si-border);
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.page-modulo .planilla-stat-valor {
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--si-text-primary);
+}
+
+.page-modulo .planilla-stat-label {
+    color: var(--si-text-secondary);
+    font-size: 12px;
+}
+
+/* Badge habilitado / no habilitado */
+.page-modulo .badge-habilitado {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.page-modulo .badge-habilitado.si {
+    background: var(--si-green-light);
+    color: var(--si-green);
+}
+
+.page-modulo .badge-habilitado.no {
+    background: var(--si-amber-light);
+    color: var(--si-amber);
+}
+
+/* Filtros compactos planilla */
+.page-modulo .planilla-filtros {
+    display: flex;
+    gap: 12px;
+    padding: 12px 24px;
+    align-items: center;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--si-border);
+}
+
+.page-modulo .planilla-filtros select,
+.page-modulo .planilla-filtros input {
+    padding: 6px 10px;
+    border: 1px solid var(--si-border);
+    border-radius: 6px;
+    font-size: 13px;
+    background: #fff;
+    color: var(--si-text-primary);
+}
+
+.page-modulo .planilla-filtros .btn-filtrar {
+    padding: 6px 14px;
+    background: var(--si-blue);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.page-modulo .planilla-filtros .btn-limpiar {
+    padding: 6px 14px;
+    background: transparent;
+    color: var(--si-text-secondary);
+    border: 1px solid var(--si-border);
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .page-modulo .planilla-container {
+        margin: 0 12px 12px;
+    }
+
+    .page-modulo .planilla-stats {
+        padding: 12px;
+    }
+
+    .page-modulo .planilla-filtros {
+        padding: 8px 12px;
+    }
+}
