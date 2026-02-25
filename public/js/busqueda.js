@@ -240,8 +240,8 @@
                 </div>
                 <div class="tl-info">
                     <div class="tl-titulo"><a href="${item.link}">${escapeHtml(item.titulo)}</a></div>
-                    <div class="tl-desc">${escapeHtml(item.descripcion || '')}</div>
                 </div>
+                <div class="tl-desc" title="${escapeHtml(item.descripcion || '')}">${escapeHtml(item.descripcion || '—')}</div>
                 <div>
                     <span class="tl-estado ${estadoClass}">${item.estado || 'N/A'}</span>
                 </div>

@@ -208,7 +208,7 @@
 
         .timeline-row {
             display: grid;
-            grid-template-columns: 100px 140px 1fr auto auto;
+            grid-template-columns: 100px 130px minmax(120px, 1.2fr) minmax(100px, 1.8fr) auto auto;
             gap: 16px;
             align-items: center;
             padding: 14px 20px;
@@ -301,7 +301,6 @@
             font-size: 14px;
             font-weight: 600;
             color: #1e293b;
-            margin-bottom: 2px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -318,11 +317,12 @@
         }
 
         .tl-desc {
-            font-size: 12px;
-            color: #94a3b8;
+            font-size: 13px;
+            color: #64748b;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            min-width: 0;
         }
 
         .tl-estado {
@@ -405,7 +405,7 @@
            ============================ */
         @media (max-width: 900px) {
             .timeline-row {
-                grid-template-columns: 80px 100px 1fr auto;
+                grid-template-columns: 80px 100px 1fr 1fr auto;
                 gap: 10px;
                 padding: 12px 14px;
             }
