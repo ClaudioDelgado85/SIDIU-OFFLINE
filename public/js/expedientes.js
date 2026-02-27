@@ -845,6 +845,8 @@ document.addEventListener('DOMContentLoaded', () => {
 async function cargarExpedienteIndividual(id) {
     try {
         const sesion = verificarAutenticacion();
+        if (!sesion) return;
+        const idNum = Number(id);
         const response = await fetch(`${API_URL}/expedientes/${id}`, {
             headers: { 'Authorization': `Bearer ${sesion.token}` }
         });
@@ -854,7 +856,13 @@ async function cargarExpedienteIndividual(id) {
             if (result.success) {
                 const item = Array.isArray(result.data) ? result.data[0] : result.data;
                 if (item) {
-                    setTimeout(() => abrirModal(item), 500);
+                    const idx = expedientes.findIndex(e => e.id === item.id);
+                    if (idx >= 0) {
+                        expedientes[idx] = item;
+                    } else {
+                        expedientes.push(item);
+                    }
+                    editarExpediente(Number.isNaN(idNum) ? item.id : idNum);
                 }
             }
         }
