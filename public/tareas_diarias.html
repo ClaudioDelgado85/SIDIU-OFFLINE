@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tareas Diarias - Sistema de Gestión Municipal</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/expedientes.css">
+    <link rel="stylesheet" href="css/sistema-v2.css">
+</head>
+
+<body class="dashboard page-modulo">
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div>
+            <h1>Tareas Diarias</h1>
+            <p style="font-size: 14px; opacity: 0.9;">Registro de actividades y operativos diarios</p>
+        </div>
+        <div class="user-info">
+            <span class="user-name" id="userName">Cargando...</span>
+            <button class="btn-logout" id="btnLogout">Cerrar Sesión</button>
+        </div>
+    </header>
+
+    <!-- Navegación -->
+    <nav class="breadcrumb">
+        <a href="dashboard.html">Dashboard</a>
+        <span>›</span>
+        <span>Tareas Diarias</span>
+    </nav>
+
+    <!-- Contenido Principal -->
+    <main class="dashboard-main">
+        <!-- Barra de acciones -->
+        <div class="actions-bar">
+            <button class="btn-primary" id="btnNuevo">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                        clip-rule="evenodd" />
+                </svg>
+                Nueva Tarea
+            </button>
+
+            <div class="search-box">
+                <input type="date" id="filterFecha">
+            </div>
+        </div>
+
+        <!-- Tabla de tareas -->
+        <div class="table-container">
+            <div id="loadingTable" class="loading-state">
+                <div class="loader"></div>
+                <p>Cargando tareas...</p>
+            </div>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <svg width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                <p>No hay tareas registradas para esta fecha</p>
+            </div>
+
+            <table id="tareasTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Categoría</th>
+                        <th>Título</th>
+                        <th>Descripción</th>
+                        <th>Dirección</th>
+                        <th>Barrio</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tareasTableBody">
+                    <!-- Datos dinámicos -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script src="js/navbar.js"></script>
+    <script src="js/tareas_diarias.js"></script>
+</body>
+
+</html>

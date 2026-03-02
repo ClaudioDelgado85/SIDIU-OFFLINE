@@ -120,6 +120,14 @@ app.use('/api/comercios', comerciosRoutes);
 const vendedoresRoutes = require('./routes/vendedoresRoutes');
 app.use('/api/vendedores', vendedoresRoutes);
 
+// Rutas de tareas diarias
+const tareasRoutes = require('./routes/tareasRoutes');
+app.use('/api/tareas-diarias', tareasRoutes);
+
+// Rutas de informes
+const informesRoutes = require('./routes/informesRoutes');
+app.use('/api/informes', informesRoutes);
+
 // ============================================
 // RUTAS DEL FRONTEND
 // ============================================
