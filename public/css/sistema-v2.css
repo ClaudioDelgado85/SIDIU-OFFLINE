@@ -274,7 +274,8 @@
     color: var(--si-blue);
 }
 
-.page-modulo .estado-badge.estado-proxima_a_vencer {
+.page-modulo .estado-badge.estado-proxima_a_vencer,
+.page-modulo .estado-badge.estado-proxima_vencer {
     background: var(--si-amber-light);
     color: var(--si-amber);
 }
@@ -287,6 +288,16 @@
 .page-modulo .estado-badge.estado-cumplida {
     background: var(--si-green-light);
     color: var(--si-green);
+}
+
+.page-modulo .estado-badge.estado-reiterada {
+    background: #F1F5F9;
+    color: #64748B;
+}
+
+.page-modulo .estado-badge.estado-infraccionado {
+    background: #FDE8E8;
+    color: #991B1B;
 }
 
 /* Reclamos */

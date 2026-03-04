@@ -5,6 +5,14 @@ const db = require('../config/database');
 
 // Función para calcular el estado automáticamente
 function calcularEstadoAutomatico(intimacion) {
+  // Si ya fue reiterada o infraccionada, respetar ese estado
+  if (intimacion.estado === 'reiterada') {
+    return 'reiterada';
+  }
+  if (intimacion.estado === 'infraccionado') {
+    return 'infraccionado';
+  }
+
   // Si ya dio cumplimiento, el estado es "cumplida"
   if (intimacion.dio_cumplimiento) {
     return 'cumplida';
@@ -112,7 +120,9 @@ exports.obtenerIntimaciones = async (req, res) => {
       vigentes: intimacionesFiltradas.filter(i => i.estado === 'vigente').length,
       proximas_vencer: intimacionesFiltradas.filter(i => i.estado === 'proxima_vencer').length,
       vencidas: intimacionesFiltradas.filter(i => i.estado === 'vencida').length,
-      cumplidas: intimacionesFiltradas.filter(i => i.estado === 'cumplida').length
+      cumplidas: intimacionesFiltradas.filter(i => i.estado === 'cumplida').length,
+      reiteradas: intimacionesFiltradas.filter(i => i.estado === 'reiterada').length,
+      infraccionados: intimacionesFiltradas.filter(i => i.estado === 'infraccionado').length
     };
 
     // Aplicar paginación manualmente
@@ -163,8 +173,20 @@ exports.crearIntimacion = async (req, res) => {
       });
     }
 
-    // Calcular estado inicial (vigente por defecto)
-    const estado = 'vigente';
+    // Validar infraccion_realizada + numero_infraccion
+    const esInfraccionada = infraccion_realizada === true || infraccion_realizada === '1' || infraccion_realizada === 1;
+    if (esInfraccionada && (!numero_infraccion || numero_infraccion.trim() === '')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Debe ingresar el número de infracción cuando marca "Infracción Realizada".'
+      });
+    }
+
+    // Calcular estado inicial
+    let estado = 'vigente';
+    if (esInfraccionada && numero_infraccion && numero_infraccion.trim() !== '') {
+      estado = 'infraccionado';
+    }
 
     const sql = `
       INSERT INTO intimaciones (
@@ -178,12 +200,29 @@ exports.crearIntimacion = async (req, res) => {
     const values = [
       fecha, tipo, nombre_apellido, dni, direccion, tipo_obstruccion || null,
       plazo_dias || 0, numero_intimacion || 1, observaciones || null, estado,
-      infraccion_realizada || false, numero_infraccion || null, fecha_infraccion || null, propietario_no_ubicado || false,
+      esInfraccionada || false, numero_infraccion || null,
+      esInfraccionada ? (fecha_infraccion || new Date().toISOString().substring(0, 10)) : (fecha_infraccion || null),
+      propietario_no_ubicado || false,
       marca || null, modelo || null, color || null, dominio || null, fecha_retiro || null, lugar_deposito || null,
       barrio_id || null
     ];
 
     const [result] = await db.pool.execute(sql, values);
+
+    // ── Marcar intimaciones anteriores como 'reiterada' ──
+    // Si existe otra intimación para el mismo DNI + dirección que no sea
+    // cumplida ni ya reiterada, la marcamos como reiterada
+    if (dni && direccion) {
+      await db.pool.execute(
+        `UPDATE intimaciones
+         SET estado = 'reiterada'
+         WHERE dni = ? AND direccion = ?
+           AND id != ?
+           AND estado NOT IN ('cumplida', 'reiterada')
+           AND dio_cumplimiento = 0`,
+        [dni, direccion, result.insertId]
+      );
+    }
 
     res.status(201).json({
       success: true,
@@ -236,7 +275,6 @@ exports.actualizarIntimacion = async (req, res) => {
 
     // Actualizar estado automáticamente si se da cumplimiento
     if (updates.dio_cumplimiento === true || updates.dio_cumplimiento === '1') {
-      // Si se marca cumplimiento, actualizar estado a cumplida y fecha subsanacion hoy si no viene
       if (!fields.includes('estado = ?')) {
         fields.push('estado = ?');
         values.push('cumplida');
@@ -244,6 +282,31 @@ exports.actualizarIntimacion = async (req, res) => {
       if (!fields.includes('fecha_subsanacion = ?') && !updates.fecha_subsanacion) {
         fields.push('fecha_subsanacion = ?');
         values.push(new Date());
+      }
+    }
+
+    // Actualizar estado a 'infraccionado' si se marca infraccion_realizada
+    const esInfraccionada = updates.infraccion_realizada === true || updates.infraccion_realizada === '1' || updates.infraccion_realizada === 1;
+    if (esInfraccionada) {
+      const numInfr = updates.numero_infraccion;
+      if (!numInfr || String(numInfr).trim() === '') {
+        return res.status(400).json({
+          success: false,
+          message: 'Debe ingresar el número de infracción cuando marca "Infracción Realizada".'
+        });
+      }
+      // Auto-set estado a infraccionado (sobreescribe cumplida si ambos se marcan)
+      const idxEstado = fields.indexOf('estado = ?');
+      if (idxEstado >= 0) {
+        values[idxEstado] = 'infraccionado';
+      } else {
+        fields.push('estado = ?');
+        values.push('infraccionado');
+      }
+      // Auto-set fecha_infraccion si no viene
+      if (!fields.includes('fecha_infraccion = ?') && !updates.fecha_infraccion) {
+        fields.push('fecha_infraccion = ?');
+        values.push(new Date().toISOString().substring(0, 10));
       }
     }
 

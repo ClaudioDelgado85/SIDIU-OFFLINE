@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS `intimaciones` (
   `dio_cumplimiento` tinyint(1) DEFAULT 0,
   `fecha_subsanacion` date DEFAULT NULL,
   `observaciones` text DEFAULT NULL,
-  `estado` enum('vigente','proxima_vencer','vencida','cumplida') DEFAULT 'vigente',
+  `estado` enum('vigente','proxima_vencer','vencida','cumplida','reiterada','infraccionado') DEFAULT 'vigente',
   -- Campos Baldíos
   `infraccion_realizada` tinyint(1) DEFAULT 0,
   `numero_infraccion` varchar(50) DEFAULT NULL,
@@ -241,7 +241,7 @@ SELECT
     END AS estado_calculado,
     DATEDIFF(DATE_ADD(i.fecha, INTERVAL i.plazo_dias DAY), CURDATE()) AS dias_restantes
 FROM intimaciones i
-WHERE i.dio_cumplimiento = 0
+WHERE i.dio_cumplimiento = 0 AND i.estado != 'reiterada'
 ORDER BY fecha_vencimiento ASC;
 
 -- Vista: Resumen mensual para dashboard

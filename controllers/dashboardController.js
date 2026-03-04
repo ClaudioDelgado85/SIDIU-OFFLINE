@@ -2,80 +2,84 @@ const db = require('../config/database');
 
 exports.obtenerResumenDashboard = async (req, res) => {
     try {
-        // 1. KPIs Generales
-        // Intimaciones: Vencidas (Ya expiró plazo) vs Próximas (Vencen en <= 3 días)
-        const [intimacionesVencidas] = await db.pool.execute(
-            "SELECT COUNT(*) as total FROM intimaciones WHERE estado = 'vigente' AND DATE_ADD(fecha, INTERVAL plazo_dias DAY) < CURDATE()"
-        );
-        const [intimacionesProximas] = await db.pool.execute(
-            "SELECT COUNT(*) as total FROM intimaciones WHERE estado = 'vigente' AND DATE_ADD(fecha, INTERVAL plazo_dias DAY) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY)"
+        // ─── KPIs ────────────────────────────────────
+
+        // Intimaciones vencidas (excluye reiterada y cumplida)
+        const [intimVencidas] = await db.pool.execute(
+            `SELECT COUNT(*) as total FROM intimaciones
+             WHERE dio_cumplimiento = 0
+             AND estado NOT IN ('reiterada', 'infraccionado')
+             AND DATE_ADD(fecha, INTERVAL plazo_dias DAY) < CURDATE()`
         );
 
-        // Reclamos: Pendientes (Nuevos) vs En Proceso
-        const [reclamosPendientes] = await db.pool.execute(
-            "SELECT COUNT(*) as total FROM reclamos WHERE estado = 'pendiente'"
-        );
-        const [reclamosEnProceso] = await db.pool.execute(
-            "SELECT COUNT(*) as total FROM reclamos WHERE estado = 'en_proceso'"
-        );
-
-        // Expedientes del Mes Actual
-        const [expedientesMes] = await db.pool.execute(
-            "SELECT COUNT(*) as total FROM expedientes WHERE MONTH(fecha) = MONTH(CURDATE()) AND YEAR(fecha) = YEAR(CURDATE())"
+        // Intimaciones próximas a vencer (≤ 3 días)
+        const [intimProximas] = await db.pool.execute(
+            `SELECT COUNT(*) as total FROM intimaciones
+             WHERE dio_cumplimiento = 0
+             AND estado NOT IN ('reiterada', 'infraccionado')
+             AND DATE_ADD(fecha, INTERVAL plazo_dias DAY) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY)`
         );
 
-        // Infracciones del Mes Actual
-        const [infraccionesMes] = await db.pool.execute(
-            "SELECT COUNT(*) as total FROM infracciones WHERE MONTH(fecha) = MONTH(CURDATE()) AND YEAR(fecha) = YEAR(CURDATE())"
+        // Expedientes con plazo otorgado
+        const [expPlazo] = await db.pool.execute(
+            `SELECT COUNT(*) as total FROM expedientes WHERE estado = 'plazo_otorgado'`
         );
 
-        // 2. Gráficos
-        // Reclamos por Tipo
-        const [reclamosPorTipo] = await db.pool.execute(
-            "SELECT tipo_reclamo, COUNT(*) as total FROM reclamos GROUP BY tipo_reclamo"
+        // Reclamos pendientes
+        const [recPendientes] = await db.pool.execute(
+            `SELECT COUNT(*) as total FROM reclamos WHERE estado = 'pendiente'`
         );
 
-        // Intimaciones por Estado
-        const [intimacionesPorEstado] = await db.pool.execute(
-            "SELECT estado, COUNT(*) as total FROM intimaciones GROUP BY estado"
+        // Reclamos en proceso
+        const [recEnProceso] = await db.pool.execute(
+            `SELECT COUNT(*) as total FROM reclamos WHERE estado = 'en_proceso'`
         );
 
-        // 3. Tablas de Acción (Últimas 5)
-        // Próximos Vencimientos (Vence en los próximos 7 días)
-        const [proximosVencimientos] = await db.pool.execute(`
-            SELECT id, fecha, tipo, nombre_apellido, 
-                   DATEDIFF(DATE_ADD(fecha, INTERVAL plazo_dias DAY), CURDATE()) as dias_restantes
-            FROM intimaciones 
-            WHERE estado = 'vigente' 
-            AND DATE_ADD(fecha, INTERVAL plazo_dias DAY) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
-            ORDER BY dias_restantes ASC
-            LIMIT 5
+        // ─── TARJETAS DE ESCALAMIENTO ────────────────
+        // Intimaciones vencidas agrupadas por numero_intimacion y tipo
+        const [escalamiento] = await db.pool.execute(`
+            SELECT
+                numero_intimacion,
+                tipo,
+                COUNT(*) as total
+            FROM intimaciones
+            WHERE dio_cumplimiento = 0
+              AND estado NOT IN ('reiterada', 'infraccionado')
+              AND DATE_ADD(fecha, INTERVAL plazo_dias DAY) < CURDATE()
+            GROUP BY numero_intimacion, tipo
+            ORDER BY numero_intimacion ASC, tipo ASC
         `);
 
-        // Últimos Reclamos
-        const [ultimosReclamos] = await db.pool.execute(
-            "SELECT id, fecha_creacion as fecha, tipo_reclamo, descripcion, estado FROM reclamos ORDER BY fecha_creacion DESC LIMIT 5"
-        );
+        // ─── RECLAMOS POR PRIORIDAD ──────────────────
+        const [recDetalle] = await db.pool.execute(`
+            SELECT r.id, r.numero_reclamo, r.tipo_reclamo, r.descripcion,
+                   r.direccion_incidente, r.prioridad, r.estado,
+                   r.fecha_creacion,
+                   DATEDIFF(CURDATE(), r.fecha_creacion) AS dias_sin_resolver,
+                   b.nombre AS barrio_nombre
+            FROM reclamos r
+            LEFT JOIN barrios b ON r.barrio_id = b.id
+            WHERE r.estado IN ('pendiente', 'en_proceso')
+            ORDER BY FIELD(r.prioridad, 'urgente', 'alta', 'media', 'baja') ASC,
+                     r.fecha_creacion ASC
+            LIMIT 10
+        `);
 
+        // ─── RESPUESTA ──────────────────────────────
 
         res.json({
             success: true,
             data: {
                 kpis: {
-                    intimaciones_vencidas: intimacionesVencidas[0].total,
-                    intimaciones_proximas: intimacionesProximas[0].total,
-                    reclamos_pendientes: reclamosPendientes[0].total,
-                    reclamos_proceso: reclamosEnProceso[0].total,
-                    expedientes_mes: expedientesMes[0].total,
-                    infracciones_mes: infraccionesMes[0].total
+                    intimaciones_vencidas: intimVencidas[0].total,
+                    intimaciones_proximas: intimProximas[0].total,
+                    expedientes_plazo: expPlazo[0].total,
+                    reclamos_pendientes: recPendientes[0].total,
+                    reclamos_proceso: recEnProceso[0].total
                 },
-                graficos: {
-                    reclamos_tipo: reclamosPorTipo,
-                    intimaciones_estado: intimacionesPorEstado
-                },
+                escalamiento,
                 tablas: {
-                    vencimientos: proximosVencimientos,
-                    recientes: ultimosReclamos
+                    reclamos_prioridad: recDetalle
                 }
             }
         });

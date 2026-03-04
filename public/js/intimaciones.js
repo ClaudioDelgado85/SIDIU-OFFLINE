@@ -372,6 +372,24 @@ function abrirModal() {
     document.getElementById('btnCerrarModal').addEventListener('click', cerrarModal);
     document.getElementById('btnCancelarModal').addEventListener('click', cerrarModal);
     document.getElementById('formIntimacion').addEventListener('submit', guardarIntimacion);
+
+    // Validación: si marca Infracción Realizada = Sí, número es obligatorio
+    const selInfraccion = document.getElementById('infraccion_realizada');
+    if (selInfraccion) {
+        selInfraccion.addEventListener('change', (e) => {
+            const numInput = document.getElementById('numero_infraccion');
+            const label = numInput?.closest('.form-group-modal')?.querySelector('label');
+            if (e.target.value === '1') {
+                numInput.required = true;
+                numInput.style.borderColor = 'var(--si-amber)';
+                if (label) label.innerHTML = 'Número Infracción <span style="color:var(--si-red)">*</span>';
+            } else {
+                numInput.required = false;
+                numInput.style.borderColor = '';
+                if (label) label.textContent = 'Número Infracción';
+            }
+        });
+    }
     document.getElementById('modalOverlay').addEventListener('click', (e) => {
         if (e.target.id === 'modalOverlay') cerrarModal();
     });
@@ -443,6 +461,13 @@ async function guardarIntimacion(e) {
         fecha_retiro: document.getElementById('fecha_retiro')?.value,
         barrio_id: document.getElementById('barrio_id').value || null,
     };
+
+    // Validación frontend: si infraccion_realizada = true, numero_infraccion es obligatorio
+    if (formData.infraccion_realizada && (!formData.numero_infraccion || formData.numero_infraccion.trim() === '')) {
+        alert('Debe ingresar el número de infracción cuando marca "Infracción Realizada".');
+        document.getElementById('numero_infraccion')?.focus();
+        return;
+    }
 
     if (intimacionEditando) {
         const dioCumplimiento = document.getElementById('dio_cumplimiento')?.checked;

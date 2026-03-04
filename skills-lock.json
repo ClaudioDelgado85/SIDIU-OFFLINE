@@ -5,6 +5,11 @@
       "source": "dammyjay93/interface-design",
       "sourceType": "github",
       "computedHash": "4d5fe1dacfebc0c1b3837b061405150ed2e4971c096543afc46c23161c5a4f7a"
+    },
+    "kpi-dashboard-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "ae1aa7914167e9232481e3606cc0cdd1127ac555c5c49bfd96d002e289278953"
     }
   }
 }
