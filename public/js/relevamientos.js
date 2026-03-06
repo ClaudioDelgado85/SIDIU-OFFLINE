@@ -42,6 +42,19 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '/login.html';
     });
 
+    document.getElementById('btnExportar').addEventListener('click', () => {
+        exportarExcel(relevamientos, [
+            { header: 'Nº Relevamiento', key: 'numero_relevamiento' },
+            { header: 'Fecha', key: (r) => formatearFecha(r.fecha_relevamiento) },
+            { header: 'Tipo', key: 'tipo_relevamiento' },
+            { header: 'Ubicación', key: 'ubicacion' },
+            { header: 'Zona', key: 'zona' },
+            { header: 'Responsable', key: 'responsable_nombre' },
+            { header: 'DNI', key: 'responsable_dni' },
+            { header: 'Observaciones', key: 'observaciones' }
+        ], 'Relevamientos', 'Relevamientos');
+    });
+
     // Búsqueda
     let timeoutBusqueda;
     document.getElementById('searchInput').addEventListener('input', () => {

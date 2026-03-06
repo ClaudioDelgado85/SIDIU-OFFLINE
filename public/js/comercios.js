@@ -19,6 +19,33 @@
         cargarComercios();
         cargarEstadisticas();
         inicializarEventos();
+
+        document.getElementById('btnExportar').addEventListener('click', async () => {
+            try {
+                const params = new URLSearchParams();
+                params.append('limit', '9999');
+                const resp = await fetch(`${API_URL}?${params}`, { headers });
+                const data = await resp.json();
+                if (data.success && data.data.length > 0) {
+                    exportarExcel(data.data, [
+                        { header: 'Fecha', key: (r) => r.fecha_relevamiento ? r.fecha_relevamiento.split('T')[0] : '' },
+                        { header: 'Propietario', key: 'nombre_propietario' },
+                        { header: 'DNI', key: 'dni_propietario' },
+                        { header: 'Dirección Comercial', key: 'direccion_comercial' },
+                        { header: 'Rubro', key: 'rubro' },
+                        { header: 'Habilitado', key: (r) => r.esta_habilitado ? 'Sí' : 'No' },
+                        { header: 'Nº Resolución', key: 'numero_resolucion' },
+                        { header: 'Reempadronar', key: (r) => r.necesita_reempadronamiento ? 'Sí' : 'No' },
+                        { header: 'Observaciones', key: 'observaciones' }
+                    ], 'Comercios', 'Comercios');
+                } else {
+                    alert('No hay datos para exportar.');
+                }
+            } catch (e) {
+                console.error('Error exportando:', e);
+                alert('Error al exportar.');
+            }
+        });
     });
 
     function cargarUsuario() {

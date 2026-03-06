@@ -342,6 +342,18 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '/login.html';
     });
 
+    document.getElementById('btnExportar').addEventListener('click', () => {
+        exportarExcel(infracciones, [
+            { header: 'Fecha', key: (i) => formatearFecha(i.fecha) },
+            { header: 'Nº Acta', key: 'numero_acta' },
+            { header: 'Nombre y Apellido', key: 'nombre_apellido' },
+            { header: 'DNI', key: 'dni' },
+            { header: 'Dirección', key: 'direccion' },
+            { header: 'Motivo', key: 'motivo_infraccion' },
+            { header: 'Observaciones', key: 'observaciones' }
+        ], 'Infracciones', 'Infracciones');
+    });
+
     document.getElementById('btnFiltros').addEventListener('click', () => {
         const panel = document.getElementById('filtersPanel');
         panel.style.display = panel.style.display === 'none' ? 'block' : 'none';

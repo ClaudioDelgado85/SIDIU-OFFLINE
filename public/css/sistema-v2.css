@@ -644,6 +644,28 @@
     border-color: var(--si-blue);
 }
 
+.page-modulo .btn-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--si-border-strong);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 14px;
+    background: white;
+    color: var(--si-text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.page-modulo .btn-export:hover {
+    background: var(--si-green-light, #F0FDF4);
+    border-color: var(--si-green, #059669);
+    color: var(--si-green, #059669);
+}
+
 /* --- Paginación --- */
 .page-modulo .pagination-container {
     border-top: 1px solid var(--si-border);

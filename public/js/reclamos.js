@@ -445,6 +445,19 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '/login.html';
     });
 
+    document.getElementById('btnExportar').addEventListener('click', () => {
+        exportarExcel(reclamos, [
+            { header: 'Nº Reclamo', key: 'numero_reclamo' },
+            { header: 'Fecha', key: (r) => formatearFecha(r.fecha_creacion) },
+            { header: 'Tipo', key: (r) => formatearTipo(r.tipo_reclamo) },
+            { header: 'Dirección', key: 'direccion_incidente' },
+            { header: 'Denunciado', key: 'denunciado_nombre' },
+            { header: 'Prioridad', key: 'prioridad' },
+            { header: 'Estado', key: (r) => formatearEstado(r.estado) },
+            { header: 'Descripción', key: 'descripcion' }
+        ], 'Reclamos', 'Reclamos');
+    });
+
     // Búsqueda con debounce
     let timeoutBusqueda;
     document.getElementById('searchInput').addEventListener('input', () => {

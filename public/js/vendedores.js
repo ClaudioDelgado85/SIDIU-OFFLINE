@@ -19,6 +19,34 @@
         cargarVendedores();
         cargarEstadisticas();
         inicializarEventos();
+
+        document.getElementById('btnExportar').addEventListener('click', async () => {
+            try {
+                const params = new URLSearchParams();
+                params.append('limit', '9999');
+                const resp = await fetch(`${API_URL}?${params}`, { headers });
+                const data = await resp.json();
+                if (data.success && data.data.length > 0) {
+                    exportarExcel(data.data, [
+                        { header: 'Fecha', key: (r) => r.fecha_relevamiento ? r.fecha_relevamiento.split('T')[0] : '' },
+                        { header: 'Vendedor', key: 'nombre_vendedor' },
+                        { header: 'DNI', key: 'dni_vendedor' },
+                        { header: 'Ubicación', key: 'ubicacion' },
+                        { header: 'Rubro', key: 'rubro' },
+                        { header: 'Autorizado', key: (r) => r.tiene_autorizacion ? 'Sí' : 'No' },
+                        { header: 'Pagó Canon', key: (r) => r.pago_canon ? 'Sí' : 'No' },
+                        { header: 'Nº Recibo', key: 'numero_recibo' },
+                        { header: 'Venc. Canon', key: (r) => r.fecha_vencimiento_canon ? r.fecha_vencimiento_canon.split('T')[0] : '' },
+                        { header: 'Observaciones', key: 'observaciones' }
+                    ], 'Vendedores', 'Vendedores');
+                } else {
+                    alert('No hay datos para exportar.');
+                }
+            } catch (e) {
+                console.error('Error exportando:', e);
+                alert('Error al exportar.');
+            }
+        });
     });
 
     function cargarUsuario() {

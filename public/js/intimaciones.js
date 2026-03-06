@@ -645,6 +645,32 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '/login.html';
     });
 
+    document.getElementById('btnExportar').addEventListener('click', () => {
+        const fmtFecha = (f) => {
+            if (!f) return '-';
+            const d = new Date(f);
+            return d.toLocaleDateString('es-AR');
+        };
+        const fmtEstado = (e) => {
+            if (!e) return '-';
+            return e.charAt(0).toUpperCase() + e.slice(1).replace(/_/g, ' ');
+        };
+        exportarExcel(intimaciones, [
+            { header: 'Fecha', key: (i) => fmtFecha(i.fecha_intimacion) },
+            { header: 'Tipo', key: 'tipo' },
+            { header: 'Nombre y Apellido', key: 'nombre_apellido' },
+            { header: 'DNI', key: 'dni' },
+            { header: 'Dirección', key: 'direccion' },
+            { header: 'Nº Intimación', key: 'numero_intimacion' },
+            { header: 'Plazo (días)', key: 'plazo_dias' },
+            { header: 'Fecha Vencimiento', key: (i) => fmtFecha(i.fecha_vencimiento) },
+            { header: 'Estado', key: (i) => fmtEstado(i.estado) },
+            { header: 'Infracción', key: (i) => i.infraccion_realizada ? 'Sí' : 'No' },
+            { header: 'Nº Infracción', key: 'numero_infraccion' },
+            { header: 'Observaciones', key: 'observaciones' }
+        ], 'Intimaciones', 'Intimaciones');
+    });
+
     document.getElementById('btnFiltros').addEventListener('click', () => {
         const panel = document.getElementById('filtersPanel');
         panel.style.display = panel.style.display === 'none' ? 'block' : 'none';

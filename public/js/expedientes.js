@@ -809,6 +809,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btnLogout').addEventListener('click', cerrarSesion);
 
+    document.getElementById('btnExportar').addEventListener('click', () => {
+        exportarExcel(expedientes, [
+            { header: 'Nº Expediente', key: 'numero_expediente' },
+            { header: 'Fecha', key: (e) => formatearFecha(e.fecha) },
+            { header: 'Nombre y Apellido', key: 'nombre_apellido' },
+            { header: 'DNI', key: 'dni' },
+            { header: 'Dirección', key: 'direccion' },
+            { header: 'Motivo', key: (e) => formatearMotivo(e.motivo) },
+            { header: 'Estado', key: (e) => formatearEstado(e.estado) },
+            { header: 'Observaciones', key: 'observaciones' }
+        ], 'Expedientes', 'Expedientes');
+    });
+
     document.getElementById('btnFiltros').addEventListener('click', toggleFiltros);
     document.getElementById('btnAplicarFiltros').addEventListener('click', aplicarFiltros);
     document.getElementById('btnLimpiarFiltros').addEventListener('click', limpiarFiltros);

@@ -19,11 +19,111 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btnDescargarPDF').addEventListener('click', descargarPDF);
 
+    document.getElementById('btnExportar').addEventListener('click', () => {
+        if (!informeData) return alert('Primero genere un informe.');
+        exportarInformeExcel(informeData);
+    });
+
     // Checkbox listeners
     document.querySelectorAll('.check-modulo input').forEach(cb => {
         cb.addEventListener('change', aplicarFiltroModulos);
     });
 });
+
+// ── Exportar Informe a Excel (multi-hoja) ───
+function exportarInformeExcel(data) {
+    if (typeof XLSX === 'undefined') {
+        alert('Error: la librería SheetJS no está cargada.');
+        return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    const fecha = data.fecha || '';
+
+    // Helper para agregar hoja
+    const addSheet = (name, items, cols) => {
+        if (!items || items.length === 0) return;
+        const rows = items.map(item =>
+            cols.reduce((obj, col) => {
+                obj[col.header] = typeof col.key === 'function' ? col.key(item) : (item[col.key] ?? '');
+                return obj;
+            }, {})
+        );
+        const ws = XLSX.utils.json_to_sheet(rows);
+        // Auto-ancho
+        ws['!cols'] = cols.map(col => ({
+            wch: Math.max(col.header.length, ...rows.map(r => String(r[col.header] || '').length).slice(0, 50)) + 2
+        }));
+        XLSX.utils.book_append_sheet(wb, ws, name);
+    };
+
+    addSheet('Tareas', data.tareas, [
+        { header: 'Categoría', key: (t) => t.categoria_nombre || '-' },
+        { header: 'Título', key: 'titulo' },
+        { header: 'Descripción', key: 'descripcion' },
+        { header: 'Ubicación', key: (t) => `${t.direccion || '-'} ${t.barrio_nombre ? `(${t.barrio_nombre})` : ''}`.trim() }
+    ]);
+
+    addSheet('Expedientes', data.expedientes, [
+        { header: 'Número', key: 'numero_expediente' },
+        { header: 'Contribuyente', key: 'nombre_apellido' },
+        { header: 'DNI', key: 'dni' },
+        { header: 'Motivo', key: 'motivo' },
+        { header: 'Estado', key: 'estado' }
+    ]);
+
+    addSheet('Intimaciones', data.intimaciones, [
+        { header: 'Nº Intimación', key: 'numero_intimacion' },
+        { header: 'Contribuyente', key: 'nombre_apellido' },
+        { header: 'Dirección', key: 'direccion' },
+        { header: 'Tipo', key: (i) => i.tipo === 'general' ? (i.tipo_obstruccion || 'General') : (i.tipo === 'baldio' ? 'Terreno Baldío' : 'Vehículo') },
+        { header: 'Plazo', key: (i) => i.plazo_dias > 0 ? `${i.plazo_dias} días` : 'Inmediato' }
+    ]);
+
+    addSheet('Infracciones', data.infracciones, [
+        { header: 'Acta', key: 'numero_acta' },
+        { header: 'Infractor', key: 'nombre_apellido' },
+        { header: 'Dirección', key: 'direccion' },
+        { header: 'Motivo', key: 'motivo_infraccion' }
+    ]);
+
+    addSheet('Reclamos', data.reclamos, [
+        { header: 'Reclamo', key: 'numero_reclamo' },
+        { header: 'Tipo', key: 'tipo_reclamo' },
+        { header: 'Lugar', key: 'direccion_incidente' },
+        { header: 'Descripción', key: 'descripcion' }
+    ]);
+
+    addSheet('Relevamientos', data.relevamientos, [
+        { header: 'Número', key: 'numero_relevamiento' },
+        { header: 'Ubicación', key: 'ubicacion' },
+        { header: 'Tipo', key: 'tipo_relevamiento' },
+        { header: 'Responsable', key: (r) => r.responsable_nombre || 'No identificado' }
+    ]);
+
+    addSheet('Comercios', data.comercios, [
+        { header: 'Propietario', key: (c) => c.nombre_propietario || '-' },
+        { header: 'Dirección', key: 'direccion_comercial' },
+        { header: 'Rubro', key: (c) => c.rubro || '-' },
+        { header: 'Habilitado', key: (c) => c.esta_habilitado ? 'Sí' : 'No' }
+    ]);
+
+    addSheet('Vendedores', data.vendedores, [
+        { header: 'Vendedor', key: (v) => v.nombre_vendedor || '-' },
+        { header: 'Ubicación', key: 'ubicacion' },
+        { header: 'Rubro', key: (v) => v.rubro || '-' },
+        { header: 'Autorizado', key: (v) => v.tiene_autorizacion ? 'Sí' : 'No' }
+    ]);
+
+    if (wb.SheetNames.length === 0) {
+        alert('No hay datos para exportar.');
+        return;
+    }
+
+    const [y, m, d] = fecha.split('-');
+    const nombreArchivo = `Informe_Diario_${d}-${m}-${y}.xlsx`;
+    XLSX.writeFile(wb, nombreArchivo);
+}
 
 // ── Generar Informe ─────────────────────────
 async function generarInforme(fecha, destinatario) {
@@ -55,6 +155,7 @@ async function generarInforme(fecha, destinatario) {
             statusDiv.style.display = 'none';
             renderDiv.style.display = 'block';
             btnPDF.disabled = false;
+            document.getElementById('btnExportar').disabled = false;
 
             document.getElementById('modulosSelector').style.display = 'block';
             autoDesmarcarVacios(data.data);
