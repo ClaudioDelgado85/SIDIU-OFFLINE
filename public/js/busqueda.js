@@ -57,6 +57,38 @@
                 ocultarResultados();
             }
         });
+
+        // Exportar Excel
+        document.getElementById('btnExportar').addEventListener('click', () => {
+            const datos = activeFilter ? allResults.filter(r => r.tipo === activeFilter) : allResults;
+            if (!datos.length) return alert('No hay resultados para exportar.');
+
+            exportarExcel(datos, [
+                { header: 'Fecha', key: (r) => formatearFecha(r.fecha) },
+                { header: 'Tipo', key: (r) => { const c = TIPOS[r.tipo]; return c ? c.labelSingular : r.tipo; } },
+                { header: 'Título', key: 'titulo' },
+                { header: 'Descripción', key: 'descripcion' },
+                { header: 'Nombre', key: 'nombre' },
+                { header: 'DNI', key: 'dni' },
+                { header: 'Estado', key: 'estado' }
+            ], 'Busqueda', 'Resultados_Busqueda');
+        });
+
+        // Descargar PDF (captura la ficha visible)
+        document.getElementById('btnDescargarPDF').addEventListener('click', descargarFichaPDF);
+
+        // Toggle ficha
+        document.getElementById('btnToggleFicha').addEventListener('click', () => {
+            const contenido = document.getElementById('fichaContenido');
+            const btn = document.getElementById('btnToggleFicha');
+            if (contenido.style.display === 'none') {
+                contenido.style.display = 'block';
+                btn.textContent = '▼ Ocultar ficha';
+            } else {
+                contenido.style.display = 'none';
+                btn.textContent = '▶ Mostrar ficha';
+            }
+        });
     });
 
     // ============================================
@@ -68,6 +100,8 @@
         document.getElementById('emptyState').style.display = 'none';
         document.getElementById('fichaContribuyente').style.display = 'none';
         document.getElementById('tipoChips').style.display = 'none';
+        document.getElementById('searchActions').style.display = 'none';
+        document.getElementById('fichaCompleta').style.display = 'none';
     }
 
     // ============================================
@@ -93,6 +127,8 @@
                 renderizarFicha(data.data, query);
                 renderizarChips(data.data);
                 renderizarTimeline(data.data, query);
+                renderizarFichaCompleta(data.data);
+                document.getElementById('searchActions').style.display = 'flex';
             } else {
                 emptyState.style.display = 'block';
             }
@@ -271,6 +307,77 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // ============================================
+    // RENDERIZAR FICHA COMPLETA (estática en página)
+    // ============================================
+    function renderizarFichaCompleta(resultados) {
+        const nombre = document.getElementById('fichaNombre').textContent || '';
+        const dni = document.getElementById('fichaDni').textContent || '';
+        const avatar = document.getElementById('fichaAvatar').textContent || '?';
+
+        // Poblar datos de persona
+        document.getElementById('fichaAvatarPDF').textContent = avatar;
+        document.getElementById('fichaNombrePDF').textContent = nombre;
+        document.getElementById('fichaDniPDF').textContent = dni;
+        document.getElementById('fichaCountPDF').textContent = `${resultados.length} registro${resultados.length !== 1 ? 's' : ''} encontrado${resultados.length !== 1 ? 's' : ''}`;
+        document.getElementById('fichaFechaGenerada').textContent = `Generado: ${new Date().toLocaleDateString('es-AR')}`;
+
+        // Poblar tabla
+        const tbody = document.getElementById('fichaTablaBody');
+        let html = '';
+        resultados.forEach(item => {
+            const cfg = TIPOS[item.tipo] || { labelSingular: item.tipo };
+            html += `<tr>
+                <td>${formatearFecha(item.fecha)}</td>
+                <td style="font-weight:600;">${cfg.labelSingular}</td>
+                <td>${escapeHtml(item.titulo)}</td>
+                <td>${escapeHtml(item.descripcion || '—')}</td>
+                <td style="text-transform:capitalize;">${item.estado || 'N/A'}</td>
+            </tr>`;
+        });
+        tbody.innerHTML = html;
+
+        // Mostrar ficha y restablecer toggle
+        document.getElementById('fichaCompleta').style.display = 'block';
+        document.getElementById('fichaContenido').style.display = 'block';
+        document.getElementById('btnToggleFicha').textContent = '▼ Ocultar ficha';
+    }
+
+    // ============================================
+    // DESCARGAR FICHA PDF (captura elemento visible)
+    // ============================================
+    async function descargarFichaPDF() {
+        const fichaContenido = document.getElementById('fichaContenido');
+        if (!fichaContenido || fichaContenido.style.display === 'none') {
+            // Si está oculta, mostrarla temporalmente
+            fichaContenido.style.display = 'block';
+        }
+
+        const btn = document.getElementById('btnDescargarPDF');
+        btn.disabled = true;
+        btn.textContent = 'Generando PDF...';
+
+        try {
+            const nombreArchivo = `Ficha_Contribuyente_${new Date().toISOString().split('T')[0]}.pdf`;
+
+            await html2pdf().set({
+                margin: [8, 8, 8, 8],
+                filename: nombreArchivo,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                pagebreak: { mode: ['css', 'legacy'] }
+            }).from(fichaContenido).save();
+
+        } catch (err) {
+            console.error('Error al generar PDF:', err);
+            alert('Error al generar el PDF');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = `<svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg> Descargar PDF`;
+        }
     }
 
 })();

@@ -656,7 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return e.charAt(0).toUpperCase() + e.slice(1).replace(/_/g, ' ');
         };
         exportarExcel(intimaciones, [
-            { header: 'Fecha', key: (i) => fmtFecha(i.fecha_intimacion) },
+            { header: 'Fecha', key: (i) => fmtFecha(i.fecha) },
             { header: 'Tipo', key: 'tipo' },
             { header: 'Nombre y Apellido', key: 'nombre_apellido' },
             { header: 'DNI', key: 'dni' },
