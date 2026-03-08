@@ -24,4 +24,11 @@ router.put('/:id', authMiddleware.verifyToken, intimacionesController.actualizar
 // DELETE /api/intimaciones/:id
 router.delete('/:id', authMiddleware.verifyToken, intimacionesController.eliminarIntimacion);
 
+const upload = require('../middleware/upload');
+// POST /api/intimaciones/:id/foto/:tipo
+router.post('/:id/foto/:tipo', authMiddleware.verifyToken, upload.single('foto'), intimacionesController.subirFoto);
+
+// DELETE /api/intimaciones/:id/foto/:tipo
+router.delete('/:id/foto/:tipo', authMiddleware.verifyToken, intimacionesController.eliminarFoto);
+
 module.exports = router;

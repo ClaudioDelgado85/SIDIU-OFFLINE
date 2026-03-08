@@ -256,7 +256,8 @@ exports.actualizarIntimacion = async (req, res) => {
       'fecha', 'tipo', 'nombre_apellido', 'dni', 'direccion', 'tipo_obstruccion',
       'plazo_dias', 'numero_intimacion', 'observaciones', 'estado', 'dio_cumplimiento', 'fecha_subsanacion',
       'infraccion_realizada', 'numero_infraccion', 'fecha_infraccion', 'propietario_no_ubicado',
-      'marca', 'modelo', 'color', 'dominio', 'fecha_retiro', 'lugar_deposito', 'barrio_id'
+      'marca', 'modelo', 'color', 'dominio', 'fecha_retiro', 'lugar_deposito', 'barrio_id',
+      'foto_inicial', 'foto_actual'
     ];
 
     const fields = [];
@@ -371,5 +372,78 @@ exports.obtenerIntimacionPorId = async (req, res) => {
   } catch (error) {
     console.error('Error obtenerIntimacionPorId:', error);
     res.status(500).json({ success: false, message: 'Error al obtener intimación' });
+  }
+};
+
+// ==========================================
+// SUBIR FOTO
+// ==========================================
+exports.subirFoto = async (req, res) => {
+  try {
+    const { id, tipo } = req.params; // tipo puede ser 'inicial' o 'actual'
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No se subió ningún archivo.' });
+    }
+
+    if (tipo !== 'inicial' && tipo !== 'actual') {
+      return res.status(400).json({ success: false, message: 'Tipo de foto inválido.' });
+    }
+
+    // El archivo ya fue guardado por multer
+    const fileUrl = `/uploads/intimaciones/${req.file.filename}`;
+    const campo = tipo === 'inicial' ? 'foto_inicial' : 'foto_actual';
+
+    await db.pool.execute(`UPDATE intimaciones SET ${campo} = ? WHERE id = ?`, [fileUrl, id]);
+
+    res.json({
+      success: true,
+      message: 'Foto subida exitosamente.',
+      data: {
+        url: fileUrl
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al subir foto:', error);
+    res.status(500).json({ success: false, message: 'Error al subir foto.' });
+  }
+};
+
+// ==========================================
+// ELIMINAR FOTO
+// ==========================================
+exports.eliminarFoto = async (req, res) => {
+  try {
+    const { id, tipo } = req.params;
+    const fs = require('fs');
+    const path = require('path');
+
+    if (tipo !== 'inicial' && tipo !== 'actual') {
+      return res.status(400).json({ success: false, message: 'Tipo de foto inválido.' });
+    }
+
+    const campo = tipo === 'inicial' ? 'foto_inicial' : 'foto_actual';
+
+    // Obtener ruta actual
+    const [rows] = await db.pool.execute(`SELECT ${campo} FROM intimaciones WHERE id = ?`, [id]);
+
+    if (rows.length > 0 && rows[0][campo]) {
+      const filePath = path.join(__dirname, '../public', rows[0][campo]);
+
+      // Borrar archivo físico si existe
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+      // Actualizar base de datos
+      await db.pool.execute(`UPDATE intimaciones SET ${campo} = NULL WHERE id = ?`, [id]);
+    }
+
+    res.json({ success: true, message: 'Foto eliminada exitosamente.' });
+
+  } catch (error) {
+    console.error('Error al eliminar foto:', error);
+    res.status(500).json({ success: false, message: 'Error al eliminar foto.' });
   }
 };

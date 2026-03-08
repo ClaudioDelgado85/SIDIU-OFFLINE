@@ -56,6 +56,7 @@ app.use('/api/', limiter);
 
 // Servir archivos estáticos (frontend)
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 // ============================================
 // RUTAS DE LA API

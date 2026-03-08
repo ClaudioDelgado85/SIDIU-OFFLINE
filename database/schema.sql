@@ -140,6 +140,9 @@ CREATE TABLE IF NOT EXISTS `intimaciones` (
   `dominio` varchar(20) DEFAULT NULL,
   `fecha_retiro` date DEFAULT NULL,
   `lugar_deposito` varchar(200) DEFAULT NULL,
+  -- Fotos (evidencia)
+  `foto_inicial` text DEFAULT NULL,
+  `foto_actual` text DEFAULT NULL,
   -- Timestamps
   `fecha_creacion` timestamp NOT NULL DEFAULT current_timestamp(),
   `fecha_actualizacion` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),

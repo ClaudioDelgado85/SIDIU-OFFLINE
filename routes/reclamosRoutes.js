@@ -17,4 +17,10 @@ router.post('/', reclamosController.crearReclamo);
 router.put('/:id', reclamosController.actualizarReclamo);
 router.delete('/:id', reclamosController.eliminarReclamo);
 
+const upload = require('../middleware/upload');
+// POST /api/reclamos/:id/foto/:tipo
+router.post('/:id/foto/:tipo', upload.single('foto'), reclamosController.subirFoto);
+// DELETE /api/reclamos/:id/foto/:tipo
+router.delete('/:id/foto/:tipo', reclamosController.eliminarFoto);
+
 module.exports = router;

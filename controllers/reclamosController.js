@@ -198,3 +198,68 @@ exports.obtenerReclamoPorId = async (req, res) => {
         res.status(500).json({ success: false, message: 'Error al obtener reclamo' });
     }
 };
+
+// ==========================================
+// SUBIR FOTO
+// ==========================================
+exports.subirFoto = async (req, res) => {
+    try {
+        const { id, tipo } = req.params;
+
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No se subió ningún archivo.' });
+        }
+
+        if (tipo !== 'inicial' && tipo !== 'actual') {
+            return res.status(400).json({ success: false, message: 'Tipo de foto inválido.' });
+        }
+
+        const fileUrl = `/uploads/reclamos/${req.file.filename}`;
+        const campo = tipo === 'inicial' ? 'foto_inicial' : 'foto_actual';
+
+        await db.pool.execute(`UPDATE reclamos SET ${campo} = ? WHERE id = ?`, [fileUrl, id]);
+
+        res.json({
+            success: true,
+            message: 'Foto subida exitosamente.',
+            data: { url: fileUrl }
+        });
+
+    } catch (error) {
+        console.error('Error al subir foto:', error);
+        res.status(500).json({ success: false, message: 'Error al subir foto.' });
+    }
+};
+
+// ==========================================
+// ELIMINAR FOTO
+// ==========================================
+exports.eliminarFoto = async (req, res) => {
+    try {
+        const { id, tipo } = req.params;
+        const fs = require('fs');
+        const path = require('path');
+
+        if (tipo !== 'inicial' && tipo !== 'actual') {
+            return res.status(400).json({ success: false, message: 'Tipo de foto inválido.' });
+        }
+
+        const campo = tipo === 'inicial' ? 'foto_inicial' : 'foto_actual';
+
+        const [rows] = await db.pool.execute(`SELECT ${campo} FROM reclamos WHERE id = ?`, [id]);
+
+        if (rows.length > 0 && rows[0][campo]) {
+            const filePath = path.join(__dirname, '../public', rows[0][campo]);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+            await db.pool.execute(`UPDATE reclamos SET ${campo} = NULL WHERE id = ?`, [id]);
+        }
+
+        res.json({ success: true, message: 'Foto eliminada exitosamente.' });
+
+    } catch (error) {
+        console.error('Error al eliminar foto:', error);
+        res.status(500).json({ success: false, message: 'Error al eliminar foto.' });
+    }
+};

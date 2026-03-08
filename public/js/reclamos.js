@@ -103,6 +103,9 @@ function renderizarTabla() {
             <td><span class="celda-tag">${formatearTipo(r.tipo_reclamo)}</span></td>
             <td>${r.direccion_incidente}</td>
             <td>${r.denunciado_nombre || '-'}</td>
+            <td style="text-align:center">${(r.foto_inicial || r.foto_actual) ? `
+                📸 <a href="javascript:void(0)" onclick="verFotosReclamo(${r.id})" style="font-size: 11px; color: var(--si-primary);">Ver</a>
+                ` : '<span style="color:var(--si-text-muted)">-</span>'}</td>
             <td><span class="priority-${r.prioridad}">${formatearPrioridad(r.prioridad)}</span></td>
             <td><span class="estado-badge estado-${r.estado}">${formatearEstado(r.estado)}</span></td>
             <td>
@@ -318,6 +321,23 @@ function abrirModal(reclamo = null) {
                             </div>
                         </div>
                         ` : ''}
+
+                        <!-- Evidencia Fotográfica -->
+                        <div class="form-section">
+                            <div class="form-section-title">Evidencia Fotográfica (Opcional)</div>
+                            <div class="form-grid">
+                                <div class="form-group-modal">
+                                    <label>📸 Foto Estado Inicial</label>
+                                    <input type="file" id="foto_inicial_input" accept="image/*">
+                                    <div id="preview_foto_inicial" style="margin-top: 10px;"></div>
+                                </div>
+                                <div class="form-group-modal">
+                                    <label>📸 Foto Estado Actual</label>
+                                    <input type="file" id="foto_actual_input" accept="image/*">
+                                    <div id="preview_foto_actual" style="margin-top: 10px;"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="panel-footer">
                         <button type="button" class="btn-text" id="btnCancelarPanel">Cancelar</button>
@@ -336,6 +356,18 @@ function abrirModal(reclamo = null) {
         document.getElementById('tipo_reclamo').value = datos.tipo_reclamo;
         document.getElementById('prioridad').value = datos.prioridad;
         document.getElementById('estado').value = datos.estado;
+
+        // Previews de fotos
+        if (datos.foto_inicial) {
+            document.getElementById('preview_foto_inicial').innerHTML = `
+                <img src="${datos.foto_inicial}" style="max-width:100%; max-height:150px; border-radius:4px; margin-bottom:5px;">
+                <br><button type="button" class="btn-text" style="color:var(--si-red); font-size:0.8rem; padding:0;" onclick="eliminarFotoReclamo(${datos.id}, 'inicial')">Eliminar Foto</button>`;
+        }
+        if (datos.foto_actual) {
+            document.getElementById('preview_foto_actual').innerHTML = `
+                <img src="${datos.foto_actual}" style="max-width:100%; max-height:150px; border-radius:4px; margin-bottom:5px;">
+                <br><button type="button" class="btn-text" style="color:var(--si-red); font-size:0.8rem; padding:0;" onclick="eliminarFotoReclamo(${datos.id}, 'actual')">Eliminar Foto</button>`;
+        }
     }
 
     document.getElementById('btnCerrarPanel').addEventListener('click', cerrarPanelReclamo);
@@ -394,6 +426,21 @@ async function guardarReclamo(esNuevo, id) {
         });
 
         if (res.ok) {
+            const responseData = await res.json();
+            const reclamoId = esNuevo ? (responseData.data ? responseData.data.id : null) : id;
+
+            if (reclamoId) {
+                const fotoInicialInput = document.getElementById('foto_inicial_input');
+                const fotoActualInput = document.getElementById('foto_actual_input');
+
+                if (fotoInicialInput && fotoInicialInput.files[0]) {
+                    await comprimirYSubirFotoReclamo(fotoInicialInput.files[0], reclamoId, 'inicial', sesion.token);
+                }
+                if (fotoActualInput && fotoActualInput.files[0]) {
+                    await comprimirYSubirFotoReclamo(fotoActualInput.files[0], reclamoId, 'actual', sesion.token);
+                }
+            }
+
             document.getElementById('modalReclamo').remove();
             cerrarPanelReclamo();
             cargarReclamos();
@@ -546,4 +593,114 @@ async function cargarReclamoIndividual(id) {
     } catch (e) {
         console.error('Error deep link:', e);
     }
+}
+
+// ============================================
+// COMPRESIÓN Y SUBIDA DE FOTOS
+// ============================================
+
+async function comprimirYSubirFotoReclamo(file, id, tipo, token) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = async () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                const MAX_WIDTH = 800;
+
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob(async (blob) => {
+                    const formData = new FormData();
+                    formData.append('foto', blob, `${tipo}.jpg`);
+
+                    try {
+                        await fetch(`${API_URL}/reclamos/${id}/foto/${tipo}`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}` },
+                            body: formData
+                        });
+                    } catch (err) {
+                        console.error(`Error al subir foto ${tipo}:`, err);
+                    }
+                    resolve();
+                }, 'image/jpeg', 0.8);
+            };
+            img.onerror = () => resolve();
+        };
+        reader.onerror = () => resolve();
+    });
+}
+
+async function eliminarFotoReclamo(id, tipo) {
+    if (!confirm(`¿Está seguro de eliminar la foto ${tipo}?`)) return;
+    const sesion = verificarAutenticacion();
+    try {
+        const response = await fetch(`${API_URL}/reclamos/${id}/foto/${tipo}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${sesion.token}` }
+        });
+        if (response.ok) {
+            const previewDiv = document.getElementById(`preview_foto_${tipo}`);
+            if (previewDiv) previewDiv.innerHTML = '';
+            const idx = reclamos.findIndex(r => r.id == id);
+            if (idx >= 0) {
+                if (tipo === 'inicial') reclamos[idx].foto_inicial = null;
+                if (tipo === 'actual') reclamos[idx].foto_actual = null;
+            }
+            alert('Foto eliminada');
+        } else {
+            alert('Error al eliminar foto');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Error al eliminar foto');
+    }
+}
+
+function verFotosReclamo(id) {
+    const reclamo = reclamos.find(r => r.id == id);
+    if (!reclamo || (!reclamo.foto_inicial && !reclamo.foto_actual)) return;
+
+    const modalHtml = `
+    <div id="modalFotos" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;">
+        <div style="background:var(--si-surface); padding:20px; border-radius:8px; width:100%; max-width:800px; max-height:90vh; overflow-y:auto; position:relative;">
+            <button onclick="document.getElementById('modalFotos').remove()" style="position:absolute; top:10px; right:15px; background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+            <h3 style="margin-top:0; margin-bottom:15px;">Evidencia - Reclamo ${reclamo.numero_reclamo}</h3>
+            <div style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center;">
+                ${reclamo.foto_inicial ? `
+                <div style="flex:1; min-width:300px; text-align:center;">
+                    <h4>Estado Inicial</h4>
+                    <a href="${reclamo.foto_inicial}" target="_blank">
+                        <img src="${reclamo.foto_inicial}" style="max-width:100%; max-height:400px; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,0.2);">
+                    </a>
+                </div>` : ''}
+                ${reclamo.foto_actual ? `
+                <div style="flex:1; min-width:300px; text-align:center;">
+                    <h4>Estado Actual</h4>
+                    <a href="${reclamo.foto_actual}" target="_blank">
+                        <img src="${reclamo.foto_actual}" style="max-width:100%; max-height:400px; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,0.2);">
+                    </a>
+                </div>` : ''}
+            </div>
+            <div style="text-align:center; margin-top:20px;">
+                <p style="color:var(--si-text-muted); font-size:0.9rem;">(Hacé clic en la imagen para abrirla en tamaño completo)</p>
+            </div>
+        </div>
+    </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
