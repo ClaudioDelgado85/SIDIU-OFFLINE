@@ -2,25 +2,26 @@
 const express = require('express');
 const router = express.Router();
 const reclamosController = require('../controllers/reclamosController');
-const authMiddleware = require('../middleware/auth');
+const { verifyToken, requireCargaOrAdmin, requireModuloAccess } = require('../middleware/auth');
 
-// Proteger rutas
-router.use(authMiddleware.verifyToken);
+// Todas las rutas requieren autenticación y acceso al módulo
+router.use(verifyToken, requireModuloAccess('reclamos'));
 
 // Estadísticas (Dashboard)
 router.get('/estadisticas', reclamosController.obtenerEstadisticas);
 
-// CRUD
+// Rutas de lectura
 router.get('/', reclamosController.obtenerReclamos);
 router.get('/:id', reclamosController.obtenerReclamoPorId);
-router.post('/', reclamosController.crearReclamo);
-router.put('/:id', reclamosController.actualizarReclamo);
-router.delete('/:id', reclamosController.eliminarReclamo);
+
+// Rutas de escritura (requiere carga o admin)
+router.post('/', requireCargaOrAdmin, reclamosController.crearReclamo);
+router.put('/:id', requireCargaOrAdmin, reclamosController.actualizarReclamo);
+router.delete('/:id', requireCargaOrAdmin, reclamosController.eliminarReclamo);
 
 const upload = require('../middleware/upload');
-// POST /api/reclamos/:id/foto/:tipo
-router.post('/:id/foto/:tipo', upload.single('foto'), reclamosController.subirFoto);
-// DELETE /api/reclamos/:id/foto/:tipo
-router.delete('/:id/foto/:tipo', reclamosController.eliminarFoto);
+// Fotos (requiere carga o admin)
+router.post('/:id/foto/:tipo', requireCargaOrAdmin, upload.single('foto'), reclamosController.subirFoto);
+router.delete('/:id/foto/:tipo', requireCargaOrAdmin, reclamosController.eliminarFoto);
 
 module.exports = router;

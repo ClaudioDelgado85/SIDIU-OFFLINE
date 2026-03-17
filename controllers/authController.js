@@ -1,9 +1,10 @@
 // controllers/authController.js
-// Controlador para autenticación (login, logout)
+// Controlador para autenticación (login, logout, verificar token)
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
+const { registrarAuditoria } = require('../middleware/auditoria');
 require('dotenv').config();
 
 // Login
@@ -42,6 +43,32 @@ exports.login = async (req, res) => {
       });
     }
 
+    // Obtener permisos de módulos para usuario de carga
+    let permisos = null;
+    if (user.rol === 'carga') {
+      const [permisosResult] = await db.pool.execute(
+        'SELECT modulo, habilitado FROM permisos_modulos WHERE usuario_id = ?',
+        [user.id]
+      );
+      permisos = {};
+      permisosResult.forEach(p => {
+        permisos[p.modulo] = p.habilitado === 1;
+      });
+    }
+
+    // Obtener configuración del sistema (timeout)
+    let timeout_minutos = 30;
+    try {
+      const [configResult] = await db.pool.execute(
+        "SELECT valor FROM configuracion_sistema WHERE clave = 'timeout_inactividad_minutos'"
+      );
+      if (configResult.length > 0) {
+        timeout_minutos = parseInt(configResult[0].valor) || 30;
+      }
+    } catch (e) {
+      // Si la tabla no existe aún, usar default
+    }
+
     // Generar token JWT
     const token = jwt.sign(
       {
@@ -52,8 +79,18 @@ exports.login = async (req, res) => {
         activo: user.activo
       },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
     );
+
+    // Registrar login en auditoría
+    await registrarAuditoria({
+      usuario_id: user.id,
+      usuario_nombre: user.nombre_completo,
+      accion: 'login',
+      modulo: 'auth',
+      descripcion: `Inicio de sesión exitoso`,
+      ip: req.ip
+    });
 
     // Respuesta exitosa
     res.json({
@@ -65,7 +102,11 @@ exports.login = async (req, res) => {
         nombre_completo: user.nombre_completo,
         usuario: user.usuario,
         email: user.email,
-        rol: user.rol
+        rol: user.rol,
+        permisos: permisos
+      },
+      configuracion: {
+        timeout_inactividad_minutos: timeout_minutos
       }
     });
 
@@ -81,10 +122,39 @@ exports.login = async (req, res) => {
 // Verificar token (obtener datos del usuario actual)
 exports.verificarToken = async (req, res) => {
   try {
-    // El usuario ya viene en req.usuario gracias al middleware verifyToken
+    // Obtener permisos actualizados
+    let permisos = null;
+    if (req.usuario.rol === 'carga') {
+      const [permisosResult] = await db.pool.execute(
+        'SELECT modulo, habilitado FROM permisos_modulos WHERE usuario_id = ?',
+        [req.usuario.id]
+      );
+      permisos = {};
+      permisosResult.forEach(p => {
+        permisos[p.modulo] = p.habilitado === 1;
+      });
+    }
+
+    // Obtener configuración actualizada
+    let timeout_minutos = 30;
+    try {
+      const [configResult] = await db.pool.execute(
+        "SELECT valor FROM configuracion_sistema WHERE clave = 'timeout_inactividad_minutos'"
+      );
+      if (configResult.length > 0) {
+        timeout_minutos = parseInt(configResult[0].valor) || 30;
+      }
+    } catch (e) { /* usar default */ }
+
     res.json({
       success: true,
-      usuario: req.usuario
+      usuario: {
+        ...req.usuario,
+        permisos: permisos
+      },
+      configuracion: {
+        timeout_inactividad_minutos: timeout_minutos
+      }
     });
   } catch (error) {
     console.error('Error al verificar token:', error);
@@ -144,6 +214,16 @@ exports.cambiarPassword = async (req, res) => {
     // Actualizar contraseña
     const updateSql = 'UPDATE usuarios SET password_hash = ? WHERE id = ?';
     await db.pool.execute(updateSql, [password_hash, usuario_id]);
+
+    // Registrar en auditoría
+    await registrarAuditoria({
+      usuario_id: req.usuario.id,
+      usuario_nombre: req.usuario.nombre_completo,
+      accion: 'editar',
+      modulo: 'auth',
+      descripcion: 'Cambió su contraseña',
+      ip: req.ip
+    });
 
     res.json({
       success: true,

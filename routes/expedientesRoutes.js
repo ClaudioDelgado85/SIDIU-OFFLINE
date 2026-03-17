@@ -4,13 +4,12 @@
 const express = require('express');
 const router = express.Router();
 const expedientesController = require('../controllers/expedientesController');
-const { verifyToken, requireCargaOrAdmin } = require('../middleware/auth');
+const { verifyToken, requireCargaOrAdmin, requireModuloAccess } = require('../middleware/auth');
 
-// Todas las rutas requieren autenticación
-router.use(verifyToken);
+// Todas las rutas requieren autenticación y acceso al módulo
+router.use(verifyToken, requireModuloAccess('expedientes'));
 
 // GET /api/expedientes - Obtener todos los expedientes (con filtros opcionales)
-// Parámetros query opcionales: estado, fecha_desde, fecha_hasta, dni, nombre, numero_expediente
 router.get('/', expedientesController.obtenerExpedientes);
 
 // GET /api/expedientes/estadisticas - Obtener estadísticas

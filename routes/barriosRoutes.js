@@ -1,20 +1,18 @@
+// routes/barriosRoutes.js
 const express = require('express');
 const router = express.Router();
 const barriosController = require('../controllers/barriosController');
-const { verifyToken } = require('../middleware/auth');
+const { verifyToken, requireCargaOrAdmin, requireModuloAccess } = require('../middleware/auth');
 
+// Todas las rutas requieren autenticación
 router.use(verifyToken);
 
-// GET /api/barrios - Lista para selects (todos los roles)
+// GET /api/barrios - Lista para selects (todos los roles autenticados)
 router.get('/', barriosController.obtenerBarrios);
 
-// POST /api/barrios - Crear (solo admin)
-router.post('/', barriosController.crearBarrio);
-
-// PUT /api/barrios/:id - Editar (solo admin)
-router.put('/:id', barriosController.editarBarrio);
-
-// DELETE /api/barrios/:id - Desactivar (solo admin)
-router.delete('/:id', barriosController.eliminarBarrio);
+// Rutas de escritura: requieren carga/admin + acceso al módulo 'catalogos'
+router.post('/', requireCargaOrAdmin, requireModuloAccess('catalogos'), barriosController.crearBarrio);
+router.put('/:id', requireCargaOrAdmin, requireModuloAccess('catalogos'), barriosController.editarBarrio);
+router.delete('/:id', requireCargaOrAdmin, requireModuloAccess('catalogos'), barriosController.eliminarBarrio);
 
 module.exports = router;

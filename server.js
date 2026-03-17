@@ -45,10 +45,9 @@ const limiter = rateLimit({
   message: 'Demasiadas peticiones desde esta IP, por favor intente más tarde.'
 });
 
-// Logging middleware para debug
+// Logging middleware (sin datos sensibles)
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  console.log('Body:', JSON.stringify(req.body, null, 2));
   next();
 });
 
@@ -128,6 +127,14 @@ app.use('/api/tareas-diarias', tareasRoutes);
 // Rutas de informes
 const informesRoutes = require('./routes/informesRoutes');
 app.use('/api/informes', informesRoutes);
+
+// Rutas de auditoría (solo admin)
+const auditoriaRoutes = require('./routes/auditoriaRoutes');
+app.use('/api/auditoria', auditoriaRoutes);
+
+// Rutas de configuración del sistema
+const configuracionRoutes = require('./routes/configuracionRoutes');
+app.use('/api/configuracion', configuracionRoutes);
 
 // ============================================
 // RUTAS DEL FRONTEND

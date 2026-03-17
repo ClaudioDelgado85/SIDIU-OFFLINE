@@ -2,7 +2,7 @@
 // CONFIGURACIÓN
 // ============================================
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = '/api';
 
 // ============================================
 // ELEMENTOS DEL DOM
@@ -101,9 +101,13 @@ loginForm.addEventListener('submit', async (e) => {
             // Login exitoso
             console.log('Login exitoso:', data);
             
-            // Guardar token y datos del usuario
+            // Guardar token y datos del usuario (incluyendo permisos)
             guardarToken(data.token);
-            guardarUsuario(data.usuario);
+            const usuarioData = data.usuario;
+            if (data.configuracion) {
+                usuarioData._timeout = data.configuracion.timeout_inactividad_minutos;
+            }
+            guardarUsuario(usuarioData);
             
             // Mostrar mensaje de éxito brevemente
             mostrarMensajeExito();
@@ -190,4 +194,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 // Focus en el campo de usuario al cargar la página
 window.addEventListener('load', () => {
     usuarioInput.focus();
+
+    // Mostrar mensaje de sesión si existe (ej: "Sesión expirada por inactividad")
+    const sessionMsg = sessionStorage.getItem('session_message');
+    if (sessionMsg) {
+        sessionStorage.removeItem('session_message');
+        mostrarError(sessionMsg);
+    }
 });

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auditoría - Sistema de Gestión Municipal</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/expedientes.css">
+    <link rel="stylesheet" href="css/sistema-v2.css">
+    <style>
+        /* Estilos específicos para auditoría */
+        .audit-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .audit-stat-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 16px 20px;
+            text-align: center;
+        }
+
+        .audit-stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #60a5fa;
+            line-height: 1.2;
+        }
+
+        .audit-stat-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .audit-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+            align-items: flex-end;
+        }
+
+        .audit-filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .audit-filter-group label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .audit-filter-group select,
+        .audit-filter-group input {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #e2e8f0;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            min-width: 140px;
+        }
+
+        .badge-accion {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-crear {
+            background: rgba(34, 197, 94, 0.15);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .badge-editar {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .badge-eliminar {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .badge-login {
+            background: rgba(168, 85, 247, 0.15);
+            color: #c084fc;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+
+        .badge-logout {
+            background: rgba(107, 114, 128, 0.15);
+            color: #9ca3af;
+            border: 1px solid rgba(107, 114, 128, 0.3);
+        }
+
+        .badge-cambio_estado {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .audit-pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .audit-pagination button {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #e2e8f0;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .audit-pagination button:hover:not(:disabled) {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .audit-pagination button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .audit-pagination span {
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+
+        .config-section {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .config-section h3 {
+            color: #e2e8f0;
+            margin: 0 0 12px;
+            font-size: 1rem;
+        }
+
+        .config-inline {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .config-inline input[type="number"] {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #e2e8f0;
+            padding: 8px 12px;
+            border-radius: 8px;
+            width: 80px;
+            font-size: 0.9rem;
+        }
+
+        .config-inline span {
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+
+        .config-inline button {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        table td {
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            .audit-filters {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body class="dashboard page-modulo">
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div>
+            <h1>Panel de Auditoría</h1>
+            <p style="font-size: 14px; opacity: 0.9;">Registro de actividades de usuarios</p>
+        </div>
+        <div class="user-info">
+            <span class="user-name" id="userName">Admin</span>
+        </div>
+    </header>
+
+    <main class="dashboard-main">
+        <!-- Configuración del sistema -->
+        <div class="config-section">
+            <h3>⚙️ Configuración del Sistema</h3>
+            <div class="config-inline">
+                <span>Timeout de inactividad:</span>
+                <input type="number" id="inputTimeout" min="5" max="120" value="30">
+                <span>minutos</span>
+                <button id="btnGuardarTimeout">Guardar</button>
+                <span id="timeoutMsg" style="color: #4ade80; font-size: 0.8rem;"></span>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="audit-stats" id="auditStats">
+            <div class="audit-stat-card">
+                <div class="audit-stat-value" id="statTotal">-</div>
+                <div class="audit-stat-label">Acciones totales</div>
+            </div>
+            <div class="audit-stat-card">
+                <div class="audit-stat-value" id="statCrear" style="color: #4ade80;">-</div>
+                <div class="audit-stat-label">Creaciones</div>
+            </div>
+            <div class="audit-stat-card">
+                <div class="audit-stat-value" id="statEditar" style="color: #60a5fa;">-</div>
+                <div class="audit-stat-label">Ediciones</div>
+            </div>
+            <div class="audit-stat-card">
+                <div class="audit-stat-value" id="statEliminar" style="color: #f87171;">-</div>
+                <div class="audit-stat-label">Eliminaciones</div>
+            </div>
+            <div class="audit-stat-card">
+                <div class="audit-stat-value" id="statLogin" style="color: #c084fc;">-</div>
+                <div class="audit-stat-label">Logins</div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="audit-filters">
+            <div class="audit-filter-group">
+                <label>Usuario</label>
+                <select id="filterUsuario">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+            <div class="audit-filter-group">
+                <label>Módulo</label>
+                <select id="filterModulo">
+                    <option value="">Todos</option>
+                    <option value="expedientes">Expedientes</option>
+                    <option value="intimaciones">Intimaciones</option>
+                    <option value="infracciones">Infracciones</option>
+                    <option value="reclamos">Reclamos</option>
+                    <option value="relevamientos">Relevamientos</option>
+                    <option value="comercios">Comercios</option>
+                    <option value="vendedores">Vendedores</option>
+                    <option value="tareas">Tareas</option>
+                    <option value="catalogos">Catálogos</option>
+                    <option value="usuarios">Usuarios</option>
+                    <option value="auth">Autenticación</option>
+                </select>
+            </div>
+            <div class="audit-filter-group">
+                <label>Acción</label>
+                <select id="filterAccion">
+                    <option value="">Todas</option>
+                    <option value="crear">Crear</option>
+                    <option value="editar">Editar</option>
+                    <option value="eliminar">Eliminar</option>
+                    <option value="login">Login</option>
+                    <option value="logout">Logout</option>
+                    <option value="cambio_estado">Cambio Estado</option>
+                </select>
+            </div>
+            <div class="audit-filter-group">
+                <label>Desde</label>
+                <input type="date" id="filterFechaDesde">
+            </div>
+            <div class="audit-filter-group">
+                <label>Hasta</label>
+                <input type="date" id="filterFechaHasta">
+            </div>
+            <div class="audit-filter-group">
+                <label>&nbsp;</label>
+                <button class="btn-primary" id="btnFiltrar" style="padding: 8px 20px;">Filtrar</button>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="table-container">
+            <div id="loadingTable" class="loading-state">
+                <div class="loader"></div>
+                <p>Cargando registros...</p>
+            </div>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <p>No se encontraron registros de auditoría</p>
+            </div>
+
+            <table id="auditTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Fecha/Hora</th>
+                        <th>Usuario</th>
+                        <th>Acción</th>
+                        <th>Módulo</th>
+                        <th>Descripción</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+                <tbody id="auditTableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginación -->
+        <div class="audit-pagination" id="paginacion"></div>
+    </main>
+
+    <script src="js/navbar.js"></script>
+    <script src="js/session-manager.js"></script>
+    <script src="js/auditoria.js"></script>
+</body>
+
+</html>

@@ -12,7 +12,7 @@ router.use(verifyToken, requireAdmin);
 // GET /api/usuarios - Obtener todos los usuarios
 router.get('/', usuariosController.obtenerUsuarios);
 
-// GET /api/usuarios/:id - Obtener un usuario por ID
+// GET /api/usuarios/:id - Obtener un usuario por ID (incluye permisos)
 router.get('/:id', usuariosController.obtenerUsuarioPorId);
 
 // POST /api/usuarios - Crear nuevo usuario
@@ -26,5 +26,11 @@ router.delete('/:id', usuariosController.eliminarUsuario);
 
 // PUT /api/usuarios/:id/resetear-password - Resetear contraseña de usuario
 router.put('/:id/resetear-password', usuariosController.resetearPassword);
+
+// GET /api/usuarios/:id/permisos - Obtener permisos de módulos
+router.get('/:id/permisos', usuariosController.obtenerPermisos);
+
+// PUT /api/usuarios/:id/permisos - Actualizar permisos de módulos
+router.put('/:id/permisos', usuariosController.actualizarPermisos);
 
 module.exports = router;

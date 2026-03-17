@@ -2,16 +2,18 @@
 const express = require('express');
 const router = express.Router();
 const infraccionesController = require('../controllers/infraccionesController');
-const authMiddleware = require('../middleware/auth');
+const { verifyToken, requireCargaOrAdmin, requireModuloAccess } = require('../middleware/auth');
 
-// Proteger todas las rutas con autenticación
-router.use(authMiddleware.verifyToken);
+// Todas las rutas requieren autenticación y acceso al módulo
+router.use(verifyToken, requireModuloAccess('infracciones'));
 
-// Rutas CRUD
+// Rutas de lectura (todos los roles con acceso)
 router.get('/', infraccionesController.obtenerInfracciones);
 router.get('/:id', infraccionesController.obtenerInfraccionPorId);
-router.post('/', infraccionesController.crearInfraccion);
-router.put('/:id', infraccionesController.actualizarInfraccion);
-router.delete('/:id', infraccionesController.eliminarInfraccion);
+
+// Rutas de escritura (requiere carga o admin)
+router.post('/', requireCargaOrAdmin, infraccionesController.crearInfraccion);
+router.put('/:id', requireCargaOrAdmin, infraccionesController.actualizarInfraccion);
+router.delete('/:id', requireCargaOrAdmin, infraccionesController.eliminarInfraccion);
 
 module.exports = router;

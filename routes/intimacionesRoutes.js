@@ -2,33 +2,31 @@
 const express = require('express');
 const router = express.Router();
 const intimacionesController = require('../controllers/intimacionesController');
-const authMiddleware = require('../middleware/auth'); // Asumiendo que existe
+const { verifyToken, requireCargaOrAdmin, requireModuloAccess } = require('../middleware/auth');
 
-// Rutas protegidas (requieren autenticación)
-// Si no tienes middleware de auth aún, puedes quitar authMiddleware
-// pero es recomendable tenerlo.
-// Ajusta la ruta del middleware según tu estructura real.
+// Todas las rutas requieren autenticación y acceso al módulo
+router.use(verifyToken, requireModuloAccess('intimaciones'));
 
 // GET /api/intimaciones
-router.get('/', authMiddleware.verifyToken, intimacionesController.obtenerIntimaciones);
+router.get('/', intimacionesController.obtenerIntimaciones);
 
 // GET /api/intimaciones/:id
-router.get('/:id', authMiddleware.verifyToken, intimacionesController.obtenerIntimacionPorId);
+router.get('/:id', intimacionesController.obtenerIntimacionPorId);
 
-// POST /api/intimaciones
-router.post('/', authMiddleware.verifyToken, intimacionesController.crearIntimacion);
+// POST /api/intimaciones (requiere carga o admin)
+router.post('/', requireCargaOrAdmin, intimacionesController.crearIntimacion);
 
-// PUT /api/intimaciones/:id
-router.put('/:id', authMiddleware.verifyToken, intimacionesController.actualizarIntimacion);
+// PUT /api/intimaciones/:id (requiere carga o admin)
+router.put('/:id', requireCargaOrAdmin, intimacionesController.actualizarIntimacion);
 
-// DELETE /api/intimaciones/:id
-router.delete('/:id', authMiddleware.verifyToken, intimacionesController.eliminarIntimacion);
+// DELETE /api/intimaciones/:id (requiere carga o admin)
+router.delete('/:id', requireCargaOrAdmin, intimacionesController.eliminarIntimacion);
 
 const upload = require('../middleware/upload');
-// POST /api/intimaciones/:id/foto/:tipo
-router.post('/:id/foto/:tipo', authMiddleware.verifyToken, upload.single('foto'), intimacionesController.subirFoto);
+// POST /api/intimaciones/:id/foto/:tipo (requiere carga o admin)
+router.post('/:id/foto/:tipo', requireCargaOrAdmin, upload.single('foto'), intimacionesController.subirFoto);
 
-// DELETE /api/intimaciones/:id/foto/:tipo
-router.delete('/:id/foto/:tipo', authMiddleware.verifyToken, intimacionesController.eliminarFoto);
+// DELETE /api/intimaciones/:id/foto/:tipo (requiere carga o admin)
+router.delete('/:id/foto/:tipo', requireCargaOrAdmin, intimacionesController.eliminarFoto);
 
 module.exports = router;

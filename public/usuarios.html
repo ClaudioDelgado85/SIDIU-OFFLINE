@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuarios - Sistema de Gestión Municipal</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/expedientes.css">
+    <link rel="stylesheet" href="css/sistema-v2.css">
+    <style>
+        /* Password eye toggle inside input */
+        .pwd-field-wrap {
+            position: relative;
+        }
+
+        .pwd-field-wrap input {
+            padding-right: 42px !important;
+            width: 100%;
+        }
+
+        .btn-eye-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--si-text-muted);
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            transition: color 0.2s;
+        }
+
+        .btn-eye-toggle:hover {
+            color: var(--si-blue);
+        }
+
+        /* Badges de rol */
+        .rol-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+
+        .rol-badge.rol-admin_total {
+            background: var(--si-red-light);
+            color: var(--si-red);
+        }
+
+        .rol-badge.rol-carga {
+            background: var(--si-blue-light);
+            color: var(--si-blue);
+        }
+
+        .rol-badge.rol-consulta {
+            background: var(--si-green-light);
+            color: var(--si-green);
+        }
+
+        /* Estado toggle */
+        .estado-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            transition: all 0.2s;
+            border: none;
+            background: none;
+        }
+
+        .estado-toggle.activo {
+            background: var(--si-green-light);
+            color: var(--si-green);
+        }
+
+        .estado-toggle.inactivo {
+            background: var(--si-red-light);
+            color: var(--si-red);
+        }
+
+        .estado-toggle:hover {
+            opacity: 0.8;
+            transform: scale(1.03);
+        }
+
+        .estado-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        /* Permisos grid */
+        .permisos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .perm-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--si-border);
+            background: var(--si-surface);
+            cursor: pointer;
+            transition: all 0.15s;
+            user-select: none;
+        }
+
+        .perm-item:hover {
+            border-color: var(--si-blue);
+        }
+
+        .perm-item input[type="checkbox"] {
+            width: 15px;
+            height: 15px;
+            accent-color: var(--si-blue);
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .perm-item label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--si-text-primary);
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .perm-item:has(input:checked) {
+            border-color: rgba(37, 99, 235, 0.3);
+            background: rgba(37, 99, 235, 0.04);
+        }
+
+        /* Sección de permisos */
+        #seccionPermisos {
+            transition: all 0.25s ease;
+        }
+
+        .permisos-titulo {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--si-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .permisos-titulo svg {
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        /* Password reveal */
+        .password-reveal-box {
+            background: var(--si-amber-light);
+            border: 1px solid rgba(217, 119, 6, 0.2);
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-top: 16px;
+            animation: fadeSlideIn 0.3s ease;
+        }
+
+        .password-reveal-box .pw-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--si-amber);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-bottom: 6px;
+        }
+
+        .password-reveal-box .pw-value {
+            font-family: var(--si-mono);
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--si-text-primary);
+            letter-spacing: 1px;
+        }
+
+        .password-reveal-box .pw-hint {
+            font-size: 11px;
+            color: var(--si-text-muted);
+            margin-top: 6px;
+        }
+
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Toast notification */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: white;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 3.7s forwards;
+            max-width: 360px;
+        }
+
+        .toast.success { background: var(--si-green); }
+        .toast.error { background: var(--si-red); }
+        .toast.info { background: var(--si-blue); }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes toastOut {
+            from { opacity: 1; }
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+
+        /* Confirmar en panel */
+        .confirm-bar {
+            background: var(--si-red-light);
+            border: 1px solid rgba(220, 38, 38, 0.15);
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-top: 16px;
+        }
+
+        .confirm-bar p {
+            font-size: 13px;
+            color: var(--si-text-primary);
+            margin: 0 0 10px;
+        }
+
+        .confirm-bar .confirm-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-danger-sm {
+            background: var(--si-red);
+            color: white;
+            border: none;
+            padding: 7px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-danger-sm:hover { background: #B91C1C; }
+
+        .btn-cancel-sm {
+            background: white;
+            color: var(--si-text-secondary);
+            border: 1px solid var(--si-border-strong);
+            padding: 7px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-cancel-sm:hover { background: var(--si-surface); }
+    </style>
+</head>
+
+<body class="dashboard page-modulo">
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div>
+            <h1>Gestión de Usuarios</h1>
+            <p style="font-size: 14px; opacity: 0.9;">Control de acceso, roles y permisos</p>
+        </div>
+        <div class="user-info">
+            <span class="user-name" id="userName">Admin</span>
+        </div>
+    </header>
+
+    <main class="dashboard-main">
+        <!-- Stats rápidos -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card stat-primary">
+                <div class="stat-value" id="statTotal">-</div>
+                <div class="stat-label">Total usuarios</div>
+            </div>
+            <div class="stat-card stat-danger">
+                <div class="stat-value" id="statAdmin">-</div>
+                <div class="stat-label">Administradores</div>
+            </div>
+            <div class="stat-card stat-info">
+                <div class="stat-value" id="statCarga">-</div>
+                <div class="stat-label">De Carga</div>
+            </div>
+            <div class="stat-card stat-success">
+                <div class="stat-value" id="statConsulta">-</div>
+                <div class="stat-label">Consulta</div>
+            </div>
+        </div>
+
+        <!-- Barra de acciones -->
+        <div class="actions-bar">
+            <button class="btn-primary" id="btnNuevoUsuario">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+                Nuevo Usuario
+            </button>
+        </div>
+
+        <!-- Tabla -->
+        <div class="table-container">
+            <div id="loadingTable" class="loading-state">
+                <div class="loader"></div>
+                <p>Cargando usuarios...</p>
+            </div>
+
+            <table id="usuariosTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Nombre de usuario</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="usuariosTableBody">
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="js/navbar.js"></script>
+    <script src="js/session-manager.js"></script>
+    <script src="js/usuarios.js"></script>
+</body>
+
+</html>
