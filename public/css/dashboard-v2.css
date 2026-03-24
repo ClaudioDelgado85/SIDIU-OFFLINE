@@ -14,7 +14,7 @@
     --cl-celeste-soft: #A8E4EC;
     --cl-amarillo: #F5C542;
     --cl-blanco: #FFFFFF;
-    --cl-fondo: #F4F7FA;
+    --cl-fondo: #E2E8F0; /* Fondo gris para contraste */
     --cl-texto: #1A2B3C;
     --cl-texto-muted: #6B7D8E;
     --cl-borde: rgba(43, 124, 181, 0.10);
@@ -174,13 +174,7 @@ body.dashboard {
 }
 
 .kpi-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    border-radius: 4px 0 0 4px;
+    display: none;
 }
 
 .kpi-card:hover {
@@ -188,44 +182,60 @@ body.dashboard {
     box-shadow: 0 8px 24px rgba(43, 124, 181, 0.1);
 }
 
-/* KPI Danger → Naranja (urgencia) */
-.kpi-card.kpi-danger::before {
-    background: var(--cl-naranja);
+/* KPI Danger (Intimaciones Vencidas) → Naranja Intenso / Red-Orange */
+.kpi-card.kpi-danger {
+    background: #ea580c;
+    border: none;
+    color: var(--cl-blanco);
 }
-
+.kpi-danger .kpi-value, .kpi-danger .kpi-label, .kpi-danger .kpi-sub {
+    color: var(--cl-blanco);
+}
 .kpi-danger .kpi-icon-wrap {
-    background: rgba(242, 140, 40, 0.1);
-    color: var(--cl-naranja);
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--cl-blanco);
 }
 
-/* KPI Warning → Amarillo */
-.kpi-card.kpi-warning::before {
-    background: var(--cl-amarillo);
+/* KPI Warning (Vencen <= 3 dias) → Naranja Analítico */
+.kpi-card.kpi-warning {
+    background: #f59e0b;
+    border: none;
+    color: var(--cl-blanco);
 }
-
+.kpi-warning .kpi-value, .kpi-warning .kpi-label, .kpi-warning .kpi-sub {
+    color: var(--cl-blanco);
+}
 .kpi-warning .kpi-icon-wrap {
-    background: rgba(245, 197, 66, 0.12);
-    color: #D4A017;
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--cl-blanco);
 }
 
-/* KPI Info → Celeste */
-.kpi-card.kpi-info::before {
-    background: var(--cl-celeste);
+/* KPI Info (Expedientes con Plazo) → Cian */
+.kpi-card.kpi-info {
+    background: #0ea5e9;
+    border: none;
+    color: var(--cl-blanco);
 }
-
+.kpi-info .kpi-value, .kpi-info .kpi-label, .kpi-info .kpi-sub {
+    color: var(--cl-blanco);
+}
 .kpi-info .kpi-icon-wrap {
-    background: rgba(92, 200, 215, 0.1);
-    color: var(--cl-celeste);
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--cl-blanco);
 }
 
-/* KPI Primary → Azul institucional */
-.kpi-card.kpi-primary::before {
-    background: var(--cl-azul);
+/* KPI Primary (Reclamos Pendientes) → Teal */
+.kpi-card.kpi-primary {
+    background: #0f766e;
+    border: none;
+    color: var(--cl-blanco);
 }
-
+.kpi-primary .kpi-value, .kpi-primary .kpi-label, .kpi-primary .kpi-sub {
+    color: var(--cl-blanco);
+}
 .kpi-primary .kpi-icon-wrap {
-    background: rgba(43, 124, 181, 0.1);
-    color: var(--cl-azul);
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--cl-blanco);
 }
 
 .kpi-icon-wrap {
@@ -258,6 +268,7 @@ body.dashboard {
     color: var(--cl-texto-muted);
     text-transform: uppercase;
     letter-spacing: 0.6px;
+    opacity: 0.9;
 }
 
 .kpi-sub {

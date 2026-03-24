@@ -18,8 +18,8 @@
         }
 
         .audit-stat-card {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.08); /* or var(--cl-borde) */
             border-radius: 12px;
             padding: 16px 20px;
             text-align: center;
@@ -34,7 +34,7 @@
 
         .audit-stat-label {
             font-size: 0.8rem;
-            color: #94a3b8;
+            color: #6B7D8E; /* var(--cl-texto-muted) */
             margin-top: 4px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -56,20 +56,25 @@
 
         .audit-filter-group label {
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: #6B7D8E;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         .audit-filter-group select,
         .audit-filter-group input {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            color: #e2e8f0;
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            color: #1A2B3C;
             padding: 8px 12px;
             border-radius: 8px;
             font-size: 0.85rem;
             min-width: 140px;
+            outline: none;
+        }
+        .audit-filter-group select:focus,
+        .audit-filter-group input:focus {
+            border-color: #2B7CB5;
         }
 
         .badge-accion {
@@ -127,9 +132,9 @@
         }
 
         .audit-pagination button {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            color: #e2e8f0;
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            color: #1A2B3C;
             padding: 8px 16px;
             border-radius: 8px;
             cursor: pointer;
@@ -146,20 +151,20 @@
         }
 
         .audit-pagination span {
-            color: #94a3b8;
+            color: #6B7D8E;
             font-size: 0.85rem;
         }
 
         .config-section {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.08);
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 24px;
         }
 
         .config-section h3 {
-            color: #e2e8f0;
+            color: #1A2B3C;
             margin: 0 0 12px;
             font-size: 1rem;
         }
@@ -171,17 +176,18 @@
         }
 
         .config-inline input[type="number"] {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            color: #e2e8f0;
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            color: #1A2B3C;
             padding: 8px 12px;
             border-radius: 8px;
             width: 80px;
             font-size: 0.9rem;
+            outline: none;
         }
 
         .config-inline span {
-            color: #94a3b8;
+            color: #6B7D8E;
             font-size: 0.85rem;
         }
 
@@ -319,7 +325,7 @@
                 <p>No se encontraron registros de auditoría</p>
             </div>
 
-            <table id="auditTable" style="display: none;">
+            <table id="auditTable" class="si-table" style="display: none;">
                 <thead>
                     <tr>
                         <th>Fecha/Hora</th>

@@ -723,11 +723,11 @@
 .dashboard .navbar-link {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 11px 12px;
+    gap: 4px;
+    padding: 8px 9px;
     color: var(--si-text-muted, #94A3B8);
     text-decoration: none;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     white-space: nowrap;
     border-bottom: 2px solid transparent;
@@ -755,15 +755,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
+    width: 15px;
+    height: 15px;
     flex-shrink: 0;
 }
 
 .page-modulo .navbar-icon svg,
 .dashboard .navbar-icon svg {
-    width: 18px;
-    height: 18px;
+    width: 15px;
+    height: 15px;
     fill: none;
     stroke: currentColor;
     stroke-width: 1.8;
@@ -773,7 +773,7 @@
 
 .page-modulo .navbar-label,
 .dashboard .navbar-label {
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.01em;
 }
 

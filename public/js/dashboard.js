@@ -103,10 +103,12 @@ function renderEscalamiento(rawData) {
         }
     ];
 
+    const iconBase = '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:4px; vertical-align:-2px; opacity:0.7;">';
+
     const tipoLabels = {
-        general: '📋 General',
-        baldio: '🏗️ Baldíos',
-        vehiculo: '🚗 Vehículos'
+        general: `${iconBase}<path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> General`,
+        baldio: `${iconBase}<path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg> Baldíos`,
+        vehiculo: `${iconBase}<path stroke-linecap="round" stroke-linejoin="round" d="M8 7h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2zm-3 8a2 2 0 100 4 2 2 0 000-4zm14 0a2 2 0 100 4 2 2 0 000-4z"/></svg> Vehículos`
     };
 
     let html = '';
