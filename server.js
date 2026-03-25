@@ -213,7 +213,9 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// Iniciar servidor
-startServer();
+// Iniciar servidor solo si NO estamos en modo test (Jest)
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
 
 module.exports = app;

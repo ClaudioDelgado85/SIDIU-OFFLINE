@@ -1,65 +1,108 @@
 # Plan de Testing y Aseguramiento de Calidad (QA)
-**Sistema de Gestión Municipal - Clorinda**
-
-Este documento detalla la estrategia recomendada, herramientas y plan de acción paso a paso para comenzar la fase de pruebas formales del sistema.
+**Sistema de Gestión Municipal - Clorinda**  
+*Última actualización: 25/03/2026*
 
 ---
 
 ## 1. Estrategia de Ramas (Git Branching)
-Para no romper el código estable actual durante las pruebas, se recomienda el siguiente flujo:
-1. Crear una rama dedicada al control de calidad desde tu rama principal (`develop` o `main`):
-   ```bash
-   git checkout -b qa
-   ```
-2. Todo el código de pruebas, configuración de librerías (Jest/Cypress) y **correcciones de bugs** detectados irán a esta rama `qa`.
-3. Una vez que la suite completa de pruebas corra sin errores, se realizará el *merge* de `qa` hacia `main` (producción).
+
+```bash
+# 1. Guardar todo el trabajo actual
+git add .
+git commit -m "Rediseño visual y corrección lógica intimaciones"
+
+# 2. Crear rama dedicada a QA
+git checkout -b qa
+
+# 3. (Al finalizar QA exitosamente) Merge a main
+git checkout main
+git merge qa
+```
 
 ---
 
-## 2. Niveles de Pruebas Recomendados (Pirámide de QA)
+## 2. Niveles de Pruebas
 
-### A. Pruebas Unitarias y de Integración (Backend)
-Son las pruebas más rápidas y económicas computacionalmente. Evalúan la "columna vertebral" del sistema (Node.js/Express) atacando los endpoints directamente simulando peticiones HTTP.
-*   **Herramientas recomendadas:** `Jest` (Framework) + `Supertest` (Librería HTTP).
-*   **Casos clave a cubrir:**
-    *   Lógica matemática (`calcularEstadoAutomatico`, plazos de fechas).
-    *   Rechazo correcto de autenticación (Middleware `auth.js` sin token).
-    *   Validación de duplicados (No permitir crear dos usuarios con el mismo DNI).
-    *   Restricción de permisos (Roles RBAC limitando accesos).
+### A. Pruebas de Backend / API (Integración)
+**Herramientas:** `Jest` + `Supertest`
 
-### B. Pruebas End-to-End E2E (Frontend/UI)
-Simulan el comportamiento de un usuario humano interactuando con las pantallas del navegador, completando inputs y haciendo clic en botones.
-*   **Herramientas recomendadas:** `Cypress` o `Playwright`.
-*   **Casos clave a cubrir:**
-    *   Flujo completo: *Login → Navegación a Intimaciones → Creación de nueva intimación → Verificación de aparición en tabla*.
-    *   Comportamiento de la barra de búsqueda global.
-    *   Renderizado condicional de la UI (Ej: Ocultar el botón "Generar Siguiente Instancia" en la 3ª intimación).
+| Módulo | Casos a probar |
+|--------|---------------|
+| **Auth (login)** | Login exitoso, credenciales inválidas, token expirado, token ausente |
+| **Middleware RBAC** | Admin accede a todo, roles limitados son rechazados en rutas protegidas |
+| **Intimaciones** | CRUD completo, `calcularEstadoAutomatico` (vigente/vencida/reiterada), bloqueo de escalamiento en #3 |
+| **Usuarios** | Crear usuario, rechazar DNI duplicado, resetear contraseña, toggle estado |
+| **Expedientes** | CRUD completo, validación de campos obligatorios |
+| **Reclamos** | Crear, editar estado, filtrar por tipo |
+| **Infracciones** | Crear, vincular con intimación |
+| **Comercios** | CRUD, validación de habilitación |
+| **Vendedores** | CRUD, validación de autorización |
+| **Dashboard** | KPIs calculados correctamente, manejo de datos null/vacíos sin romper |
+| **Sesión/JWT** | Token expira correctamente, redirección al login |
 
-### C. QA Manual y Pruebas de Carga
-Pruebas destructivas y de capacidad técnica que son difíciles de automatizar al 100%.
-*   **Seguridad Manual:** Intentar forzar URLs (ej: `/auditoria.html`) con cuentas de bajo nivel (ej: `VENDEDOR`) para asegurar que el backend y frontend evitan el paso.
-*   **Pruebas de Estrés (opcional):** Usar herramientas como `Artillery` para mandar cientos de peticiones simultáneas de inserción de actas y verificar cómo responde la base de datos MySQL (bloqueos, latencia).
+### B. Pruebas End-to-End E2E (Frontend/UI) — **Obligatorio**
+**Herramientas:** `Cypress`
+
+| Flujo | Qué verifica |
+|-------|-------------|
+| **Login → Dashboard** | Ingreso exitoso, KPIs visibles, navbar completa |
+| **Intimaciones** | Crear intimación, verificar tabla, botón → oculto en #3 |
+| **Búsqueda Global** | Buscar por DNI, ver ficha contribuyente, exportar PDF |
+| **Usuarios (Admin)** | Crear usuario, resetear contraseña, toggle activo/inactivo |
+| **Permisos RBAC** | Usuario limitado NO ve módulos restringidos en navbar ni puede forzar URL |
+| **Responsive** | Navbar y Dashboard se adaptan a pantallas pequeñas |
+
+### C. QA Manual (Casos de Borde y Seguridad)
+
+| Prueba | Descripción |
+|--------|-------------|
+| **Forzar URLs** | Ingresar con rol VENDEDOR e intentar acceder a `/auditoria.html` y `/usuarios.html` por URL directa |
+| **Migraciones SQL** | Aplicar `schema.sql` + migraciones sobre una DB vacía y verificar que todo funcione |
+| **Exportación** | Probar "Exportar Excel" y "Descargar PDF" en Búsqueda Global |
+| **Fotos** | Subir, visualizar y eliminar fotos en Intimaciones |
+| **Datos extremos** | Crear intimación con nombre de 200 caracteres, DNI con letras, fecha futura |
+
+### D. Pruebas de Estrés *(Opcional)*
+**Herramienta:** `Artillery`
+- Simular 50-100 peticiones simultáneas a endpoints pesados (Dashboard, Búsqueda).
+- Verificar que MySQL no genere deadlocks ni timeouts.
 
 ---
 
-## 3. Plan de Acción (Siguientes Pasos)
+## 3. Plan de Acción (Fases)
 
-Para comenzar de forma progresiva, recomiendo el siguiente itinerario de ejecución:
+- [ ] **Fase 1: Configurar Entorno**
+  - `npm install --save-dev jest supertest`
+  - Crear script `"test"` en `package.json`
+  - Crear estructura `/tests/controllers/`, `/tests/middlewares/`
 
-- [ ] **Fase 1: Configurar Entorno Backend**
-  - Instalar dependencias: `npm install --save-dev jest supertest`
-  - Crear el script `"test"` en el `package.json`.
-  - Crear la carpeta `/tests` estructurada (ej: `tests/controllers`, `tests/middlewares`).
+- [ ] **Fase 2: Pruebas Backend Críticas**
+  - `auth.test.js` → Login + middleware de roles
+  - `intimaciones.test.js` → CRUD + lógica de estados + bloqueo #3
+  - `usuarios.test.js` → CRUD + duplicados + reset password
+  - `dashboard.test.js` → KPIs con datos normales y vacíos
 
-- [ ] **Fase 2: Batería de Pruebas Críticas (Backend)**
-  - Escribir pruebas para `auth.js` (Autenticación y RBAC).
-  - Escribir pruebas para `intimacionesController.js`.
-  - Escribir pruebas para el login y creación de `usuariosController.js`.
+- [ ] **Fase 3: Pruebas Backend Secundarias**
+  - `expedientes.test.js` → CRUD básico
+  - `reclamos.test.js` → CRUD básico
+  - `infracciones.test.js` → CRUD + vinculación
+  - `comercios.test.js` y `vendedores.test.js` → CRUD
 
-- [ ] **Fase 3: Ejecución y Corrección de Bugs**
-  - Correr la suite (`npm test`).
-  - Arreglar cualquier fallo (bug) que descubran los tests automatizados.
+- [ ] **Fase 4: Ejecución y Corrección**
+  - Correr suite completa (`npm test`)
+  - Corregir bugs detectados
+  - Documentar resultados
 
-- [ ] **Fase 4: (Opcional) Configurar E2E Frontend**
-  - Instalar `cypress`.
-  - Crear pruebas visuales básicas del flujo principal de login y expedientes.
+- [ ] **Fase 5: Pruebas E2E con Cypress**
+  - `npm install --save-dev cypress`
+  - Escribir flujos principales (Login, Intimaciones, Búsqueda)
+  - Verificar UI responsive y permisos RBAC visual
+
+- [ ] **Fase 6: QA Manual**
+  - Ejecutar checklist manual de seguridad y casos de borde
+  - Verificar migraciones SQL sobre DB limpia
+  - Probar exportaciones (Excel/PDF)
+
+- [ ] **Fase 7: Merge Final**
+  - `git checkout main && git merge qa`
+  - Deploy a producción (Render)
