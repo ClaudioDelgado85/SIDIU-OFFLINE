@@ -150,7 +150,7 @@ function mostrarIntimaciones() {
                             <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
                         </svg>
                     </button>
-                    ${!item.dio_cumplimiento ?
+                    ${!item.dio_cumplimiento && item.numero_intimacion < 3 ?
                 `<button class="btn-icon btn-next" data-id="${item.id}" title="Generar Siguiente Instancia">
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
                             <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
@@ -787,6 +787,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.classList.contains('btn-next') || e.target.closest('.btn-next')) {
             const id = (e.target.dataset.id || e.target.closest('.btn-next').dataset.id);
             const original = intimaciones.find(i => i.id == id);
+
+            // Seguridad: no permitir escalar más allá de la 3ª intimación
+            if (original.numero_intimacion >= 3) {
+                alert('La 3ª intimación es el tope del escalamiento. Para continuar, edite esta intimación y agregue los datos de la infracción.');
+                return;
+            }
 
             // Preparar nueva instancia
             intimacionEditando = null; // Es una NUEVA, no edición

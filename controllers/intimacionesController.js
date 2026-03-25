@@ -5,10 +5,7 @@ const db = require('../config/database');
 
 // Función para calcular el estado automáticamente
 function calcularEstadoAutomatico(intimacion) {
-  // Si ya fue reiterada o infraccionada, respetar ese estado
-  if (intimacion.estado === 'reiterada') {
-    return 'reiterada';
-  }
+  // Si fue infraccionada, respetar ese estado
   if (intimacion.estado === 'infraccionado') {
     return 'infraccionado';
   }
@@ -101,12 +98,31 @@ exports.obtenerIntimaciones = async (req, res) => {
 
     const [allIntimaciones] = await db.pool.execute(sql, params);
 
+    // ── Determinar la última intimación por grupo DNI+dirección ──
+    // Esto nos permite saber cuáles son "reiteradas" (las anteriores)
+    // y cuál es la "activa" (la más reciente) que debe recalcular su estado.
+    const [latestPerGroup] = await db.pool.execute(
+      `SELECT MAX(id) as ultimo_id FROM intimaciones GROUP BY dni, direccion`
+    );
+    const latestIds = new Set(latestPerGroup.map(r => r.ultimo_id));
+
     // Calcular estado automático para cada intimación
-    const intimacionesConEstado = allIntimaciones.map(item => ({
-      ...item,
-      estado: calcularEstadoAutomatico(item),
-      fecha_vencimiento: new Date(new Date(item.fecha).getTime() + (item.plazo_dias || 0) * 24 * 60 * 60 * 1000)
-    }));
+    const intimacionesConEstado = allIntimaciones.map(item => {
+      let estadoCalculado = calcularEstadoAutomatico(item);
+
+      // Si NO es la última de su grupo DNI+dirección y no está cumplida/infraccionada,
+      // entonces es "reiterada" (fue superada por una intimación más reciente)
+      const esUltima = latestIds.has(item.id);
+      if (!esUltima && estadoCalculado !== 'cumplida' && estadoCalculado !== 'infraccionado') {
+        estadoCalculado = 'reiterada';
+      }
+
+      return {
+        ...item,
+        estado: estadoCalculado,
+        fecha_vencimiento: new Date(new Date(item.fecha).getTime() + (item.plazo_dias || 0) * 24 * 60 * 60 * 1000)
+      };
+    });
 
     // Aplicar filtro de estado si se especificó
     let intimacionesFiltradas = intimacionesConEstado;
