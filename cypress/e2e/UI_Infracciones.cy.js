@@ -5,11 +5,11 @@ describe('Módulo de Infracciones (UI)', () => {
     cy.visit('/infracciones.html')
   })
 
-  it('Renderiza indicadores principales', () => {
-    cy.get('#statTotal').should('be.visible')
-    cy.get('#statPendientes').should('be.visible')
-    cy.get('#statPagadas').should('be.visible')
-    cy.get('#statAnuladas').should('be.visible')
+  it('Renderiza la vista principal correctamente', () => {
+    // Infracciones no cuenta con el componente stats-grid en la parte superior
+    cy.get('h1').should('contain', 'Actas de Infracción')
+    cy.get('#btnNuevo').should('be.visible')
+    cy.get('#btnExportar').should('be.visible')
   })
 
   it('Abre el modal para crear Infracción', () => {

@@ -15,7 +15,7 @@ describe('Módulo de Reclamos (UI)', () => {
   it('Prueba carga de Nuevo Reclamo', () => {
     cy.get('#btnNuevo').click()
     cy.get('#formReclamo').should('be.visible')
-    cy.get('#btnCancelarModal').click()
+    cy.get('#btnCancelarPanel').click()
     cy.get('#formReclamo').should('not.exist') // Removido del DOM
   })
 
