@@ -41,7 +41,7 @@ app.use(express.urlencoded({ extended: true }));
 // Rate limiting (prevenir ataques de fuerza bruta)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // máximo 100 requests por IP
+  max: process.env.NODE_ENV === 'production' ? 100 : 2000, // 2000 requests localmente para evitar que Cypress colapse por velocidad
   message: 'Demasiadas peticiones desde esta IP, por favor intente más tarde.'
 });
 
