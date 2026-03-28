@@ -126,8 +126,9 @@ const requireModuloAccess = (modulo) => {
           [id, modulo]
         );
 
-        // Si no hay registro de permiso, se asume habilitado por defecto
-        if (permisos.length === 0 || permisos[0].habilitado) {
+        // Política de ZERO TRUST (Cero Confianza - Default Deny)
+        // Solo ingresa si existe el permiso EN LA BASE DE DATOS y está habilitado en true (1)
+        if (permisos.length > 0 && permisos[0].habilitado) {
           return next();
         }
 

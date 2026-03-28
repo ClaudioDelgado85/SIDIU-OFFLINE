@@ -2,7 +2,7 @@ services:
   - type: web
     name: gestion-municipal-clorinda
     runtime: node
-    buildCommand: npm install
+    buildCommand: npm install --production
     startCommand: npm start
     envVars:
       - key: NODE_ENV
