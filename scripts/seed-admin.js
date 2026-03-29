@@ -8,7 +8,7 @@ const createAdmin = async () => {
     const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
     
     // Verificar si el administrador ya existe
-    const [existingUsers] = await pool.query('SELECT id FROM usuarios WHERE nombre_usuario = ?', [adminUser]);
+    const [existingUsers] = await pool.query('SELECT id FROM usuarios WHERE usuario = ?', [adminUser]);
     
     if (existingUsers.length > 0) {
       console.log(`⚠️ El usuario '${adminUser}' ya existe. No se realizaron cambios.`);
@@ -20,7 +20,7 @@ const createAdmin = async () => {
     
     // Insertar
     await pool.query(
-      `INSERT INTO usuarios (nombre_usuario, password_hash, rol, nombre, apellido) VALUES (?, ?, 'admin', 'Administrador', 'Sistema')`,
+      `INSERT INTO usuarios (usuario, email, password_hash, rol, nombre_completo) VALUES (?, 'admin@clorinda.gob.ar', ?, 'admin_total', 'Administrador Sistema')`,
       [adminUser, hash]
     );
 
