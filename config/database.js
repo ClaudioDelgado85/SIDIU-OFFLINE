@@ -4,8 +4,8 @@
 const mysql = require('mysql2');
 require('dotenv').config();
 
-// Crear pool de conexiones
-const pool = mysql.createPool({
+// Opciones base de configuración
+const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
@@ -16,7 +16,15 @@ const pool = mysql.createPool({
   queueLimit: 0,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0
-});
+};
+
+// Si se requiere SSL (ej. para TiDB/Aiven en la nube remota), lo agregamos
+if (process.env.DB_SSL === 'true') {
+  dbConfig.ssl = { rejectUnauthorized: false };
+}
+
+// Crear pool de conexiones
+const pool = mysql.createPool(dbConfig);
 
 // Promisificar para usar async/await
 const promisePool = pool.promise();
