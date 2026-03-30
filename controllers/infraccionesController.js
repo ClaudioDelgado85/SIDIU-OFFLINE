@@ -60,7 +60,7 @@ exports.obtenerInfracciones = async (req, res) => {
         sql += ' ORDER BY fecha DESC, id DESC';
         sql += ' LIMIT ? OFFSET ?';
 
-        const paginationParams = [...params, recordsPerPage.toString(), offset.toString()];
+        const paginationParams = [...params, recordsPerPage, offset];
         const [infracciones] = await db.pool.execute(sql, paginationParams);
 
         res.json({

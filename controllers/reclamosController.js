@@ -57,7 +57,7 @@ exports.obtenerReclamos = async (req, res) => {
 
         // Fix: params array needs to be spread correctly or passed directly depending on mysql2 version, 
         // but here spread is safe for offset/limit strings
-        const queryParams = [...params, recordsPerPage.toString(), offset.toString()];
+        const queryParams = [...params, recordsPerPage, offset];
         const [rows] = await db.pool.execute(sql, queryParams);
 
         res.json({
