@@ -19,6 +19,9 @@ const expedientesRoutes = require('./routes/expedientesRoutes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Configurar confianza en el proxy de Render (necesario para el rate-limit)
+app.set('trust proxy', 1);
+
 // ============================================
 // MIDDLEWARES
 // ============================================
