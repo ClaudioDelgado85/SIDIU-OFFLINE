@@ -73,12 +73,9 @@ exports.obtenerExpedientes = async (req, res) => {
     // Query principal con paginación
     let sql = 'SELECT * FROM expedientes' + whereClause;
     sql += ' ORDER BY fecha DESC, id DESC';
-    sql += ' LIMIT ? OFFSET ?';
+    sql += ` LIMIT ${parseInt(recordsPerPage)} OFFSET ${parseInt(offset)}`;
 
-    // Agregar parámetros de paginación (deben ser enteros para TiDB)
-    const paginationParams = [...params, recordsPerPage, offset];
-
-    const [expedientes] = await db.pool.execute(sql, paginationParams);
+    const [expedientes] = await db.pool.execute(sql, params);
 
     res.json({
       success: true,

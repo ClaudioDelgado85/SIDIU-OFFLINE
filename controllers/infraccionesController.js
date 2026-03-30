@@ -58,10 +58,9 @@ exports.obtenerInfracciones = async (req, res) => {
         // Query principal
         let sql = 'SELECT * FROM infracciones' + whereClause;
         sql += ' ORDER BY fecha DESC, id DESC';
-        sql += ' LIMIT ? OFFSET ?';
+        sql += ` LIMIT ${parseInt(recordsPerPage)} OFFSET ${parseInt(offset)}`;
 
-        const paginationParams = [...params, recordsPerPage, offset];
-        const [infracciones] = await db.pool.execute(sql, paginationParams);
+        const [infracciones] = await db.pool.execute(sql, params);
 
         res.json({
             success: true,

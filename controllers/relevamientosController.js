@@ -35,9 +35,8 @@ exports.obtenerRelevamientos = async (req, res) => {
             SELECT * FROM relevamientos 
             ${whereClause} 
             ORDER BY fecha_relevamiento DESC, id DESC 
-            LIMIT ? OFFSET ?
+            LIMIT ${parseInt(recordsPerPage)} OFFSET ${parseInt(offset)}
         `;
-        params.push(parseInt(recordsPerPage), parseInt(offset));
 
         const [rows] = await db.pool.execute(sql, params);
 

@@ -53,12 +53,9 @@ exports.obtenerReclamos = async (req, res) => {
         const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
         // Query
-        const sql = `SELECT * FROM reclamos ${whereClause} ORDER BY fecha_creacion DESC LIMIT ? OFFSET ?`;
+        const sql = `SELECT * FROM reclamos ${whereClause} ORDER BY fecha_creacion DESC LIMIT ${parseInt(recordsPerPage)} OFFSET ${parseInt(offset)}`;
 
-        // Fix: params array needs to be spread correctly or passed directly depending on mysql2 version, 
-        // but here spread is safe for offset/limit strings
-        const queryParams = [...params, recordsPerPage, offset];
-        const [rows] = await db.pool.execute(sql, queryParams);
+        const [rows] = await db.pool.execute(sql, params);
 
         res.json({
             success: true,
