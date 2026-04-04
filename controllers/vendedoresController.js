@@ -43,8 +43,7 @@ const obtenerVendedores = async (req, res) => {
 
         // Paginación
         const offset = (page - 1) * limit;
-        query += ' ORDER BY v.fecha_relevamiento DESC, v.id DESC LIMIT ? OFFSET ?';
-        params.push(parseInt(limit), offset);
+        query += ` ORDER BY v.fecha_relevamiento DESC, v.id DESC LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
 
         const rows = await db.query(query, params);
 
