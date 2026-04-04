@@ -334,6 +334,54 @@ CREATE TABLE `vendedores_ambulantes` (
   CONSTRAINT `fk_vendedores_barrio` FOREIGN KEY (`barrio_id`) REFERENCES `barrios` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ==========================================================
+-- DATOS INICIALES
+-- ==========================================================
+
+-- Catálogos: tipo_intimacion
+INSERT IGNORE INTO catalogos (categoria, valor, label, orden) VALUES
+  ('tipo_intimacion', 'general', 'General', 1),
+  ('tipo_intimacion', 'baldio', 'Terreno Baldío', 2),
+  ('tipo_intimacion', 'vehiculo', 'Vehículo Abandonado', 3);
+
+-- Catálogos: intimacion_por
+INSERT IGNORE INTO catalogos (categoria, valor, label, orden) VALUES
+  ('intimacion_por', 'escombros', 'Escombros', 1),
+  ('intimacion_por', 'arena', 'Arena', 2),
+  ('intimacion_por', 'construccion', 'Construcción sin autorización', 3),
+  ('intimacion_por', 'agua_servida', 'Pérdida de agua servida', 4),
+  ('intimacion_por', 'basura', 'Basura / Residuos', 5),
+  ('intimacion_por', 'otros', 'Otros', 99);
+
+-- Catálogos: motivo_expediente
+INSERT IGNORE INTO catalogos (categoria, valor, label, orden) VALUES
+  ('motivo_expediente', 'habilitacion', 'Habilitación', 1),
+  ('motivo_expediente', 'reempadronamiento', 'Reempadronamiento', 2),
+  ('motivo_expediente', 'ampliacion_rubro', 'Ampliación de rubro', 3),
+  ('motivo_expediente', 'cambio_rubro', 'Cambio de rubro', 4),
+  ('motivo_expediente', 'traslado_local', 'Traslado de local', 5),
+  ('motivo_expediente', 'cambio_titular', 'Cambio de titular', 6),
+  ('motivo_expediente', 'cancelacion', 'Cancelación', 7),
+  ('motivo_expediente', 'reclamos', 'Reclamos', 8),
+  ('motivo_expediente', 'aprobacion_plano', 'Aprobación de plano', 9),
+  ('motivo_expediente', 'oficio_juzgado', 'Oficio del juzgado', 10),
+  ('motivo_expediente', 'otros', 'Otros', 99);
+
+-- Catálogos: tipo_tarea_diaria
+INSERT IGNORE INTO catalogos (categoria, valor, label, orden) VALUES
+  ('tipo_tarea_diaria', 'operativo', 'Operativo', 1),
+  ('tipo_tarea_diaria', 'administrativo', 'Administrativo', 2),
+  ('tipo_tarea_diaria', 'inspeccion', 'Inspección', 3),
+  ('tipo_tarea_diaria', 'limpieza', 'Limpieza', 4),
+  ('tipo_tarea_diaria', 'notificacion', 'Notificación', 5),
+  ('tipo_tarea_diaria', 'relevamiento', 'Relevamiento', 6),
+  ('tipo_tarea_diaria', 'otros', 'Otros', 99);
+
+-- Configuración del sistema
+INSERT IGNORE INTO configuracion_sistema (clave, valor, descripcion) VALUES
+  ('nombre_sistema', 'Sistema de Gestión Municipal', 'Nombre del sistema'),
+  ('municipio', 'Municipalidad de Clorinda', 'Nombre del municipio');
+
 -- Estructura para la vista: vista_alertas_intimaciones
 DROP VIEW IF EXISTS `vista_alertas_intimaciones`;
 CREATE VIEW `vista_alertas_intimaciones` AS select `i`.`id` AS `id`,`i`.`tipo` AS `tipo`,`i`.`nombre_apellido` AS `nombre_apellido`,`i`.`dni` AS `dni`,`i`.`direccion` AS `direccion`,`i`.`fecha` AS `fecha_intimacion`,`i`.`fecha` + interval `i`.`plazo_dias` day AS `fecha_vencimiento`,`i`.`plazo_dias` AS `plazo_dias`,`i`.`numero_intimacion` AS `numero_intimacion`,`i`.`barrio_id` AS `barrio_id`,case when `i`.`dio_cumplimiento` = 1 then 'cumplida' when curdate() > `i`.`fecha` + interval `i`.`plazo_dias` day then 'vencida' when to_days(`i`.`fecha` + interval `i`.`plazo_dias` day) - to_days(curdate()) <= 3 then 'proxima_vencer' else 'vigente' end AS `estado_calculado`,to_days(`i`.`fecha` + interval `i`.`plazo_dias` day) - to_days(curdate()) AS `dias_restantes` from `intimaciones` `i` where `i`.`dio_cumplimiento` = 0 order by `i`.`fecha` + interval `i`.`plazo_dias` day;

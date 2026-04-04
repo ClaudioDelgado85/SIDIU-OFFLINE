@@ -11,6 +11,7 @@ const CATEGORIAS_LABELS = {
     'tipo_intimacion': '📋 Tipo Intimación',
     'intimacion_por': '📌 Intimación Por',
     'motivo_expediente': '📁 Motivo Expediente',
+    'tipo_tarea_diaria': '📝 Tipo Tarea Diaria',
     'barrios': '🏘️ Barrios'
 };
 
