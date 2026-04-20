@@ -1,16 +1,11 @@
-// ============================================
-// NAVBAR GLOBAL — Navegación entre módulos
-// Incluir este script en todas las páginas (excepto login)
-// Adapta la navegación según el rol del usuario
-// ============================================
-
 (function () {
-    // Definición de módulos con su ID para permisos
+    'use strict';
+
     const modulos = [
         {
             href: 'dashboard.html',
             label: 'Inicio',
-            moduloId: null, // Siempre visible
+            moduloId: null,
             icon: '<svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>'
         },
         {
@@ -64,211 +59,313 @@
         {
             href: 'informe_diario.html',
             label: 'Informe',
-            moduloId: null, // Siempre visible
+            moduloId: null,
             icon: '<svg viewBox="0 0 24 24"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>'
         },
         {
             href: 'busqueda.html',
-            label: 'Búsqueda',
-            moduloId: null, // Siempre visible (todos pueden buscar)
+            label: 'Busqueda',
+            moduloId: null,
             icon: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>'
         },
         {
             href: 'catalogos.html',
-            label: 'Catálogos',
+            label: 'Catalogos',
             moduloId: 'catalogos',
             icon: '<svg viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.573-1.066z"/><circle cx="12" cy="12" r="3"/></svg>'
         }
     ];
 
-    // Módulos solo para admin
     const modulosAdmin = [
         {
             href: 'usuarios.html',
             label: 'Usuarios',
             moduloId: null,
-            adminOnly: true,
             icon: '<svg viewBox="0 0 24 24"><path d="M17 20h5V16c0-2-3-4-6-4h-5c-3 0-6 2-6 4v4h5M12 12a4 4 0 100-8 4 4 0 000 8z"/></svg>'
         },
         {
             href: 'auditoria.html',
-            label: 'Auditoría',
+            label: 'Auditoria',
             moduloId: null,
-            adminOnly: true,
             icon: '<svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path d="M9 14l2 2 4-4"/></svg>'
         }
     ];
 
-    // Obtener datos del usuario
+    const paginaActual = window.location.pathname.split('/').pop() || 'dashboard.html';
     const usuarioData = JSON.parse(localStorage.getItem('usuario') || '{}');
     const rol = usuarioData.rol || 'consulta';
     const permisos = usuarioData.permisos || {};
 
-    // Filtrar módulos según rol
-    function moduloVisible(m) {
-        // Módulos sin moduloId siempre son visibles
-        if (!m.moduloId) return true;
-
-        // Admin ve todo
-        if (rol === 'admin_total') return true;
-
-        // Consulta ve todo (solo lectura, restricción es en el backend)
-        if (rol === 'consulta') return true;
-
-        // Carga: verificar permisos específicos
+    function moduloVisible(modulo) {
+        if (!modulo.moduloId) return true;
+        if (rol === 'admin_total' || rol === 'consulta') return true;
         if (rol === 'carga') {
-            // Si no hay permisos definidos, asumimos habilitado
             if (!permisos || Object.keys(permisos).length === 0) return true;
-            // Si tiene un permiso definido, respetarlo
-            if (permisos.hasOwnProperty(m.moduloId)) {
-                return permisos[m.moduloId];
+            if (Object.prototype.hasOwnProperty.call(permisos, modulo.moduloId)) {
+                return permisos[modulo.moduloId];
             }
-            // Sin registro explícito = habilitado
             return true;
         }
-
         return true;
     }
 
-    // Construir lista de módulos a mostrar
-    let modulosVisibles = modulos.filter(moduloVisible);
-
-    // Agregar módulos solo-admin
-    if (rol === 'admin_total') {
-        modulosVisibles = modulosVisibles.concat(modulosAdmin);
-    }
-
-    const paginaActual = window.location.pathname.split('/').pop() || 'dashboard.html';
-
-    // Verificar acceso a la página actual
-    const moduloActual = modulos.find(m => m.href === paginaActual);
+    const moduloActual = modulos.find((modulo) => modulo.href === paginaActual);
     if (moduloActual && moduloActual.moduloId && rol === 'carga') {
-        if (permisos && permisos.hasOwnProperty(moduloActual.moduloId) && !permisos[moduloActual.moduloId]) {
-            // Redirigir al dashboard si no tiene acceso
-            alert('No tiene acceso a este módulo. Contacte al administrador.');
+        if (Object.prototype.hasOwnProperty.call(permisos, moduloActual.moduloId) && !permisos[moduloActual.moduloId]) {
+            alert('No tiene acceso a este modulo. Contacte al administrador.');
             window.location.href = '/dashboard.html';
             return;
         }
     }
 
-    // Verificar páginas solo-admin
-    const paginasAdmin = ['auditoria.html', 'usuarios.html'];
-    if (paginasAdmin.includes(paginaActual) && rol !== 'admin_total') {
+    if (['auditoria.html', 'usuarios.html'].includes(paginaActual) && rol !== 'admin_total') {
         alert('Acceso denegado. Se requieren permisos de administrador.');
         window.location.href = '/dashboard.html';
         return;
     }
 
-    const nav = document.createElement('nav');
-    nav.className = 'navbar-modulos';
-    nav.innerHTML = modulosVisibles.map(m => {
-        const activo = paginaActual === m.href;
-        return `<a href="${m.href}" class="navbar-link${activo ? ' active' : ''}" title="${m.label}">
-            <span class="navbar-icon">${m.icon}</span>
-            <span class="navbar-label">${m.label}</span>
-        </a>`;
-    }).join('');
-
-    // Insertar después del header
-    const header = document.querySelector('.dashboard-header');
-    if (header) {
-        header.insertAdjacentElement('afterend', nav);
+    let modulosVisibles = modulos.filter(moduloVisible);
+    if (rol === 'admin_total') {
+        modulosVisibles = modulosVisibles.concat(modulosAdmin);
     }
 
-    // Agregar indicador de rol y botón de logout al header
+    const header = document.querySelector('.dashboard-header');
+    const nav = document.createElement('nav');
+    nav.className = 'navbar-modulos';
+    nav.setAttribute('aria-label', 'Navegacion principal');
+
+    const linksHtml = modulosVisibles.map((modulo) => {
+        const activo = paginaActual === modulo.href;
+        return `
+            <a href="${modulo.href}" class="navbar-link${activo ? ' active' : ''}" title="${modulo.label}">
+                <span class="navbar-icon">${modulo.icon}</span>
+                <span class="navbar-label">${modulo.label}</span>
+            </a>
+        `;
+    }).join('');
+
+    const rolLabels = {
+        admin_total: 'Administrador',
+        carga: 'Usuario de Carga',
+        consulta: 'Solo Consulta'
+    };
+
+    nav.innerHTML = `
+        <div class="navbar-menu-header">
+            <div class="navbar-menu-brand">
+                <strong>SIDIU</strong>
+                <span>${header?.querySelector('h1')?.textContent || 'Sistema Municipal'}</span>
+            </div>
+            <button type="button" class="navbar-close-btn" id="btnNavbarClose" aria-label="Cerrar menu">×</button>
+        </div>
+        ${linksHtml}
+        <div class="navbar-menu-footer">
+            <div class="navbar-menu-user">
+                <strong>${usuarioData.nombre_completo || 'Usuario'}</strong>
+                <small>${rolLabels[rol] || rol}</small>
+            </div>
+            <button type="button" class="navbar-menu-logout" id="btnNavbarMenuLogout">Salir</button>
+        </div>
+    `;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'navbar-overlay';
+
     if (header) {
-        const rolLabels = {
-            'admin_total': 'Administrador',
-            'carga': 'Usuario de Carga',
-            'consulta': 'Solo Consulta'
-        };
+        header.classList.add('dashboard-header-has-nav');
+        header.insertAdjacentElement('afterend', nav);
+        header.insertAdjacentElement('afterend', overlay);
+    } else {
+        document.body.prepend(nav);
+        document.body.prepend(overlay);
+    }
+
+    injectHeaderControls();
+    injectSharedStyles();
+    bindMenuEvents();
+
+    function injectHeaderControls() {
+        if (!header) return;
+
+        const oldUserInfo = header.querySelector('.user-info');
+        if (oldUserInfo) {
+            oldUserInfo.style.display = 'none';
+        }
+
+        const contentBlock = header.firstElementChild;
+        if (contentBlock && !contentBlock.classList.contains('user-info')) {
+            contentBlock.classList.add('navbar-title-block');
+        }
+
+        const btnHamburger = document.createElement('button');
+        btnHamburger.type = 'button';
+        btnHamburger.id = 'btnHamburgerMenu';
+        btnHamburger.className = 'btn-hamburger';
+        btnHamburger.setAttribute('aria-label', 'Abrir menu');
+        btnHamburger.setAttribute('aria-expanded', 'false');
+        btnHamburger.innerHTML = `
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 7h16M4 12h16M4 17h16"/>
+            </svg>
+        `;
 
         const userInfo = document.createElement('div');
         userInfo.className = 'navbar-user-info';
         userInfo.innerHTML = `
             <span class="navbar-user-name">${usuarioData.nombre_completo || 'Usuario'}</span>
             <span class="navbar-user-role rol-${rol}">${rolLabels[rol] || rol}</span>
-            <button class="navbar-logout-btn" id="btnNavbarLogout" title="Cerrar sesión">
+            <button type="button" class="navbar-logout-btn" id="btnNavbarLogout" title="Cerrar sesion">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/>
+                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                    <polyline points="16,17 21,12 16,7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
                 </svg>
             </button>
         `;
 
-        // Estilos del user info
+        header.prepend(btnHamburger);
+        header.appendChild(userInfo);
+    }
+
+    function injectSharedStyles() {
+        if (document.getElementById('navbarGlobalStyles')) return;
+
         const style = document.createElement('style');
+        style.id = 'navbarGlobalStyles';
         style.textContent = `
+            .dashboard-header { position: relative; }
             .navbar-user-info {
-                display: flex; align-items: center; gap: 10px;
-                position: absolute; right: 20px; top: 50%;
+                position: absolute;
+                right: 20px;
+                top: 50%;
                 transform: translateY(-50%);
+                display: flex;
+                align-items: center;
+                gap: 10px;
             }
             .navbar-user-name {
-                color: #e2e8f0; font-size: 0.85rem; font-weight: 500;
+                color: #e2e8f0;
+                font-size: 0.85rem;
+                font-weight: 500;
             }
             .navbar-user-role {
-                font-size: 0.7rem; padding: 2px 8px; border-radius: 10px;
-                font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+                display: inline-flex;
+                align-items: center;
+                font-size: 0.7rem;
+                padding: 3px 9px;
+                border-radius: 999px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
             }
             .navbar-user-role.rol-admin_total {
-                background: rgba(239,68,68,0.2); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3);
+                background: rgba(239, 68, 68, 0.2);
+                color: #fecaca;
+                border: 1px solid rgba(239, 68, 68, 0.3);
             }
             .navbar-user-role.rol-carga {
-                background: rgba(59,130,246,0.2); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3);
+                background: rgba(59, 130, 246, 0.2);
+                color: #bfdbfe;
+                border: 1px solid rgba(59, 130, 246, 0.3);
             }
             .navbar-user-role.rol-consulta {
-                background: rgba(34,197,94,0.2); color: #86efac; border: 1px solid rgba(34,197,94,0.3);
+                background: rgba(34, 197, 94, 0.2);
+                color: #bbf7d0;
+                border: 1px solid rgba(34, 197, 94, 0.3);
             }
             .navbar-logout-btn {
-                background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3);
-                color: #fca5a5; cursor: pointer; padding: 6px; border-radius: 6px;
-                display: flex; align-items: center; transition: all 0.2s;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 34px;
+                height: 34px;
+                border: 1px solid rgba(239, 68, 68, 0.28);
+                border-radius: 10px;
+                background: rgba(239, 68, 68, 0.14);
+                color: #fecaca;
+                cursor: pointer;
             }
             .navbar-logout-btn:hover {
-                background: rgba(239,68,68,0.3); color: #fee2e2;
+                background: rgba(239, 68, 68, 0.24);
             }
-            .dashboard-header { position: relative; }
-
             @media (max-width: 768px) {
                 .navbar-user-info {
-                    position: static; transform: none;
-                    justify-content: center; margin-top: 8px;
+                    position: static;
+                    transform: none;
                 }
-                .navbar-user-name { display: none; }
+                .navbar-user-name {
+                    display: none;
+                }
             }
         `;
-        // Ocultar el div .user-info original si existe (evita duplicidad visual pero mantiene IDs para JS viejo)
-        const oldUserInfo = header.querySelector('.user-info');
-        if (oldUserInfo) {
-            oldUserInfo.style.display = 'none';
-        }
 
         document.head.appendChild(style);
-        header.appendChild(userInfo);
+    }
 
-        // Evento logout
-        document.getElementById('btnNavbarLogout').addEventListener('click', () => {
+    function bindMenuEvents() {
+        const btnHamburger = document.getElementById('btnHamburgerMenu');
+        const btnClose = document.getElementById('btnNavbarClose');
+        const btnLogoutHeader = document.getElementById('btnNavbarLogout');
+        const btnLogoutMenu = document.getElementById('btnNavbarMenuLogout');
+        const btnLogoutOriginal = document.getElementById('btnLogout');
+
+        const handleLogout = () => {
             if (typeof window.cerrarSesionManual === 'function') {
                 window.cerrarSesionManual();
+                return;
+            }
+
+            localStorage.removeItem('token');
+            localStorage.removeItem('usuario');
+            window.location.href = '/login.html';
+        };
+
+        const closeMenu = () => {
+            nav.classList.remove('is-open');
+            overlay.classList.remove('is-open');
+            document.body.classList.remove('mobile-nav-open');
+            btnHamburger?.setAttribute('aria-expanded', 'false');
+        };
+
+        const openMenu = () => {
+            nav.classList.add('is-open');
+            overlay.classList.add('is-open');
+            document.body.classList.add('mobile-nav-open');
+            btnHamburger?.setAttribute('aria-expanded', 'true');
+        };
+
+        const toggleMenu = () => {
+            if (!window.matchMedia('(max-width: 768px)').matches) return;
+            if (nav.classList.contains('is-open')) {
+                closeMenu();
             } else {
-                localStorage.removeItem('token');
-                localStorage.removeItem('usuario');
-                window.location.href = '/login.html';
+                openMenu();
+            }
+        };
+
+        btnHamburger?.addEventListener('click', toggleMenu);
+        btnClose?.addEventListener('click', closeMenu);
+        overlay.addEventListener('click', closeMenu);
+        btnLogoutHeader?.addEventListener('click', handleLogout);
+        btnLogoutMenu?.addEventListener('click', handleLogout);
+        if (btnLogoutOriginal && btnLogoutOriginal !== btnLogoutHeader) {
+            btnLogoutOriginal.addEventListener('click', handleLogout);
+        }
+
+        nav.querySelectorAll('.navbar-link').forEach((link) => {
+            link.addEventListener('click', closeMenu);
+        });
+
+        window.addEventListener('resize', () => {
+            if (!window.matchMedia('(max-width: 768px)').matches) {
+                closeMenu();
             }
         });
-        
-        // Si existe el btnLogout original (ej: dashboard.html antiguo), enlazarlo también
-        const btnLogoutOriginal = document.getElementById('btnLogout');
-        if (btnLogoutOriginal && btnLogoutOriginal !== document.getElementById('btnNavbarLogout')) {
-            btnLogoutOriginal.addEventListener('click', () => {
-                if (typeof window.cerrarSesionManual === 'function') {
-                    window.cerrarSesionManual();
-                } else {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('usuario');
-                    window.location.href = '/login.html';
-                }
-            });
-        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                closeMenu();
+            }
+        });
     }
 })();
