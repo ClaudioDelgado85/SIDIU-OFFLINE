@@ -605,10 +605,10 @@
     .page-modulo .navbar-link,
     .dashboard .navbar-link {
         width: 100%;
-        padding: 14px 18px !important;
+        padding: 18px 22px !important;
         flex-direction: row !important;
         justify-content: flex-start;
-        gap: 14px;
+        gap: 16px;
         border-bottom: none;
         border-left: 3px solid transparent;
     }
@@ -626,7 +626,12 @@
     }
 
     .navbar-label {
-        font-size: 0.88rem;
+        font-size: 1.25rem;
+    }
+
+    .navbar-icon svg {
+        width: 32px;
+        height: 32px;
     }
 
     .empty-state {
