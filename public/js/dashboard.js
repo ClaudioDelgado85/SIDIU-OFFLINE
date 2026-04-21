@@ -159,22 +159,54 @@ function renderReclamos(items) {
         return;
     }
 
-    let html = `<table class="dash-table"><thead><tr>
+    let htmlTable = `<table class="dash-table mobile-hidden-by-cards"><thead><tr>
         <th>Nro</th><th>Tipo</th><th>Dirección</th><th>Prioridad</th><th>Días</th>
     </tr></thead><tbody>`;
+
+    let htmlCards = `<div class="mobile-cards-container dashboard-mobile-reclamos">`;
 
     items.forEach(r => {
         const prioClass = `p-${r.prioridad}`;
         const prioLabel = r.prioridad.charAt(0).toUpperCase() + r.prioridad.slice(1);
-
-        html += `<tr onclick="window.location.href='reclamos.html'">
+        
+        // Fila de tabla para escritorio
+        htmlTable += `<tr onclick="window.location.href='reclamos.html'">
             <td style="font-weight:700;">${r.numero_reclamo}</td>
             <td style="text-transform:capitalize;">${r.tipo_reclamo}</td>
             <td style="max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${r.direccion_incidente}">${r.direccion_incidente}</td>
             <td><span class="badge-prioridad ${prioClass}">${prioLabel}</span></td>
             <td><span class="badge-dias badge-warning">${r.dias_sin_resolver} d</span></td>
         </tr>`;
+
+        // Tarjeta para móvil
+        let isClass = 'is-info';
+        if(r.prioridad === 'alta') isClass = 'is-danger';
+        else if(r.prioridad === 'media') isClass = 'is-warning';
+
+        htmlCards += `
+        <div class="mobile-card ${isClass}" onclick="window.location.href='reclamos.html'">
+            <div class="mobile-card-top">
+                <div>
+                    <h3 class="mobile-card-title" style="text-transform:capitalize;">${r.tipo_reclamo}</h3>
+                    <p class="mobile-card-subtitle">${r.direccion_incidente}</p>
+                </div>
+                <span class="badge-prioridad ${prioClass}" style="font-size:0.7rem; padding:4px 8px;">${prioLabel}</span>
+            </div>
+            <div class="mobile-card-summary">
+                <div class="mobile-card-field">
+                    <span class="mobile-card-field-label">Nro. Reclamo</span>
+                    <span class="mobile-card-field-value">${r.numero_reclamo}</span>
+                </div>
+                <div class="mobile-card-field">
+                    <span class="mobile-card-field-label">Días sin resolver</span>
+                    <span class="mobile-card-field-value" style="color:#d97706; font-weight:700;">${r.dias_sin_resolver} días</span>
+                </div>
+            </div>
+        </div>`;
     });
 
-    container.innerHTML = html + '</tbody></table>';
+    htmlTable += '</tbody></table>';
+    htmlCards += '</div>';
+
+    container.innerHTML = htmlTable + htmlCards;
 }

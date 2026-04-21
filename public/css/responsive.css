@@ -271,8 +271,18 @@
     .table-container table,
     .planilla-container table,
     table.planilla-grid,
-    table.si-table {
+    table.si-table,
+    table.dash-table,
+    .dash-panel .panel-content .dash-table,
+    .panel-content > .dash-table {
         display: none !important;
+    }
+
+    /* Tarjetas móviles dentro del panel de reclamos del dashboard */
+    .dash-panel .panel-content .dashboard-mobile-reclamos {
+        display: grid !important;
+        gap: 12px;
+        padding: 14px;
     }
 
     .mobile-results-hint {
