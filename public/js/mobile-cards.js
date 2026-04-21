@@ -148,12 +148,25 @@
                 const tipo = helpers.cellText(row, 1);
                 const estado = helpers.badgeText(row) || helpers.cellText(row, 7);
 
+                // Extraer fotos del array global de intimaciones
+                let fotoInicial = null;
+                let fotoActual = null;
+                if (typeof intimaciones !== 'undefined' && Array.isArray(intimaciones)) {
+                    const rowIndex = Array.from(row.parentNode.children).indexOf(row);
+                    const intimacionData = intimaciones[rowIndex];
+                    if (intimacionData) {
+                        fotoInicial = intimacionData.foto_inicial || null;
+                        fotoActual = intimacionData.foto_actual || null;
+                    }
+                }
+
                 return {
                     eyebrow: 'Intimacion',
                     title: nombre || 'Sin nombre',
                     subtitle: helpers.clean([direccion, dni ? `DNI ${dni}` : ''].filter(Boolean).join(' · ')),
                     badge: estado,
                     accent: helpers.accentFromText(estado || row.getAttribute('data-estado')),
+                    photos: { inicial: fotoInicial, actual: fotoActual },
                     summary: helpers.compact([
                         helpers.field('Tipo', tipo),
                         helpers.field('Nro', helpers.cellText(row, 4)),
@@ -224,12 +237,25 @@
                 const prioridad = helpers.cellText(row, 6);
                 const estado = helpers.badgeText(row) || helpers.cellText(row, 7);
 
+                // Extraer fotos del array global de reclamos
+                let fotoInicial = null;
+                let fotoActual = null;
+                if (typeof reclamos !== 'undefined' && Array.isArray(reclamos)) {
+                    const rowIndex = Array.from(row.parentNode.children).indexOf(row);
+                    const reclamoData = reclamos[rowIndex];
+                    if (reclamoData) {
+                        fotoInicial = reclamoData.foto_inicial || null;
+                        fotoActual = reclamoData.foto_actual || null;
+                    }
+                }
+
                 return {
                     eyebrow: 'Reclamo',
                     title: numero || 'Sin numero',
                     subtitle: helpers.cellText(row, 3),
                     badge: estado,
                     accent: helpers.accentFromText(`${estado} ${prioridad}`),
+                    photos: { inicial: fotoInicial, actual: fotoActual },
                     summary: helpers.compact([
                         helpers.field('Tipo', helpers.cellText(row, 2)),
                         helpers.field('Prioridad', prioridad),
@@ -633,21 +659,46 @@
         const overlay = ensureDetailOverlay();
         const head = overlay.querySelector('#mobileDetailHead');
         const list = overlay.querySelector('#mobileDetailList');
-        const badge = item.badge ? `<span class="mobile-card-badge">${helpers.escape(item.badge)}</span>` : '';
 
-        head.innerHTML = `
-            <p class="mobile-card-eyebrow">${helpers.escape(item.eyebrow || '')}</p>
-            <h3 class="mobile-card-title" id="mobileDetailTitle">${helpers.escape(item.title || 'Detalle')}</h3>
-            ${item.subtitle ? `<p class="mobile-card-subtitle">${helpers.escape(item.subtitle)}</p>` : ''}
-            ${badge}
-        `;
+        // Ocultar encabezado redundante
+        head.innerHTML = '';
 
-        list.innerHTML = (item.details || item.summary || []).map((field) => `
+        let detailHtml = (item.details || item.summary || []).map((field) => `
             <div class="mobile-detail-row">
                 <span class="mobile-detail-label">${helpers.escape(field.label)}</span>
                 <span class="mobile-detail-value">${helpers.escape(field.value)}</span>
             </div>
         `).join('');
+
+        // Mostrar fotos si existen (intimaciones)
+        if (item.photos && (item.photos.inicial || item.photos.actual)) {
+            detailHtml += `<div class="mobile-detail-photos">`;
+            detailHtml += `<span class="mobile-detail-label" style="margin-bottom:8px; display:block;">EVIDENCIA FOTOGRAFICA</span>`;
+            detailHtml += `<div style="display:flex; flex-direction:column; gap:12px;">`;
+            if (item.photos.inicial) {
+                detailHtml += `
+                    <div style="text-align:center;">
+                        <span style="font-size:0.75rem; font-weight:600; color:var(--si-text-muted,#64748b); display:block; margin-bottom:6px;">Estado Inicial</span>
+                        <a href="${item.photos.inicial}" target="_blank">
+                            <img src="${item.photos.inicial}" style="max-width:100%; max-height:250px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.15);" alt="Foto estado inicial">
+                        </a>
+                    </div>`;
+            }
+            if (item.photos.actual) {
+                detailHtml += `
+                    <div style="text-align:center;">
+                        <span style="font-size:0.75rem; font-weight:600; color:var(--si-text-muted,#64748b); display:block; margin-bottom:6px;">Estado Actual</span>
+                        <a href="${item.photos.actual}" target="_blank">
+                            <img src="${item.photos.actual}" style="max-width:100%; max-height:250px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.15);" alt="Foto estado actual">
+                        </a>
+                    </div>`;
+            }
+            detailHtml += `</div>`;
+            detailHtml += `<p style="text-align:center; font-size:0.72rem; color:var(--si-text-muted,#64748b); margin-top:8px;">Toca la imagen para verla en tamaño completo</p>`;
+            detailHtml += `</div>`;
+        }
+
+        list.innerHTML = detailHtml;
 
         overlay.classList.add('is-open');
         document.body.classList.add('mobile-detail-open');
