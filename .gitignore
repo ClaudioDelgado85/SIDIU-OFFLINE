@@ -32,6 +32,9 @@ Thumbs.db
 *.swo
 *~
 
+# Archivos subidos por usuarios
+public/uploads/
+
 # Archivos temporales
 tmp/
 temp/

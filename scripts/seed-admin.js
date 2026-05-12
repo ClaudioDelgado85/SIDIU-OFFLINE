@@ -4,8 +4,12 @@ const bcrypt = require('bcryptjs');
 
 const createAdmin = async () => {
   try {
-    const adminUser = 'admin';
-    const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
+    const adminUser = process.env.ADMIN_USER || 'admin';
+    const adminPass = process.env.ADMIN_PASSWORD;
+    if (!adminPass) {
+      console.error('ERROR: Debe definir ADMIN_PASSWORD en las variables de entorno.');
+      process.exit(1);
+    }
     
     // Verificar si el administrador ya existe
     const [existingUsers] = await pool.query('SELECT id FROM usuarios WHERE usuario = ?', [adminUser]);

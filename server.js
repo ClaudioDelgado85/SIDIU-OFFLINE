@@ -165,7 +165,7 @@ app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || 'Error interno del servidor'
+    message: process.env.NODE_ENV === 'production' ? 'Error interno del servidor' : err.message
   });
 });
 
