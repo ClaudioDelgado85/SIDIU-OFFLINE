@@ -24,6 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
         exportarInformeExcel(informeData);
     });
 
+    document.getElementById('btnWord').addEventListener('click', () => {
+        if (!informeData) return alert('Primero genere un informe.');
+        descargarWord();
+    });
+
     // Checkbox listeners
     document.querySelectorAll('.check-modulo input').forEach(cb => {
         cb.addEventListener('change', aplicarFiltroModulos);
@@ -125,6 +130,45 @@ function exportarInformeExcel(data) {
     XLSX.writeFile(wb, nombreArchivo);
 }
 
+// ── Descargar Word ───────────────────────────
+async function descargarWord() {
+    const sesion = verificarAutenticacion();
+    if (!sesion) return;
+
+    const btn = document.getElementById('btnWord');
+    btn.disabled = true;
+    btn.textContent = 'Generando Word...';
+
+    try {
+        const fecha = document.getElementById('fechaInforme').value;
+        const [y, m, d] = fecha.split('-');
+        const res = await fetch(`${API_URL}/informes/diario/docx?fecha=${fecha}`, {
+            headers: { 'Authorization': `Bearer ${sesion.token}` }
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.message || 'Error al generar Word');
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Informe_Diario_${d}-${m}-${y}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        console.error('Error Word:', err);
+        alert(err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4v16h12V4H6zm2 3h8v2H8V7zm0 4h8v2H8v-2zm0 4h5v2H8v-2zm10 7H6c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h8l6 6v14c0 1.1-.9 2-2 2z"/></svg> Word`;
+    }
+}
+
 // ── Generar Informe ─────────────────────────
 async function generarInforme(fecha, destinatario) {
     const sesion = verificarAutenticacion();
@@ -156,6 +200,7 @@ async function generarInforme(fecha, destinatario) {
             renderDiv.style.display = 'block';
             btnPDF.disabled = false;
             document.getElementById('btnExportar').disabled = false;
+            document.getElementById('btnWord').disabled = false;
 
             document.getElementById('modulosSelector').style.display = 'block';
             autoDesmarcarVacios(data.data);
