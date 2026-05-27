@@ -282,7 +282,14 @@ exports.actualizarIntimacion = async (req, res) => {
     for (const key of Object.keys(updates)) {
       if (allowedFields.includes(key)) {
         fields.push(`${key} = ?`);
-        values.push(updates[key]);
+        
+        // Convertir strings vacíos a null para evitar errores de MySQL (fechas, enteros, foráneas)
+        let val = updates[key];
+        if (val === '') {
+          val = null;
+        }
+        
+        values.push(val);
       }
     }
 
