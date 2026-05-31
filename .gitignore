@@ -43,3 +43,9 @@ temp/
 # Backups de base de datos
 *.sql.backup
 backups/
+
+# Bases de datos SQLite y backups
+*.db
+*.db-wal
+*.db-shm
+*.db.bak-*

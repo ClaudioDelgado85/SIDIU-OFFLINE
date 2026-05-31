@@ -60,7 +60,12 @@ exports.obtenerResumenDashboard = async (req, res) => {
             FROM reclamos r
             LEFT JOIN barrios b ON r.barrio_id = b.id
             WHERE r.estado IN ('pendiente', 'en_proceso')
-            ORDER BY FIELD(r.prioridad, 'urgente', 'alta', 'media', 'baja') ASC,
+            ORDER BY CASE 
+                         WHEN r.prioridad = 'urgente' THEN 1 
+                         WHEN r.prioridad = 'alta' THEN 2 
+                         WHEN r.prioridad = 'media' THEN 3 
+                         ELSE 4 
+                     END ASC,
                      r.fecha_creacion ASC
             LIMIT 10
         `);

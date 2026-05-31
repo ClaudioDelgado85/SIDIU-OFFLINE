@@ -1,0 +1,23 @@
+change: migracion-sqlite
+project: sidiu-offline
+created: 2026-05-30
+artifact_store: hybrid  # engram + openspec
+
+dag:
+  explore:   done
+  propose:   done
+  spec:      done
+  design:    done
+  tasks:     done
+  apply:     done
+  verify:    done
+  archive:   pending
+
+next_phase: archive
+
+engram_refs:
+  explore:  "sdd/migracion-sqlite/explore"
+  proposal: "sdd/migracion-sqlite/proposal"
+  spec:     "sdd/migracion-sqlite/spec"
+  design:   "sdd/migracion-sqlite/design"
+  tasks:    "sdd/migracion-sqlite/tasks"

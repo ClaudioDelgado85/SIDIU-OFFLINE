@@ -1,0 +1,52 @@
+# openspec/config.yaml
+schema: spec-driven
+
+context: |
+  Tech stack: Node.js v13.4 + Express 4.18 (CommonJS, sin TypeScript)
+  Architecture: MVC — routes/ → controllers/ → services/ → config/database.js
+  DB actual: mysql2 → TiDB Cloud | DB objetivo: sqlite3 (Adapter Pattern)
+  Testing: Jest ^30.3.0 + supertest | E2E: Cypress ^15.13.0
+  Style: JavaScript puro, sin linter configurado
+
+strict_tdd: false
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Identify affected modules/packages
+  specs:
+    - Use Given/When/Then format for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group tasks by phase (infrastructure, implementation, testing)
+    - Use hierarchical numbering (1.1, 1.2, etc.)
+    - Keep tasks small enough to complete in one session
+  apply:
+    - Follow existing CommonJS patterns (require/module.exports)
+    - No TypeScript, no ESM
+    - DB interface: pool.execute(sql, params) → [rows|okPacket, undefined]
+    tdd: false
+    test_command: "npm test"
+  verify:
+    test_command: "npm test"
+    build_command: ""
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas (large removals)
+
+testing:
+  strict_tdd: false
+  runner:
+    framework: Jest
+    command: "npm test"
+    flags: "--verbose --forceExit --detectOpenHandles"
+  layers:
+    unit: { available: true, tool: "Jest + supertest", path: "tests/controllers/" }
+    integration: { available: true, tool: "supertest ^7.2.2" }
+    e2e: { available: true, tool: "Cypress ^15.13.0", command: "npm run cy:run" }
+  coverage:
+    available: true
+    command: "npx jest --coverage"
