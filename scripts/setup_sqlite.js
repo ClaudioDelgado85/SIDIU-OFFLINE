@@ -8,9 +8,11 @@ const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
 
 const dbPath = process.env.SQLITE_DB_PATH || './database/gestion_municipal.db';
+const resetDatabase = process.env.SQLITE_RESET === 'true' || process.argv.includes('--reset');
 
 console.log('=== INICIANDO SETUP DE SQLITE ===');
 console.log(`Ruta de la base de datos: ${dbPath}`);
+console.log(`Modo: ${resetDatabase ? 'reset completo' : 'inicializacion/verificacion sin borrar datos'}`);
 
 // 1. Verificar y crear el directorio database/ si no existe
 const dbDir = path.dirname(path.resolve(dbPath));
@@ -19,8 +21,8 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-// 2. Respaldar base de datos existente como backup si no es en memoria
-if (dbPath !== ':memory:' && fs.existsSync(dbPath)) {
+// 2. Respaldar base de datos existente solo si se pidio reset destructivo
+if (resetDatabase && dbPath !== ':memory:' && fs.existsSync(dbPath)) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const backupPath = `${dbPath}.bak-${timestamp}`;
   console.log(`Base de datos existente encontrada. Creando respaldo: ${backupPath}`);
@@ -57,7 +59,15 @@ function ejecutarSchema() {
     process.exit(1);
   }
 
-  const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+  let schemaSql = fs.readFileSync(schemaPath, 'utf8');
+
+  if (!resetDatabase) {
+    schemaSql = schemaSql
+      .split(/\r?\n/)
+      .filter(line => !/^\s*DROP\s+(TABLE|VIEW)\s+/i.test(line))
+      .filter(line => !/^\s*PRAGMA\s+foreign_keys\s*=\s*OFF\s*;/i.test(line))
+      .join('\n');
+  }
   
   db.exec(schemaSql, (err) => {
     if (err) {

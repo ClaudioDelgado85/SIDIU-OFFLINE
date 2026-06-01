@@ -5,7 +5,21 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
+const { execFileSync } = require('child_process');
 require('dotenv').config();
+
+const shouldUseSqlite = process.env.DB_CLIENT !== 'mysql';
+if (shouldUseSqlite && process.env.NODE_ENV !== 'test' && process.env.SKIP_SQLITE_SETUP !== 'true') {
+  try {
+    execFileSync(process.execPath, [path.join(__dirname, 'scripts', 'setup_sqlite.js')], {
+      cwd: __dirname,
+      stdio: 'inherit'
+    });
+  } catch (error) {
+    console.error('No se pudo inicializar/verificar la base SQLite local.');
+    process.exit(1);
+  }
+}
 
 const db = require('./config/database');
 

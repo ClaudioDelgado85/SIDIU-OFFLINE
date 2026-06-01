@@ -161,6 +161,9 @@ if (process.env.DB_CLIENT === 'mysql') {
     // 13. INSERT IGNORE -> INSERT OR IGNORE
     translated = translated.replace(/INSERT\s+IGNORE\s+INTO/gi, 'INSERT OR IGNORE INTO');
 
+    // 14. SHOW TABLES -> consulta equivalente en sqlite_master
+    translated = translated.replace(/^\s*SHOW\s+TABLES\s*;?\s*$/i, "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name");
+
     return translated;
   };
 
