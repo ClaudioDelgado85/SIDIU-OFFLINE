@@ -55,8 +55,9 @@ const requireMysql = () => {
   };
 };
 
-// Si el cliente no es sqlite, usar mysql original
-if (process.env.DB_CLIENT !== 'sqlite') {
+// SQLite es el modo por defecto (proyecto offline).
+// MySQL solo se activa con DB_CLIENT=mysql explícito.
+if (process.env.DB_CLIENT === 'mysql') {
   module.exports = requireMysql();
 } else {
   const sqlite3 = require('sqlite3').verbose();

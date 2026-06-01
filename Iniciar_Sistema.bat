@@ -3,9 +3,18 @@
 cd /d "%~dp0"
 
 echo ==========================================================
-echo   INICIANDO SISTEMA DE GESTIÓN MUNICIPAL (MODO OFFLINE)
+echo   INICIANDO SISTEMA DE GESTION MUNICIPAL (MODO OFFLINE)
 echo ==========================================================
 echo.
+
+:: Si no existe .env, crearlo desde la plantilla
+if not exist ".env" (
+    if exist ".env.example" (
+        copy ".env.example" ".env" > nul
+        echo [OK] Archivo .env creado desde plantilla.
+    )
+)
+
 echo [1/2] Levantando el servidor local en segundo plano...
 :: Lanzamos node de forma directa y minimizada sin anidamientos de comillas raros
 start /min node server.js
