@@ -4,6 +4,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
+const { getJwtSecret, getJwtExpiresIn } = require('../config/jwt');
 const { registrarAuditoria } = require('../middleware/auditoria');
 require('dotenv').config();
 
@@ -78,8 +79,8 @@ exports.login = async (req, res) => {
         rol: user.rol,
         activo: user.activo
       },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
+      getJwtSecret(),
+      { expiresIn: getJwtExpiresIn() }
     );
 
     // Registrar login en auditoría

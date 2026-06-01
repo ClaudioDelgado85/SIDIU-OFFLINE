@@ -3,6 +3,7 @@
 
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
+const { getJwtSecret } = require('../config/jwt');
 require('dotenv').config();
 
 // Lista de módulos válidos del sistema
@@ -26,7 +27,7 @@ const verifyToken = async (req, res, next) => {
     }
 
     // Verificar token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
 
     // Verificar que el usuario siga activo en la base de datos
     const [usuarios] = await db.pool.execute(
