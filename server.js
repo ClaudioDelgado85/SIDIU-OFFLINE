@@ -4,7 +4,6 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
 
@@ -41,12 +40,19 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rate limiting (prevenir ataques de fuerza bruta)
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: process.env.NODE_ENV === 'production' ? 100 : 2000, // 2000 requests localmente para evitar que Cypress colapse por velocidad
-  message: 'Demasiadas peticiones desde esta IP, por favor intente más tarde.'
-});
+// Rate limiting (prevenir ataques de fuerza bruta) - Resiliente a versiones antiguas de Node en Windows 7
+let limiter;
+try {
+  const rateLimit = require('express-rate-limit');
+  limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: process.env.NODE_ENV === 'production' ? 100 : 2000, // 2000 requests localmente para evitar que Cypress colapse por velocidad
+    message: 'Demasiadas peticiones desde esta IP, por favor intente más tarde.'
+  });
+} catch (error) {
+  console.log('⚠️ express-rate-limit no es compatible con esta versión de Node.js (Node < 14 en Windows 7). Usando bypass de rate-limit.');
+  limiter = (req, res, next) => next();
+}
 
 // Logging middleware (sin datos sensibles)
 app.use((req, res, next) => {
