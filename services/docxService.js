@@ -104,7 +104,7 @@ async function generarDocx(data) {
 
   addModule('Intimaciones Realizadas', data.intimaciones,
     [{ label: 'Nro', key: 'numero_intimacion' }, { label: 'Contribuyente', key: 'nombre_apellido' }, { label: 'Dirección', key: 'direccion' }, { label: 'Tipo', key: (i) => i.tipo }, { label: 'Plazo', key: (i) => i.plazo_dias > 0 ? `${i.plazo_dias} días` : 'Inmediato' }],
-    (i, key) => typeof key === 'function' ? key(i) : i[key] ?? '-'
+    (i, key) => typeof key === 'function' ? key(i) : (i[key] != null ? i[key] : '-')
   );
 
   addModule('Actas de Infracción', data.infracciones,
@@ -136,14 +136,14 @@ async function generarDocx(data) {
   const r = data.resumen;
   paragraphs.push(sectionTitle('Resumen General'));
   const moduleLabels = [
-    ['Tareas', r?.total_tareas],
-    ['Expedientes', r?.total_expedientes],
-    ['Intimaciones', r?.total_intimaciones],
-    ['Infracciones', r?.total_infracciones],
-    ['Reclamos', r?.total_reclamos],
-    ['Relevamientos', r?.total_relevamientos],
-    ['Comercios', r?.total_comercios],
-    ['Vendedores', r?.total_vendedores],
+    ['Tareas', r && r.total_tareas],
+    ['Expedientes', r && r.total_expedientes],
+    ['Intimaciones', r && r.total_intimaciones],
+    ['Infracciones', r && r.total_infracciones],
+    ['Reclamos', r && r.total_reclamos],
+    ['Relevamientos', r && r.total_relevamientos],
+    ['Comercios', r && r.total_comercios],
+    ['Vendedores', r && r.total_vendedores],
   ];
   moduleLabels.filter(([, count]) => count > 0).forEach(([label, count]) => {
     paragraphs.push(totalLine(label, count));

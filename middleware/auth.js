@@ -15,7 +15,8 @@ const MODULOS_VALIDOS = [
 const verifyToken = async (req, res, next) => {
   try {
     // Obtener token del header
-    const token = req.headers.authorization?.split(' ')[1]; // Bearer TOKEN
+    const authHeader = req.headers.authorization;
+    const token = authHeader ? authHeader.split(' ')[1] : null; // Bearer TOKEN
 
     if (!token) {
       return res.status(401).json({
