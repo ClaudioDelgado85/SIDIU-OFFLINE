@@ -74,7 +74,7 @@ function exportarInformeExcel(data) {
         { header: 'Contribuyente', key: 'nombre_apellido' },
         { header: 'DNI', key: 'dni' },
         { header: 'Motivo', key: 'motivo' },
-        { header: 'Estado', key: 'estado' }
+        { header: 'Estado', key: (e) => formatearEstado(e.estado) }
     ]);
 
     addSheet('Intimaciones', data.intimaciones, [
@@ -339,7 +339,7 @@ function renderSectionExpedientes(items) {
     if (items.length === 0) { body.innerHTML = '<p class="sin-registros">Sin movimientos de expedientes.</p>'; return; }
     let html = `<table class="informe-tabla"><thead><tr><th>Número</th><th>Contribuyente</th><th>Motivo</th><th>Estado</th></tr></thead><tbody>`;
     items.forEach(i => {
-        html += `<tr><td style="font-weight:600;">${i.numero_expediente}</td><td>${i.nombre_apellido} <span style="font-size:11px;color:#94A3B8;">(${i.dni})</span></td><td>${i.motivo}</td><td style="text-transform:capitalize;">${i.estado}</td></tr>`;
+        html += `<tr><td style="font-weight:600;">${i.numero_expediente}</td><td>${i.nombre_apellido} <span style="font-size:11px;color:#94A3B8;">(${i.dni})</span></td><td>${i.motivo}</td><td>${formatearEstado(i.estado)}</td></tr>`;
     });
     body.innerHTML = html + '</tbody></table>';
 }
@@ -412,6 +412,16 @@ function renderSectionVendedores(items) {
 }
 
 // ── Utilidades ──────────────────────────────
+function formatearEstado(estado) {
+    const estados = {
+        'ingreso': 'Ingresó',
+        'en_inspeccion': 'En inspección',
+        'plazo_otorgado': 'Plazo otorgado',
+        'salida': 'Dio salida'
+    };
+    return estados[estado] || estado;
+}
+
 function setCount(id, count) {
     const el = document.getElementById(id);
     el.textContent = count;

@@ -27,9 +27,9 @@ exports.informeDiario = async (req, res) => {
             SELECT e.*, b.nombre AS barrio_nombre
             FROM expedientes e
             LEFT JOIN barrios b ON e.barrio_id = b.id
-            WHERE e.fecha = ?
+            WHERE e.fecha = ? OR e.fecha_inspeccion = ? OR e.fecha_salida = ?
             ORDER BY e.numero_expediente ASC
-        `, [fecha]);
+        `, [fecha, fecha, fecha]);
 
         // Intimaciones
         const [intimaciones] = await db.pool.execute(`
@@ -135,8 +135,9 @@ exports.exportarDocx = async (req, res) => {
         const [expedientes] = await db.pool.execute(`
             SELECT e.*, b.nombre AS barrio_nombre
             FROM expedientes e LEFT JOIN barrios b ON e.barrio_id = b.id
-            WHERE e.fecha = ? ORDER BY e.numero_expediente ASC
-        `, [fecha]);
+            WHERE e.fecha = ? OR e.fecha_inspeccion = ? OR e.fecha_salida = ?
+            ORDER BY e.numero_expediente ASC
+        `, [fecha, fecha, fecha]);
 
         const [intimaciones] = await db.pool.execute(`
             SELECT i.*, b.nombre AS barrio_nombre

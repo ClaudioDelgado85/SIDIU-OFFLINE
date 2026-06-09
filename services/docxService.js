@@ -97,9 +97,17 @@ async function generarDocx(data) {
     (t, key) => typeof key === 'function' ? key(t) : t[key] || '-'
   );
 
-  addModule('Expedientes Ingresados', data.expedientes,
-    [{ label: 'Número', key: 'numero_expediente' }, { label: 'Contribuyente', key: 'nombre_apellido' }, { label: 'Motivo', key: 'motivo' }, { label: 'Estado', key: 'estado' }],
-    (i, key) => i[key] || '-'
+  addModule('Movimientos de Expedientes', data.expedientes,
+    [{ label: 'Número', key: 'numero_expediente' }, { label: 'Contribuyente', key: 'nombre_apellido' }, { label: 'Motivo', key: 'motivo' }, { label: 'Estado', key: (i) => {
+      const estados = {
+        'ingreso': 'Ingresó',
+        'en_inspeccion': 'En inspección',
+        'plazo_otorgado': 'Plazo otorgado',
+        'salida': 'Dio salida'
+      };
+      return estados[i.estado] || i.estado;
+    }}],
+    (i, key) => typeof key === 'function' ? key(i) : i[key] || '-'
   );
 
   addModule('Intimaciones Realizadas', data.intimaciones,
