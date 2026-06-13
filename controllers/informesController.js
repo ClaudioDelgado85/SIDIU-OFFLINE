@@ -31,11 +31,15 @@ exports.informeDiario = async (req, res) => {
             ORDER BY e.numero_expediente ASC
         `, [fecha, fecha, fecha]);
 
-        // Intimaciones
+        // Intimaciones con etiquetas de catálogos
         const [intimaciones] = await db.pool.execute(`
-            SELECT i.*, b.nombre AS barrio_nombre
+            SELECT i.*, b.nombre AS barrio_nombre,
+                   t.label AS tipo_label,
+                   o.label AS tipo_obstruccion_label
             FROM intimaciones i
             LEFT JOIN barrios b ON i.barrio_id = b.id
+            LEFT JOIN catalogos t ON t.categoria = 'tipo_intimacion' AND t.valor = i.tipo
+            LEFT JOIN catalogos o ON o.categoria = 'intimacion_por' AND o.valor = i.tipo_obstruccion
             WHERE i.fecha = ?
             ORDER BY i.id ASC
         `, [fecha]);
@@ -140,8 +144,13 @@ exports.exportarDocx = async (req, res) => {
         `, [fecha, fecha, fecha]);
 
         const [intimaciones] = await db.pool.execute(`
-            SELECT i.*, b.nombre AS barrio_nombre
-            FROM intimaciones i LEFT JOIN barrios b ON i.barrio_id = b.id
+            SELECT i.*, b.nombre AS barrio_nombre,
+                   t.label AS tipo_label,
+                   o.label AS tipo_obstruccion_label
+            FROM intimaciones i
+            LEFT JOIN barrios b ON i.barrio_id = b.id
+            LEFT JOIN catalogos t ON t.categoria = 'tipo_intimacion' AND t.valor = i.tipo
+            LEFT JOIN catalogos o ON o.categoria = 'intimacion_por' AND o.valor = i.tipo_obstruccion
             WHERE i.fecha = ? ORDER BY i.id ASC
         `, [fecha]);
 

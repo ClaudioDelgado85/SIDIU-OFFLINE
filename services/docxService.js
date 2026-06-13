@@ -111,7 +111,7 @@ async function generarDocx(data) {
   );
 
   addModule('Intimaciones Realizadas', data.intimaciones,
-    [{ label: 'Nro', key: 'numero_intimacion' }, { label: 'Contribuyente', key: 'nombre_apellido' }, { label: 'Dirección', key: 'direccion' }, { label: 'Tipo', key: (i) => i.tipo }, { label: 'Plazo', key: (i) => i.plazo_dias > 0 ? `${i.plazo_dias} días` : 'Inmediato' }],
+    [{ label: 'Nro', key: 'numero_intimacion' }, { label: 'Contribuyente', key: 'nombre_apellido' }, { label: 'Dirección', key: 'direccion' }, { label: 'Tipo', key: (i) => i.tipo_obstruccion_label || i.tipo_label || i.tipo }, { label: 'Plazo', key: (i) => i.plazo_dias > 0 ? `${i.plazo_dias} días` : 'Inmediato' }],
     (i, key) => typeof key === 'function' ? key(i) : (i[key] != null ? i[key] : '-')
   );
 

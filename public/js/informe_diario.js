@@ -81,7 +81,7 @@ function exportarInformeExcel(data) {
         { header: 'Nº Intimación', key: 'numero_intimacion' },
         { header: 'Contribuyente', key: 'nombre_apellido' },
         { header: 'Dirección', key: 'direccion' },
-        { header: 'Tipo', key: (i) => i.tipo === 'general' ? (i.tipo_obstruccion || 'General') : (i.tipo === 'baldio' ? 'Terreno Baldío' : 'Vehículo') },
+        { header: 'Tipo', key: (i) => i.tipo_obstruccion_label || i.tipo_label || i.tipo },
         { header: 'Plazo', key: (i) => i.plazo_dias > 0 ? `${i.plazo_dias} días` : 'Inmediato' }
     ]);
 
@@ -350,7 +350,7 @@ function renderSectionIntimaciones(items) {
     if (items.length === 0) { body.innerHTML = '<p class="sin-registros">Sin intimaciones.</p>'; return; }
     let html = `<table class="informe-tabla"><thead><tr><th>Nro</th><th>Contribuyente</th><th>Dirección</th><th>Tipo</th><th>Plazo</th></tr></thead><tbody>`;
     items.forEach(i => {
-        const tipo = i.tipo === 'general' ? i.tipo_obstruccion : (i.tipo === 'baldio' ? 'Terreno Baldío' : 'Vehículo');
+        const tipo = i.tipo_obstruccion_label || i.tipo_label || i.tipo;
         html += `<tr><td>${i.numero_intimacion}</td><td>${i.nombre_apellido}</td><td>${i.direccion}</td><td>${tipo}</td><td>${i.plazo_dias > 0 ? `${i.plazo_dias} días` : 'Inmediato'}</td></tr>`;
     });
     body.innerHTML = html + '</tbody></table>';
