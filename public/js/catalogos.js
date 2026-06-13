@@ -10,6 +10,7 @@ let opcionEditando = null;
 const CATEGORIAS_LABELS = {
     'tipo_intimacion': '📋 Tipo Intimación',
     'intimacion_por': '📌 Intimación Por',
+    'rubro_comercial': '🏪 Rubro Comercial',
     'motivo_expediente': '📁 Motivo Expediente',
     'tipo_tarea_diaria': '📝 Tipo Tarea Diaria',
     'barrios': '🏘️ Barrios'

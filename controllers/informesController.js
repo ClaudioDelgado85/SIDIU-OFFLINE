@@ -35,11 +35,13 @@ exports.informeDiario = async (req, res) => {
         const [intimaciones] = await db.pool.execute(`
             SELECT i.*, b.nombre AS barrio_nombre,
                    t.label AS tipo_label,
-                   o.label AS tipo_obstruccion_label
+                   o.label AS tipo_obstruccion_label,
+                   r.label AS rubro_comercial_label
             FROM intimaciones i
             LEFT JOIN barrios b ON i.barrio_id = b.id
             LEFT JOIN catalogos t ON t.categoria = 'tipo_intimacion' AND t.valor = i.tipo
             LEFT JOIN catalogos o ON o.categoria = 'intimacion_por' AND o.valor = i.tipo_obstruccion
+            LEFT JOIN catalogos r ON r.categoria = 'rubro_comercial' AND r.valor = i.rubro_comercial
             WHERE i.fecha = ?
             ORDER BY i.id ASC
         `, [fecha]);
@@ -146,11 +148,13 @@ exports.exportarDocx = async (req, res) => {
         const [intimaciones] = await db.pool.execute(`
             SELECT i.*, b.nombre AS barrio_nombre,
                    t.label AS tipo_label,
-                   o.label AS tipo_obstruccion_label
+                   o.label AS tipo_obstruccion_label,
+                   r.label AS rubro_comercial_label
             FROM intimaciones i
             LEFT JOIN barrios b ON i.barrio_id = b.id
             LEFT JOIN catalogos t ON t.categoria = 'tipo_intimacion' AND t.valor = i.tipo
             LEFT JOIN catalogos o ON o.categoria = 'intimacion_por' AND o.valor = i.tipo_obstruccion
+            LEFT JOIN catalogos r ON r.categoria = 'rubro_comercial' AND r.valor = i.rubro_comercial
             WHERE i.fecha = ? ORDER BY i.id ASC
         `, [fecha]);
 

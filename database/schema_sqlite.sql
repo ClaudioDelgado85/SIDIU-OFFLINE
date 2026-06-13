@@ -171,6 +171,7 @@ CREATE TABLE IF NOT EXISTS intimaciones (
   lugar_deposito TEXT,
   foto_inicial TEXT,
   foto_actual TEXT,
+  rubro_comercial TEXT,
   fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
   fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP,
   barrio_id INTEGER,

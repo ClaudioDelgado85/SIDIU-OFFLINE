@@ -262,6 +262,14 @@ function abrirModal() {
                                 <input type="text" id="tipo_obstruccion_detalle" placeholder="Describa el motivo de la intimación">
                             </div>
 
+                            <!-- Rubro Comercial (solo para tipo Comercio) -->
+                            <div class="form-group-modal form-grid-full" id="grupoRubroComercial" style="display:none">
+                                <label>Rubro Comercial *</label>
+                                <select id="rubro_comercial">
+                                    <option value="">-- Cargando... --</option>
+                                </select>
+                            </div>
+
                             <!-- Campos de Infracción -->
                             <div class="form-grid-full form-section">
                                 <div class="form-section-title">Datos de Infracción (si aplica)</div>
@@ -383,6 +391,7 @@ function abrirModal() {
             _setTipoObstruccionDesdeEdicion(intimacionEditando.tipo_obstruccion);
         }
     });
+    cargarSelectCatalogo('rubro_comercial', 'rubro_comercial', intimacionEditando?.rubro_comercial || null, { incluirVacio: true, textoVacio: '-- Seleccionar rubro --' });
 
     document.getElementById('tipo_obstruccion').addEventListener('change', (e) => {
         const grupoDetalle = document.getElementById('grupoIntimacionPorDetalle');
@@ -440,12 +449,15 @@ function cerrarModal() {
 function cambiarTipoFormulario(tipo) {
     const balDio = document.getElementById('camposBaldio');
     const vehiculo = document.getElementById('camposVehiculo');
+    const rubroComercial = document.getElementById('grupoRubroComercial');
 
     balDio.classList.add('hidden');
     vehiculo.classList.add('hidden');
+    if (rubroComercial) rubroComercial.style.display = 'none';
 
     if (tipo === 'baldio') balDio.classList.remove('hidden');
     if (tipo === 'vehiculo') vehiculo.classList.remove('hidden');
+    if (tipo === 'comercio' && rubroComercial) rubroComercial.style.display = '';
 }
 
 async function guardarIntimacion(e) {
@@ -464,6 +476,7 @@ async function guardarIntimacion(e) {
         dni: document.getElementById('dni').value,
         direccion: document.getElementById('direccion').value,
         tipo_obstruccion: tipoObstruccionFinal,
+        rubro_comercial: document.getElementById('rubro_comercial')?.value || null,
         plazo_dias: document.getElementById('plazo_dias').value,
         numero_intimacion: document.getElementById('numero_intimacion').value,
         observaciones: document.getElementById('observaciones').value,
@@ -483,6 +496,13 @@ async function guardarIntimacion(e) {
         fecha_retiro: document.getElementById('fecha_retiro')?.value,
         barrio_id: document.getElementById('barrio_id').value || null,
     };
+
+    // Validación frontend: rubro comercial obligatorio para tipo Comercio
+    if (formData.tipo === 'comercio' && !formData.rubro_comercial) {
+        alert('Debe seleccionar el rubro comercial para intimaciones de tipo Comercio.');
+        document.getElementById('rubro_comercial')?.focus();
+        return;
+    }
 
     // Validación frontend: si infraccion_realizada = true, numero_infraccion es obligatorio
     if (formData.infraccion_realizada && (!formData.numero_infraccion || formData.numero_infraccion.trim() === '')) {
@@ -704,24 +724,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('btnExportar').addEventListener('click', () => {
-        const fmtFecha = (f) => {
-            if (!f) return '-';
-            const d = new Date(f);
-            return d.toLocaleDateString('es-AR');
-        };
         const fmtEstado = (e) => {
             if (!e) return '-';
             return e.charAt(0).toUpperCase() + e.slice(1).replace(/_/g, ' ');
         };
         exportarExcel(intimaciones, [
-            { header: 'Fecha', key: (i) => fmtFecha(i.fecha) },
+            { header: 'Fecha', key: (i) => formatearFecha(i.fecha) },
             { header: 'Tipo', key: 'tipo' },
+            { header: 'Rubro', key: (i) => i.rubro_comercial_label || '-' },
             { header: 'Nombre y Apellido', key: 'nombre_apellido' },
             { header: 'DNI', key: 'dni' },
             { header: 'Dirección', key: 'direccion' },
             { header: 'Nº Intimación', key: 'numero_intimacion' },
             { header: 'Plazo (días)', key: 'plazo_dias' },
-            { header: 'Fecha Vencimiento', key: (i) => fmtFecha(i.fecha_vencimiento) },
+            { header: 'Fecha Vencimiento', key: (i) => formatearFecha(i.fecha_vencimiento) },
             { header: 'Estado', key: (i) => fmtEstado(i.estado) },
             { header: 'Infracción', key: (i) => i.infraccion_realizada ? 'Sí' : 'No' },
             { header: 'Nº Infracción', key: 'numero_infraccion' },

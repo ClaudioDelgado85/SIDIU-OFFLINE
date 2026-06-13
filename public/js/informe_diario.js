@@ -82,6 +82,7 @@ function exportarInformeExcel(data) {
         { header: 'Contribuyente', key: 'nombre_apellido' },
         { header: 'Dirección', key: 'direccion' },
         { header: 'Tipo', key: (i) => i.tipo_obstruccion_label || i.tipo_label || i.tipo },
+        { header: 'Rubro', key: (i) => i.rubro_comercial_label || '' },
         { header: 'Plazo', key: (i) => i.plazo_dias > 0 ? `${i.plazo_dias} días` : 'Inmediato' }
     ]);
 
@@ -351,7 +352,8 @@ function renderSectionIntimaciones(items) {
     let html = `<table class="informe-tabla"><thead><tr><th>Nro</th><th>Contribuyente</th><th>Dirección</th><th>Tipo</th><th>Plazo</th></tr></thead><tbody>`;
     items.forEach(i => {
         const tipo = i.tipo_obstruccion_label || i.tipo_label || i.tipo;
-        html += `<tr><td>${i.numero_intimacion}</td><td>${i.nombre_apellido}</td><td>${i.direccion}</td><td>${tipo}</td><td>${i.plazo_dias > 0 ? `${i.plazo_dias} días` : 'Inmediato'}</td></tr>`;
+        const rubro = i.rubro_comercial_label ? `<br><small style="color:#64748B;">${i.rubro_comercial_label}</small>` : '';
+        html += `<tr><td>${i.numero_intimacion}</td><td>${i.nombre_apellido}</td><td>${i.direccion}</td><td>${tipo}${rubro}</td><td>${i.plazo_dias > 0 ? `${i.plazo_dias} días` : 'Inmediato'}</td></tr>`;
     });
     body.innerHTML = html + '</tbody></table>';
 }

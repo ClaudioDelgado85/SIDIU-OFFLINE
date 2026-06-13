@@ -134,6 +134,21 @@ function sembrarDatos() {
       ['intimacion_por', 'agua_servida', 'Pérdida de agua servida', 4],
       ['intimacion_por', 'basura', 'Basura / Residuos', 5],
       ['intimacion_por', 'otros', 'Otros', 99],
+
+      // rubro_comercial
+      ['rubro_comercial', 'panaderia', 'Panadería', 1],
+      ['rubro_comercial', 'carniceria', 'Carnicería', 2],
+      ['rubro_comercial', 'kiosco', 'Kiosco', 3],
+      ['rubro_comercial', 'despensa', 'Despensa', 4],
+      ['rubro_comercial', 'verduleria', 'Verdulería', 5],
+      ['rubro_comercial', 'farmacia', 'Farmacia', 6],
+      ['rubro_comercial', 'boutique', 'Boutique', 7],
+      ['rubro_comercial', 'peluqueria', 'Peluquería', 8],
+      ['rubro_comercial', 'ferreteria', 'Ferretería', 9],
+      ['rubro_comercial', 'gastronomia', 'Gastronomía', 10],
+      ['rubro_comercial', 'bar', 'Bar', 11],
+      ['rubro_comercial', 'autoservicio', 'Autoservicio', 12],
+      ['rubro_comercial', 'otro', 'Otro', 99],
       
       // motivo_expediente
       ['motivo_expediente', 'habilitacion', 'Habilitación', 1],

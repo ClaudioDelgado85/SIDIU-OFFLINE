@@ -93,7 +93,7 @@ exports.obtenerIntimaciones = async (req, res) => {
     }
 
     // Query principal SIN paginación para poder filtrar por estado calculado
-    let sql = 'SELECT * FROM intimaciones' + whereClause;
+    let sql = 'SELECT i.*, c.label AS rubro_comercial_label FROM intimaciones i LEFT JOIN catalogos c ON c.categoria = \'rubro_comercial\' AND c.valor = i.rubro_comercial' + whereClause;
     sql += ' ORDER BY fecha DESC, id DESC';
 
     const [allIntimaciones] = await db.pool.execute(sql, params);
@@ -175,6 +175,7 @@ exports.crearIntimacion = async (req, res) => {
     const {
       fecha, tipo, nombre_apellido, dni, direccion, tipo_obstruccion,
       plazo_dias, numero_intimacion, observaciones, barrio_id,
+      rubro_comercial,
       // Campos Baldíos
       infraccion_realizada, numero_infraccion, fecha_infraccion, propietario_no_ubicado,
       // Campos Vehículos
@@ -186,6 +187,14 @@ exports.crearIntimacion = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Faltan campos obligatorios (fecha, tipo, nombre, dni, dirección).'
+      });
+    }
+
+    // Validar rubro comercial
+    if (tipo === 'comercio' && !rubro_comercial) {
+      return res.status(400).json({
+        success: false,
+        message: 'El rubro comercial es obligatorio para intimaciones de tipo Comercio.'
       });
     }
 
@@ -206,15 +215,16 @@ exports.crearIntimacion = async (req, res) => {
 
     const sql = `
       INSERT INTO intimaciones (
-        fecha, tipo, nombre_apellido, dni, direccion, tipo_obstruccion,
+        fecha, tipo, nombre_apellido, dni, direccion, tipo_obstruccion, rubro_comercial,
         plazo_dias, numero_intimacion, observaciones, estado,
         infraccion_realizada, numero_infraccion, fecha_infraccion, propietario_no_ubicado,
         marca, modelo, color, dominio, fecha_retiro, lugar_deposito, barrio_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const values = [
       fecha, tipo, nombre_apellido, dni, direccion, tipo_obstruccion || null,
+      rubro_comercial || null,
       plazo_dias || 0, numero_intimacion || 1, observaciones || null, estado,
       esInfraccionada || false, numero_infraccion || null,
       esInfraccionada ? (fecha_infraccion || new Date().toISOString().substring(0, 10)) : (fecha_infraccion || null),
@@ -267,9 +277,22 @@ exports.actualizarIntimacion = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Intimación no encontrada.' });
     }
 
+    // Validar rubro comercial para tipo Comercio
+    if (updates.tipo === 'comercio' && !updates.rubro_comercial) {
+      return res.status(400).json({
+        success: false,
+        message: 'El rubro comercial es obligatorio para intimaciones de tipo Comercio.'
+      });
+    }
+
+    // Si el tipo cambia de comercio a otro, limpiar rubro_comercial
+    if (updates.tipo && updates.tipo !== 'comercio') {
+      updates.rubro_comercial = null;
+    }
+
     // Construir query dinámica
     const allowedFields = [
-      'fecha', 'tipo', 'nombre_apellido', 'dni', 'direccion', 'tipo_obstruccion',
+      'fecha', 'tipo', 'nombre_apellido', 'dni', 'direccion', 'tipo_obstruccion', 'rubro_comercial',
       'plazo_dias', 'numero_intimacion', 'observaciones', 'estado', 'dio_cumplimiento', 'fecha_subsanacion',
       'infraccion_realizada', 'numero_infraccion', 'fecha_infraccion', 'propietario_no_ubicado',
       'marca', 'modelo', 'color', 'dominio', 'fecha_retiro', 'lugar_deposito', 'barrio_id',
