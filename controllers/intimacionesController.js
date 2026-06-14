@@ -41,7 +41,8 @@ function calcularEstadoAutomatico(intimacion) {
 // Obtener todas las intimaciones (con filtros y paginación)
 exports.obtenerIntimaciones = async (req, res) => {
   try {
-    const { tipo, estado, numero, dni, nombre, fecha_desde, fecha_hasta, busqueda, page, limit } = req.query;
+    const { tipo, estado, numero, dni, nombre, fecha_desde, fecha_hasta, busqueda, page, limit, exportar } = req.query;
+    const esExportacion = exportar === 'true' || exportar === '1';
 
     // Configuración de paginación
     const currentPage = parseInt(page) || 1;
@@ -140,6 +141,15 @@ exports.obtenerIntimaciones = async (req, res) => {
       reiteradas: intimacionesFiltradas.filter(i => i.estado === 'reiterada').length,
       infraccionados: intimacionesFiltradas.filter(i => i.estado === 'infraccionado').length
     };
+
+    // Si es exportación, devolver todos sin paginar
+    if (esExportacion) {
+      return res.json({
+        success: true,
+        data: intimacionesFiltradas,
+        stats
+      });
+    }
 
     // Aplicar paginación manualmente
     const totalRecords = intimacionesFiltradas.length;

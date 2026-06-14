@@ -723,26 +723,58 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '/login.html';
     });
 
-    document.getElementById('btnExportar').addEventListener('click', () => {
+    document.getElementById('btnExportar').addEventListener('click', async () => {
+        const sesion = verificarAutenticacion();
+        if (!sesion) return;
+
         const fmtEstado = (e) => {
             if (!e) return '-';
             return e.charAt(0).toUpperCase() + e.slice(1).replace(/_/g, ' ');
         };
-        exportarExcel(intimaciones, [
-            { header: 'Fecha', key: (i) => formatearFecha(i.fecha) },
-            { header: 'Tipo', key: 'tipo' },
-            { header: 'Rubro', key: (i) => i.rubro_comercial_label || '-' },
-            { header: 'Nombre y Apellido', key: 'nombre_apellido' },
-            { header: 'DNI', key: 'dni' },
-            { header: 'Dirección', key: 'direccion' },
-            { header: 'Nº Intimación', key: 'numero_intimacion' },
-            { header: 'Plazo (días)', key: 'plazo_dias' },
-            { header: 'Fecha Vencimiento', key: (i) => formatearFecha(i.fecha_vencimiento) },
-            { header: 'Estado', key: (i) => fmtEstado(i.estado) },
-            { header: 'Infracción', key: (i) => i.infraccion_realizada ? 'Sí' : 'No' },
-            { header: 'Nº Infracción', key: 'numero_infraccion' },
-            { header: 'Observaciones', key: 'observaciones' }
-        ], 'Intimaciones', 'Intimaciones');
+
+        try {
+            // Obtener TODOS los registros sin paginación
+            const params = new URLSearchParams();
+            if (filtrosActuales.tipo) params.append('tipo', filtrosActuales.tipo);
+            if (filtrosActuales.estado) params.append('estado', filtrosActuales.estado);
+            if (filtrosActuales.numero) params.append('numero', filtrosActuales.numero);
+            if (filtrosActuales.fecha_desde) params.append('fecha_desde', filtrosActuales.fecha_desde);
+            if (filtrosActuales.fecha_hasta) params.append('fecha_hasta', filtrosActuales.fecha_hasta);
+            const busqueda = document.getElementById('searchInput').value;
+            if (busqueda) params.append('busqueda', busqueda);
+            params.append('exportar', 'true');
+
+            const res = await fetch(`${API_URL}/intimaciones?${params.toString()}`, {
+                headers: { 'Authorization': `Bearer ${sesion.token}` }
+            });
+            if (!res.ok) throw new Error('Error al obtener datos para exportar');
+            const data = await res.json();
+
+            if (!data.data || data.data.length === 0) {
+                alert('No hay registros para exportar.');
+                return;
+            }
+
+            exportarExcel(data.data, [
+                { header: 'Fecha', key: (i) => formatearFecha(i.fecha) },
+                { header: 'Tipo', key: 'tipo' },
+                { header: 'Rubro', key: (i) => i.rubro_comercial_label || '-' },
+                { header: 'Nombre y Apellido', key: 'nombre_apellido' },
+                { header: 'DNI', key: 'dni' },
+                { header: 'Dirección', key: 'direccion' },
+                { header: 'Nº Intimación', key: 'numero_intimacion' },
+                { header: 'Plazo (días)', key: 'plazo_dias' },
+                { header: 'Fecha Vencimiento', key: (i) => formatearFecha(i.fecha_vencimiento) },
+                { header: 'Estado', key: (i) => fmtEstado(i.estado) },
+                { header: 'Infracción', key: (i) => i.infraccion_realizada ? 'Sí' : 'No' },
+                { header: 'Nº Infracción', key: 'numero_infraccion' },
+                { header: 'Observaciones', key: 'observaciones' }
+            ], 'Intimaciones', 'Intimaciones');
+
+        } catch (error) {
+            console.error('Error al exportar:', error);
+            alert('Error al exportar. Intente nuevamente.');
+        }
     });
 
     document.getElementById('btnFiltros').addEventListener('click', () => {
