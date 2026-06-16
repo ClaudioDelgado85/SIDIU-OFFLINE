@@ -6,6 +6,12 @@
     const token = localStorage.getItem('token');
     let barrios = [];
 
+    // Estado de paginación
+    let paginaActual = 1;
+    const LIMIT = 20;
+    let totalPaginas = 1;
+    let totalRegistros = 0;
+
     if (!token) { window.location.href = 'index.html'; return; }
 
     const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
@@ -76,9 +82,17 @@
         const busquedaInput = document.getElementById('filtro-busqueda');
         if (busquedaInput) {
             busquedaInput.addEventListener('keyup', (e) => {
-                if (e.key === 'Enter') cargarVendedores();
+                if (e.key === 'Enter') { paginaActual = 1; cargarVendedores(); }
             });
         }
+
+        // Paginación
+        document.getElementById('btnPrevPage').addEventListener('click', () => {
+            if (paginaActual > 1) { paginaActual--; cargarVendedores(); }
+        });
+        document.getElementById('btnNextPage').addEventListener('click', () => {
+            if (paginaActual < totalPaginas) { paginaActual++; cargarVendedores(); }
+        });
     }
 
     async function cargarBarrios() {
@@ -123,25 +137,30 @@
     window.cargarVendedores = async function () {
         try {
             const params = new URLSearchParams();
-            const busqueda = document.getElementById('filtro-busqueda').value;
+            const busqueda = document.getElementById('filtro-busqueda').value.trim();
             const autorizacion = document.getElementById('filtro-autorizacion');
             const canon = document.getElementById('filtro-canon');
             const barrio = document.getElementById('filtro-barrio');
             const desde = document.getElementById('filtro-desde');
             const hasta = document.getElementById('filtro-hasta');
 
+            if (busqueda) params.append('rubro', busqueda); // búsqueda aproximada por rubro/nombre via backend
             if (autorizacion && autorizacion.value !== '') params.append('tiene_autorizacion', autorizacion.value);
             if (canon && canon.value !== '') params.append('pago_canon', canon.value);
             if (barrio && barrio.value) params.append('barrio_id', barrio.value);
             if (desde && desde.value) params.append('fecha_desde', desde.value);
             if (hasta && hasta.value) params.append('fecha_hasta', hasta.value);
-            params.append('limit', '200');
+            params.append('page', paginaActual);
+            params.append('limit', LIMIT);
 
             const resp = await fetch(`${API_URL}?${params}`, { headers });
             const data = await resp.json();
 
             if (data.success) {
                 let registros = data.data;
+
+                // Filtro de texto local para nombre/DNI/ubicación
+                // (el backend filtra por rubro, complementamos localmente)
                 if (busqueda) {
                     const q = busqueda.toLowerCase();
                     registros = registros.filter(r =>
@@ -151,7 +170,16 @@
                         (r.rubro || '').toLowerCase().includes(q)
                     );
                 }
+
+                // Actualizar estado de paginación
+                if (data.pagination) {
+                    totalPaginas = data.pagination.totalPages;
+                    totalRegistros = data.pagination.total;
+                    paginaActual = data.pagination.currentPage;
+                }
+
                 renderizarTabla(registros);
+                actualizarPaginacion();
             }
         } catch (e) { console.error('Error cargando vendedores:', e); }
     };
@@ -168,8 +196,32 @@
         if (barrio) barrio.value = '';
         if (desde) desde.value = '';
         if (hasta) hasta.value = '';
+        paginaActual = 1;
         cargarVendedores();
     };
+
+    // ==========================================
+    // PAGINACIÓN
+    // ==========================================
+    function actualizarPaginacion() {
+        const pagination = document.getElementById('pagination');
+        const pageInfo = document.getElementById('pageInfo');
+        const btnPrev = document.getElementById('btnPrevPage');
+        const btnNext = document.getElementById('btnNextPage');
+
+        if (totalPaginas <= 1) {
+            pagination.style.display = 'none';
+            return;
+        }
+
+        const inicio = (paginaActual - 1) * LIMIT + 1;
+        const fin = Math.min(paginaActual * LIMIT, totalRegistros);
+
+        pagination.style.display = 'flex';
+        pageInfo.textContent = `Mostrando ${inicio}–${fin} de ${totalRegistros} · Página ${paginaActual} de ${totalPaginas}`;
+        btnPrev.disabled = paginaActual <= 1;
+        btnNext.disabled = paginaActual >= totalPaginas;
+    }
 
     // ==========================================
     // RENDERIZAR TABLA

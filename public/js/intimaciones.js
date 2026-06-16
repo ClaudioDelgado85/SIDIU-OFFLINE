@@ -37,11 +37,11 @@ function verificarAutenticacion() {
 // CARGAR DATOS
 // ============================================
 
-async function cargarIntimaciones(filtros = {}, pagina = 1) {
+async function cargarIntimaciones(filtros = null, pagina = 1) {
     const sesion = verificarAutenticacion();
     if (!sesion) return;
 
-    if (Object.keys(filtros).length > 0 || pagina === 1) {
+    if (filtros !== null) {
         filtrosActuales = filtros;
     }
 
@@ -82,7 +82,7 @@ async function cargarIntimaciones(filtros = {}, pagina = 1) {
         if (data.stats) estadisticasActuales = data.stats;
 
         mostrarIntimaciones();
-        mostrarPaginacion();
+        actualizarPaginacion();
         actualizarEstadisticasVista();
 
     } catch (error) {
@@ -660,35 +660,26 @@ function _setTipoObstruccionDesdeEdicion(valor) {
     }
 }
 
-function mostrarPaginacion() {
-    const container = document.querySelector('.table-container');
-    let pagDiv = document.getElementById('paginacionContainer');
-
-    if (!pagDiv) {
-        pagDiv = document.createElement('div');
-        pagDiv.id = 'paginacionContainer';
-        pagDiv.className = 'pagination-container';
-        container.appendChild(pagDiv);
-    }
+function actualizarPaginacion() {
+    const pagination = document.getElementById('pagination');
+    const pageInfo = document.getElementById('pageInfo');
+    const btnPrev = document.getElementById('btnPrevPage');
+    const btnNext = document.getElementById('btnNextPage');
 
     const { currentPage, totalPages, totalRecords, recordsPerPage } = paginacionActual;
 
-    if (totalRecords === 0) {
-        pagDiv.innerHTML = '';
+    if (totalPages <= 1) {
+        pagination.style.display = 'none';
         return;
     }
 
     const inicio = (currentPage - 1) * recordsPerPage + 1;
     const fin = Math.min(currentPage * recordsPerPage, totalRecords);
 
-    pagDiv.innerHTML = `
-        <div class="pagination-info">Mostrando ${inicio}-${fin} de ${totalRecords}</div>
-        <div class="pagination-controls">
-            <button class="btn-page" ${currentPage === 1 ? 'disabled' : ''} onclick="cargarIntimaciones({}, ${currentPage - 1})">Anterior</button>
-            <span class="btn-page-num active">${currentPage}</span>
-            <button class="btn-page" ${currentPage === totalPages ? 'disabled' : ''} onclick="cargarIntimaciones({}, ${currentPage + 1})">Siguiente</button>
-        </div>
-    `;
+    pagination.style.display = 'flex';
+    pageInfo.textContent = `Mostrando ${inicio}–${fin} de ${totalRecords} · Página ${currentPage} de ${totalPages}`;
+    btnPrev.disabled = currentPage <= 1;
+    btnNext.disabled = currentPage >= totalPages;
 }
 
 // ============================================
@@ -700,6 +691,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sesion) document.getElementById('userName').textContent = sesion.usuario.nombre_completo;
 
     cargarIntimaciones();
+
+    // Paginación
+    document.getElementById('btnPrevPage').addEventListener('click', () => {
+        if (paginacionActual.currentPage > 1) {
+            cargarIntimaciones(null, paginacionActual.currentPage - 1);
+        }
+    });
+    document.getElementById('btnNextPage').addEventListener('click', () => {
+        if (paginacionActual.currentPage < paginacionActual.totalPages) {
+            cargarIntimaciones(null, paginacionActual.currentPage + 1);
+        }
+    });
 
     // Cargar filtro tipo desde catálogo
     cargarSelectCatalogo('filterTipo', 'tipo_intimacion', null, { incluirVacio: true, textoVacio: 'Todos' });
@@ -799,7 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('filterNumero').value = '';
         document.getElementById('filterFechaDesde').value = '';
         document.getElementById('filterFechaHasta').value = '';
-        cargarIntimaciones();
+        cargarIntimaciones({});
     });
 
     document.getElementById('searchInput').addEventListener('input', (e) => {
