@@ -338,10 +338,10 @@
             const ultimoInput = filaNueva.querySelector('[data-field="observaciones"]');
             if (ultimoInput) {
                 ultimoInput.addEventListener('blur', function () {
-                    const ubi = filaNueva.querySelector('[data-field="ubicacion"]').value.trim();
-                    if (ubi) {
+                    const ubi = filaNueva.querySelector('[data-field="ubicacion"]')?.value.trim();
+                    if (ubi && filaNueva.parentNode) {
                         setTimeout(() => {
-                            if (!filaNueva.contains(document.activeElement)) {
+                            if (filaNueva.parentNode && !filaNueva.contains(document.activeElement)) {
                                 guardarFilaNueva(filaNueva);
                             }
                         }, 150);
@@ -380,9 +380,12 @@
     // ==========================================
     // GUARDAR FILA NUEVA (POST)
     // ==========================================
+    let guardandoFilaNueva = false;
     async function guardarFilaNueva(fila) {
+        if (guardandoFilaNueva) return;
+        guardandoFilaNueva = true;
         const datos = extraerDatosFila(fila);
-        if (!datos.ubicacion) return;
+        if (!datos.ubicacion) { guardandoFilaNueva = false; return; }
         try {
             fila.classList.add('fila-guardando');
             const resp = await fetch(API_URL, { method: 'POST', headers, body: JSON.stringify(datos) });
@@ -396,6 +399,7 @@
             fila.classList.remove('fila-guardando');
             console.error('Error creando:', e);
         }
+        guardandoFilaNueva = false;
     }
 
     // ==========================================
