@@ -6,12 +6,16 @@ const db = require('../config/database');
 // ==========================================
 const obtenerVendedores = async (req, res) => {
     try {
-        const { rubro, tiene_autorizacion, pago_canon, barrio_id, fecha_desde, fecha_hasta, page = 1, limit = 50 } = req.query;
+        const { rubro, tiene_autorizacion, pago_canon, barrio_id, fecha_desde, fecha_hasta, page = 1, limit = 50, busqueda } = req.query;
 
         let query = 'SELECT v.*, b.nombre AS barrio_nombre FROM vendedores_ambulantes v LEFT JOIN barrios b ON v.barrio_id = b.id WHERE 1=1';
         const params = [];
 
-        if (rubro) {
+        if (busqueda) {
+            query += ' AND (v.nombre_vendedor LIKE ? OR v.dni_vendedor LIKE ? OR v.ubicacion LIKE ? OR v.rubro LIKE ?)';
+            const q = `%${busqueda}%`;
+            params.push(q, q, q, q);
+        } else if (rubro) {
             query += ' AND v.rubro LIKE ?';
             params.push(`%${rubro}%`);
         }

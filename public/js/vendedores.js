@@ -78,11 +78,19 @@
             });
         }
 
-        // Búsqueda con Enter
+        // Búsqueda con Enter y auto-búsqueda con debounce
         const busquedaInput = document.getElementById('filtro-busqueda');
         if (busquedaInput) {
             busquedaInput.addEventListener('keyup', (e) => {
                 if (e.key === 'Enter') { paginaActual = 1; cargarVendedores(); }
+            });
+            // Auto-búsqueda al escribir (debounce 500ms como en intimaciones)
+            busquedaInput.addEventListener('input', () => {
+                clearTimeout(window.searchTimeout);
+                window.searchTimeout = setTimeout(() => {
+                    paginaActual = 1;
+                    cargarVendedores();
+                }, 500);
             });
         }
 
@@ -144,7 +152,7 @@
             const desde = document.getElementById('filtro-desde');
             const hasta = document.getElementById('filtro-hasta');
 
-            if (busqueda) params.append('rubro', busqueda); // búsqueda aproximada por rubro/nombre via backend
+            if (busqueda) params.append('busqueda', busqueda);
             if (autorizacion && autorizacion.value !== '') params.append('tiene_autorizacion', autorizacion.value);
             if (canon && canon.value !== '') params.append('pago_canon', canon.value);
             if (barrio && barrio.value) params.append('barrio_id', barrio.value);
@@ -158,18 +166,6 @@
 
             if (data.success) {
                 let registros = data.data;
-
-                // Filtro de texto local para nombre/DNI/ubicación
-                // (el backend filtra por rubro, complementamos localmente)
-                if (busqueda) {
-                    const q = busqueda.toLowerCase();
-                    registros = registros.filter(r =>
-                        (r.nombre_vendedor || '').toLowerCase().includes(q) ||
-                        (r.dni_vendedor || '').toLowerCase().includes(q) ||
-                        (r.ubicacion || '').toLowerCase().includes(q) ||
-                        (r.rubro || '').toLowerCase().includes(q)
-                    );
-                }
 
                 // Actualizar estado de paginación
                 if (data.pagination) {
@@ -196,6 +192,11 @@
         if (barrio) barrio.value = '';
         if (desde) desde.value = '';
         if (hasta) hasta.value = '';
+        paginaActual = 1;
+        cargarVendedores();
+    };
+
+    window.aplicarFiltrosVendedores = function () {
         paginaActual = 1;
         cargarVendedores();
     };
