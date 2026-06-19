@@ -123,7 +123,7 @@ if (process.env.DB_CLIENT === 'mysql') {
     translated = translated.replace(/DATE_FORMAT\(([^,]+),\s*([^)]+)\)/gi, 'strftime($2, $1)');
 
     // 4. DATEDIFF(A, B) -> MUST BE TRANSLATED BEFORE CURDATE()/NOW() because of commas in arguments
-    translated = translated.replace(/DATEDIFF\(([^,]+),\s*([^)]+)\)/gi, 'CAST(julianday($1) - julianday($2) AS INTEGER)');
+    translated = translated.replace(/DATEDIFF\(([^,]+),\s*([^)]+)\)/gi, 'CAST(julianday(date($1)) - julianday(date($2)) AS INTEGER)');
 
     // 5. DATE_ADD(A, INTERVAL B DAY/MONTH/YEAR) -> MUST BE TRANSLATED BEFORE CURDATE()/NOW()
     translated = translated.replace(/DATE_ADD\(([^,]+),\s*INTERVAL\s*([^ ]+)\s+(DAY|MONTH|YEAR)S?\)/gi, (match, expr, interval, unit) => {
