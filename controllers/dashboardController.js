@@ -8,7 +8,8 @@ exports.obtenerResumenDashboard = async (req, res) => {
         const [intimVencidas] = await db.pool.execute(
             `SELECT COUNT(*) as total FROM intimaciones
              WHERE dio_cumplimiento = 0
-             AND estado NOT IN ('reiterada', 'infraccionado')
+             AND estado != 'infraccionado'
+             AND id IN (SELECT MAX(id) FROM intimaciones GROUP BY dni, direccion)
              AND DATE_ADD(fecha, INTERVAL plazo_dias DAY) < CURDATE()`
         );
 
@@ -16,7 +17,8 @@ exports.obtenerResumenDashboard = async (req, res) => {
         const [intimProximas] = await db.pool.execute(
             `SELECT COUNT(*) as total FROM intimaciones
              WHERE dio_cumplimiento = 0
-             AND estado NOT IN ('reiterada', 'infraccionado')
+             AND estado != 'infraccionado'
+             AND id IN (SELECT MAX(id) FROM intimaciones GROUP BY dni, direccion)
              AND DATE_ADD(fecha, INTERVAL plazo_dias DAY) BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 3 DAY)`
         );
 
@@ -44,7 +46,8 @@ exports.obtenerResumenDashboard = async (req, res) => {
                 COUNT(*) as total
             FROM intimaciones
             WHERE dio_cumplimiento = 0
-              AND estado NOT IN ('reiterada', 'infraccionado')
+              AND estado != 'infraccionado'
+              AND id IN (SELECT MAX(id) FROM intimaciones GROUP BY dni, direccion)
               AND DATE_ADD(fecha, INTERVAL plazo_dias DAY) < CURDATE()
             GROUP BY numero_intimacion, tipo
             ORDER BY numero_intimacion ASC, tipo ASC

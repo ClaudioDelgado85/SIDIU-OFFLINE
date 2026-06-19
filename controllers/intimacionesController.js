@@ -16,7 +16,8 @@ function calcularEstadoAutomatico(intimacion) {
   }
 
   // Calcular fecha de vencimiento
-  const fechaIntimacion = new Date(intimacion.fecha);
+  const [year, month, day] = intimacion.fecha.split('-').map(Number);
+  const fechaIntimacion = new Date(year, month - 1, day);
   const plazo = intimacion.plazo_dias || 0;
   const fechaVencimiento = new Date(fechaIntimacion);
   fechaVencimiento.setDate(fechaVencimiento.getDate() + plazo);
@@ -118,10 +119,11 @@ exports.obtenerIntimaciones = async (req, res) => {
         estadoCalculado = 'reiterada';
       }
 
+      const [y, m, d] = item.fecha.split('-').map(Number);
       return {
         ...item,
         estado: estadoCalculado,
-        fecha_vencimiento: new Date(new Date(item.fecha).getTime() + (item.plazo_dias || 0) * 24 * 60 * 60 * 1000)
+        fecha_vencimiento: new Date(y, m - 1, d + (item.plazo_dias || 0))
       };
     });
 
