@@ -16,8 +16,7 @@ function calcularEstadoAutomatico(intimacion) {
   }
 
   // Calcular fecha de vencimiento
-  const [year, month, day] = intimacion.fecha.split('-').map(Number);
-  const fechaIntimacion = new Date(year, month - 1, day);
+  const fechaIntimacion = new Date(intimacion.fecha);
   const plazo = intimacion.plazo_dias || 0;
   const fechaVencimiento = new Date(fechaIntimacion);
   fechaVencimiento.setDate(fechaVencimiento.getDate() + plazo);
@@ -119,11 +118,10 @@ exports.obtenerIntimaciones = async (req, res) => {
         estadoCalculado = 'reiterada';
       }
 
-      const [y, m, d] = item.fecha.split('-').map(Number);
       return {
         ...item,
         estado: estadoCalculado,
-        fecha_vencimiento: new Date(y, m - 1, d + (item.plazo_dias || 0))
+        fecha_vencimiento: new Date(new Date(item.fecha).getTime() + (item.plazo_dias || 0) * 24 * 60 * 60 * 1000)
       };
     });
 
@@ -340,7 +338,11 @@ exports.actualizarIntimacion = async (req, res) => {
       }
       if (!fields.includes('fecha_subsanacion = ?') && !updates.fecha_subsanacion) {
         fields.push('fecha_subsanacion = ?');
-        values.push(new Date());
+        var hoy = new Date();
+        var yyyy = hoy.getFullYear();
+        var mm = String(hoy.getMonth() + 1).padStart(2, '0');
+        var dd = String(hoy.getDate()).padStart(2, '0');
+        values.push(yyyy + '-' + mm + '-' + dd);
       }
     }
 

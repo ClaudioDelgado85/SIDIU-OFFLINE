@@ -365,6 +365,10 @@ function abrirModal() {
                                     <input type="checkbox" id="dio_cumplimiento" style="width:auto;">
                                     <strong>¿Dio cumplimiento?</strong> (Marcar para cerrar el caso)
                                 </label>
+                                <div id="grupoFechaSubsanacion" style="display:none; margin-top:10px;">
+                                    <label>Fecha de cumplimiento</label>
+                                    <input type="date" id="fecha_subsanacion">
+                                </div>
                             </div>
                             ` : ''}
 
@@ -418,6 +422,23 @@ function abrirModal() {
                 numInput.required = false;
                 numInput.style.borderColor = '';
                 if (label) label.textContent = 'Número Infracción';
+            }
+        });
+    }
+    // Toggle fecha de cumplimiento cuando se marca/desmarca el checkbox
+    var cbCumplimiento = document.getElementById('dio_cumplimiento');
+    if (cbCumplimiento) {
+        cbCumplimiento.addEventListener('change', function(e) {
+            var grupo = document.getElementById('grupoFechaSubsanacion');
+            if (grupo) {
+                grupo.style.display = e.target.checked ? 'block' : 'none';
+            }
+            // Auto-llenar con la fecha de hoy si se marca y está vacío
+            if (e.target.checked) {
+                var fechaInput = document.getElementById('fecha_subsanacion');
+                if (fechaInput && !fechaInput.value) {
+                    fechaInput.valueAsDate = new Date();
+                }
             }
         });
     }
@@ -512,8 +533,15 @@ async function guardarIntimacion(e) {
     }
 
     if (intimacionEditando) {
-        const dioCumplimiento = document.getElementById('dio_cumplimiento')?.checked;
-        if (dioCumplimiento) formData.dio_cumplimiento = true;
+        var dioCumplimientoEl = document.getElementById('dio_cumplimiento');
+        var dioCumplimiento = dioCumplimientoEl ? dioCumplimientoEl.checked : false;
+        if (dioCumplimiento) {
+            formData.dio_cumplimiento = true;
+            var fechaSubEl = document.getElementById('fecha_subsanacion');
+            if (fechaSubEl && fechaSubEl.value) {
+                formData.fecha_subsanacion = fechaSubEl.value;
+            }
+        }
     }
 
     try {
@@ -602,6 +630,18 @@ function cargarDatosFormulario() {
 
     if (i.dio_cumplimiento) {
         document.getElementById('dio_cumplimiento').checked = true;
+        var grupoFechaSub = document.getElementById('grupoFechaSubsanacion');
+        if (grupoFechaSub) grupoFechaSub.style.display = 'block';
+        if (i.fecha_subsanacion) {
+            var fechaSubVal = String(i.fecha_subsanacion);
+            // Si es un timestamp numérico antiguo, convertir a fecha
+            if (/^\d{10,}/.test(fechaSubVal)) {
+                var d = new Date(Number(fechaSubVal));
+                fechaSubVal = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            }
+            var fechaSubInput = document.getElementById('fecha_subsanacion');
+            if (fechaSubInput) fechaSubInput.value = fechaSubVal.substring(0, 10);
+        }
     }
 
     // Previews de fotos
