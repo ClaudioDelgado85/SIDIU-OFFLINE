@@ -344,6 +344,20 @@ exports.actualizarIntimacion = async (req, res) => {
         var dd = String(hoy.getDate()).padStart(2, '0');
         values.push(yyyy + '-' + mm + '-' + dd);
       }
+    } else if (updates.dio_cumplimiento === false || updates.dio_cumplimiento === '0' || updates.dio_cumplimiento === 0) {
+      // Si se desmarca cumplimiento, limpiar fecha y recalcular estado
+      if (!fields.includes('fecha_subsanacion = ?')) {
+        fields.push('fecha_subsanacion = ?');
+        values.push(null);
+      }
+      if (!fields.includes('estado = ?')) {
+        const [rows] = await db.pool.execute('SELECT * FROM intimaciones WHERE id = ?', [id]);
+        const current = rows[0];
+        const merged = { ...current, ...updates, dio_cumplimiento: false };
+        const nuevoEstado = calcularEstadoAutomatico(merged);
+        fields.push('estado = ?');
+        values.push(nuevoEstado);
+      }
     }
 
     // Actualizar estado a 'infraccionado' si se marca infraccion_realizada

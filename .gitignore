@@ -49,3 +49,7 @@ backups/
 *.db-wal
 *.db-shm
 *.db.bak-*
+
+# Indices locales de herramientas
+.codegraph/
+.atl/

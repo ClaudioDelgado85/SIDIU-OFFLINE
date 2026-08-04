@@ -535,12 +535,14 @@ async function guardarIntimacion(e) {
     if (intimacionEditando) {
         var dioCumplimientoEl = document.getElementById('dio_cumplimiento');
         var dioCumplimiento = dioCumplimientoEl ? dioCumplimientoEl.checked : false;
+        formData.dio_cumplimiento = dioCumplimiento;
         if (dioCumplimiento) {
-            formData.dio_cumplimiento = true;
             var fechaSubEl = document.getElementById('fecha_subsanacion');
             if (fechaSubEl && fechaSubEl.value) {
                 formData.fecha_subsanacion = fechaSubEl.value;
             }
+        } else {
+            formData.fecha_subsanacion = null;
         }
     }
 
