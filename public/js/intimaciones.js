@@ -197,7 +197,7 @@ function actualizarEstadisticasVista() {
 // MODAL Y FORMULARIO
 // ============================================
 
-function abrirModal() {
+function abrirModal(plantilla) {
     const modalHTML = `
         <div class="panel-overlay" id="modalOverlay">
             <div class="panel-lateral" id="panelLateral">
@@ -385,17 +385,20 @@ function abrirModal() {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-    cargarSelectBarrios('barrio_id', intimacionEditando?.barrio_id);
+    cargarSelectBarrios('barrio_id', plantilla?.barrio_id || intimacionEditando?.barrio_id);
 
-    cargarSelectCatalogo('tipo', 'tipo_intimacion', intimacionEditando?.tipo || 'general', { incluirVacio: false }).then(() => {
+    cargarSelectCatalogo('tipo', 'tipo_intimacion', plantilla?.tipo || intimacionEditando?.tipo || 'general', { incluirVacio: false }).then(() => {
         if (intimacionEditando) cambiarTipoFormulario(intimacionEditando.tipo);
+        else if (plantilla) cambiarTipoFormulario(plantilla.tipo);
     });
     cargarSelectCatalogo('tipo_obstruccion', 'intimacion_por', null, { incluirVacio: true, textoVacio: '-- Seleccionar --' }).then(() => {
         if (intimacionEditando) {
             _setTipoObstruccionDesdeEdicion(intimacionEditando.tipo_obstruccion);
+        } else if (plantilla) {
+            _setTipoObstruccionDesdeEdicion(plantilla.tipo_obstruccion);
         }
     });
-    cargarSelectCatalogo('rubro_comercial', 'rubro_comercial', intimacionEditando?.rubro_comercial || null, { incluirVacio: true, textoVacio: '-- Seleccionar rubro --' });
+    cargarSelectCatalogo('rubro_comercial', 'rubro_comercial', plantilla?.rubro_comercial || intimacionEditando?.rubro_comercial || null, { incluirVacio: true, textoVacio: '-- Seleccionar rubro --' });
 
     document.getElementById('tipo_obstruccion').addEventListener('change', (e) => {
         const grupoDetalle = document.getElementById('grupoIntimacionPorDetalle');
@@ -889,22 +892,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Preparar nueva instancia
             intimacionEditando = null; // Es una NUEVA, no edición
-            abrirModal();
 
-            // Precargar datos del original
-            document.getElementById('tipo').value = original.tipo;
-            cambiarTipoFormulario(original.tipo);
+            // Plantilla: precarga los selects asíncronos (tipo, tipo_obstruccion, rubro_comercial)
+            const plantilla = { ...original, id: undefined };
+            let nextNum = (parseInt(original.numero_intimacion) || 1) + 1;
+            if (nextNum > 3) nextNum = 3; // Tope visual del select
+            plantilla.numero_intimacion = nextNum;
 
+            abrirModal(plantilla);
+
+            // Precargar datos del original (campos directos, sin async)
             document.getElementById('fecha').valueAsDate = new Date(); // Fecha HOY
             document.getElementById('nombre_apellido').value = original.nombre_apellido;
             document.getElementById('dni').value = original.dni;
             document.getElementById('direccion').value = original.direccion;
-            _setTipoObstruccionDesdeEdicion(original.tipo_obstruccion);
             document.getElementById('plazo_dias').value = original.plazo_dias; // Mismo plazo por defecto
 
-            // Incrementar número
-            let nextNum = (parseInt(original.numero_intimacion) || 1) + 1;
-            if (nextNum > 3) nextNum = 3; // Tope en 3ra? O dejar libre. Por ahora tope visual del select.
             document.getElementById('numero_intimacion').value = nextNum;
 
             document.getElementById('observaciones').value = `Continuación de intimación #${original.id}. \n` + (original.observaciones || '');
