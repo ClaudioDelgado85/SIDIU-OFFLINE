@@ -910,7 +910,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             document.getElementById('numero_intimacion').value = nextNum;
 
-            document.getElementById('observaciones').value = `Continuación de intimación #${original.id}. \n` + (original.observaciones || '');
+            document.getElementById('observaciones').value = `Continuación de intimación #${original.numero_intimacion}. \n` + (original.observaciones || '');
 
             // Copiar datos específicos si existen
             if (original.tipo === 'baldio') {
