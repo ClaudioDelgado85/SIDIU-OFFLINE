@@ -424,31 +424,39 @@
     align-items: center;
     justify-content: center;
     border-radius: 6px;
-    color: var(--si-text-muted);
+    color: #fff;
 }
 
-.page-modulo .btn-icon:hover {
-    background: var(--si-surface);
-}
-
-.page-modulo .btn-icon.btn-edit:hover {
-    color: var(--si-blue);
-    background: var(--si-blue-light);
-}
-
-.page-modulo .btn-icon.btn-delete:hover {
-    color: var(--si-red);
-    background: var(--si-red-light);
+.page-modulo .btn-icon.btn-next {
+    background: #16a34a;
 }
 
 .page-modulo .btn-icon.btn-next:hover {
-    color: var(--si-cyan);
-    background: var(--si-cyan-light);
+    background: #15803d;
+}
+
+.page-modulo .btn-icon.btn-infraccion {
+    background: #b91c1c;
 }
 
 .page-modulo .btn-icon.btn-infraccion:hover {
-    color: var(--si-red);
-    background: var(--si-red-light);
+    background: #991b1b;
+}
+
+.page-modulo .btn-icon.btn-edit {
+    background: #ea580c;
+}
+
+.page-modulo .btn-icon.btn-edit:hover {
+    background: #c2410c;
+}
+
+.page-modulo .btn-icon.btn-delete {
+    background: #dc2626;
+}
+
+.page-modulo .btn-icon.btn-delete:hover {
+    background: #b91c1c;
 }
 
 /* --- Panel lateral slide-in --- */
