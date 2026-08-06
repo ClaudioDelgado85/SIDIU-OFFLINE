@@ -417,46 +417,49 @@
 }
 
 .page-modulo .btn-icon {
-    width: 30px;
-    height: 30px;
+    width: 24px;
+    height: 24px;
     padding: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
-    color: #fff;
+    border-radius: 5px;
 }
 
 .page-modulo .btn-icon.btn-next {
-    background: #16a34a;
+    background: #dcfce7;
+    color: #16a34a;
 }
 
 .page-modulo .btn-icon.btn-next:hover {
-    background: #15803d;
+    background: #bbf7d0;
 }
 
 .page-modulo .btn-icon.btn-infraccion {
-    background: #b91c1c;
+    background: #fee2e2;
+    color: #b91c1c;
 }
 
 .page-modulo .btn-icon.btn-infraccion:hover {
-    background: #991b1b;
+    background: #fecaca;
 }
 
 .page-modulo .btn-icon.btn-edit {
-    background: #ea580c;
+    background: #ffedd5;
+    color: #ea580c;
 }
 
 .page-modulo .btn-icon.btn-edit:hover {
-    background: #c2410c;
+    background: #fed7aa;
 }
 
 .page-modulo .btn-icon.btn-delete {
-    background: #dc2626;
+    background: #fee2e2;
+    color: #dc2626;
 }
 
 .page-modulo .btn-icon.btn-delete:hover {
-    background: #b91c1c;
+    background: #fecaca;
 }
 
 /* --- Panel lateral slide-in --- */
