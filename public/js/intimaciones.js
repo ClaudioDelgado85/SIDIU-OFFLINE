@@ -109,7 +109,10 @@ function mostrarIntimaciones() {
     emptyState.style.display = 'none';
     tbody.innerHTML = '';
 
+    const esAdmin = (JSON.parse(localStorage.getItem('usuario') || '{}').rol === 'admin_total');
+
     intimaciones.forEach(item => {
+        const esReiterada = item.estado === 'reiterada';
         const tr = document.createElement('tr');
         tr.setAttribute('data-estado', item.estado);
         tr.innerHTML = `
@@ -145,30 +148,34 @@ function mostrarIntimaciones() {
             </td>
             <td class="col-extra">
                 <div class="action-buttons">
-                    <button class="btn-icon btn-edit" data-id="${item.id}" title="Editar">
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
-                        </svg>
-                    </button>
-                    ${!item.dio_cumplimiento && item.numero_intimacion < 3 ?
+                    ${!esReiterada && !item.dio_cumplimiento && item.numero_intimacion < 3 ?
                 `<button class="btn-icon btn-next" data-id="${item.id}" title="Generar Siguiente Instancia">
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
                             <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
                         </svg>
                     </button>`
                 : ''}
-                    ${item.estado === 'vencida' && !item.dio_cumplimiento ?
+                    ${!esReiterada && item.estado === 'vencida' && !item.dio_cumplimiento ?
                 `<button class="btn-icon btn-infraccion" data-id="${item.id}" title="Generar Infracción">
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
                             <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                         </svg>
                     </button>`
                 : ''}
-                    <button class="btn-icon btn-delete" data-id="${item.id}" title="Eliminar">
+                    ${!esReiterada || esAdmin ?
+                `<button class="btn-icon btn-edit" data-id="${item.id}" title="Editar">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                        </svg>
+                    </button>`
+                : ''}
+                    ${!esReiterada || esAdmin ?
+                `<button class="btn-icon btn-delete" data-id="${item.id}" title="Eliminar">
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
                             <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
                         </svg>
-                    </button>
+                    </button>`
+                : ''}
                 </div>
             </td>
             <td class="col-toggle"></td>
