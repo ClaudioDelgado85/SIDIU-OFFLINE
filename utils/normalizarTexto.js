@@ -15,6 +15,11 @@ function upper(val) {
   return val.replace(/\s+/g, ' ').trim().toUpperCase();
 }
 
+function normalizarDni(val) {
+  if (typeof val !== 'string') return val;
+  return val.replace(/[\s.\-]/g, '');
+}
+
 function normalizarObstruccion(val) {
   if (typeof val !== 'string') return val;
   const limpio = val.replace(/\s+/g, ' ').trim();
@@ -26,4 +31,4 @@ function normalizarObstruccion(val) {
   return limpio;
 }
 
-module.exports = { titleCase, upper, normalizarObstruccion };
+module.exports = { titleCase, upper, normalizarDni, normalizarObstruccion };

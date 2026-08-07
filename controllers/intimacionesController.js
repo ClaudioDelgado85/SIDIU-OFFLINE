@@ -2,7 +2,7 @@
 // Controlador para gestión de intimaciones
 
 const db = require('../config/database');
-const { titleCase, upper, normalizarObstruccion } = require('../utils/normalizarTexto');
+const { titleCase, upper, normalizarDni, normalizarObstruccion } = require('../utils/normalizarTexto');
 
 // Función para calcular el estado automáticamente
 function calcularEstadoAutomatico(intimacion) {
@@ -79,14 +79,16 @@ exports.obtenerIntimaciones = async (req, res) => {
 
     // Búsqueda general
     if (busqueda) {
-      whereClause += ' AND (dni LIKE ? OR nombre_apellido LIKE ? OR direccion LIKE ?)';
-      params.push(`%${busqueda}%`, `%${busqueda}%`, `%${busqueda}%`);
+      const dniTerm = busqueda.replace(/[\s.\-]/g, '');
+      whereClause += ` AND (REPLACE(REPLACE(REPLACE(dni, '.', ''), ' ', ''), '-', '') LIKE ? OR nombre_apellido LIKE ? OR direccion LIKE ?)`;
+      params.push(`%${dniTerm}%`, `%${busqueda}%`, `%${busqueda}%`);
     }
 
     // Filtros específicos
     if (dni && !busqueda) {
-      whereClause += ' AND dni LIKE ?';
-      params.push(`%${dni}%`);
+      const dniTerm = dni.replace(/[\s.\-]/g, '');
+      whereClause += ' AND REPLACE(REPLACE(REPLACE(dni, \'.\', \'\'), \' \', \'\'), \'-\', \'\') LIKE ?';
+      params.push(`%${dniTerm}%`);
     }
 
     if (nombre && !busqueda) {
@@ -195,6 +197,7 @@ exports.crearIntimacion = async (req, res) => {
 
     // Normalizar campos de texto ingresados por operadores
     nombre_apellido = titleCase(nombre_apellido);
+    dni = normalizarDni(dni);
     direccion = titleCase(direccion);
     tipo_obstruccion = normalizarObstruccion(tipo_obstruccion);
     observaciones = typeof observaciones === 'string' ? observaciones.replace(/\s+/g, ' ').trim() : observaciones;
@@ -331,6 +334,7 @@ exports.actualizarIntimacion = async (req, res) => {
     // Normalizar campos de texto ingresados por operadores
     const camposNormalizables = {
       nombre_apellido: titleCase,
+      dni: normalizarDni,
       direccion: titleCase,
       tipo_obstruccion: normalizarObstruccion,
       marca: titleCase,
