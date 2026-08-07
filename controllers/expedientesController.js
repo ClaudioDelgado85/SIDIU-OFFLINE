@@ -2,6 +2,7 @@
 // Controlador para gestión de expedientes
 
 const db = require('../config/database');
+const { titleCase, upper, normalizarDni, normalizarObstruccion } = require('../utils/normalizarTexto');
 
 // Obtener todos los expedientes (con filtros opcionales y paginación)
 exports.obtenerExpedientes = async (req, res) => {
@@ -44,14 +45,16 @@ exports.obtenerExpedientes = async (req, res) => {
 
     // Búsqueda general (busca en múltiples campos con OR)
     if (busqueda) {
-      whereClause += ' AND (dni LIKE ? OR nombre_apellido LIKE ? OR numero_expediente LIKE ?)';
-      params.push(`%${busqueda}%`, `%${busqueda}%`, `%${busqueda}%`);
+      const dniTerm = busqueda.replace(/[\s.\-]/g, '');
+      whereClause += ` AND (REPLACE(REPLACE(REPLACE(dni, '.', ''), ' ', ''), '-', '') LIKE ? OR nombre_apellido LIKE ? OR UPPER(numero_expediente) LIKE ?)`;
+      params.push(`%${dniTerm}%`, `%${busqueda}%`, `%${busqueda.toUpperCase()}%`);
     }
 
     // Filtros específicos individuales (para uso directo)
     if (dni && !busqueda) {
-      whereClause += ' AND dni LIKE ?';
-      params.push(`%${dni}%`);
+      const dniTerm = dni.replace(/[\s.\-]/g, '');
+      whereClause += ' AND REPLACE(REPLACE(REPLACE(dni, \'.\', \'\'), \' \', \'\'), \'-\', \'\') LIKE ?';
+      params.push(`%${dniTerm}%`);
     }
 
     if (nombre && !busqueda) {
@@ -60,8 +63,8 @@ exports.obtenerExpedientes = async (req, res) => {
     }
 
     if (numero_expediente && !busqueda) {
-      whereClause += ' AND numero_expediente LIKE ?';
-      params.push(`%${numero_expediente}%`);
+      whereClause += ' AND UPPER(numero_expediente) LIKE ?';
+      params.push(`%${numero_expediente.toUpperCase()}%`);
     }
 
     // Query para contar el total de registros (para paginación)
@@ -135,7 +138,13 @@ exports.crearExpediente = async (req, res) => {
   console.log('Usuario:', req.usuario);
 
   try {
-    const { fecha, numero_expediente, nombre_apellido, dni, motivo, estado, barrio_id } = req.body;
+    let { fecha, numero_expediente, nombre_apellido, dni, motivo, estado, barrio_id } = req.body;
+
+    // Normalizar campos de texto ingresados por operadores
+    numero_expediente = upper(numero_expediente);
+    nombre_apellido = titleCase(nombre_apellido);
+    dni = normalizarDni(dni);
+    motivo = normalizarObstruccion(motivo);
 
     // Validar campos requeridos
     if (!fecha || !numero_expediente || !nombre_apellido || !dni || !motivo) {
@@ -165,6 +174,10 @@ exports.crearExpediente = async (req, res) => {
     // Extraer campos opcionales del nuevo flujo
     const { fecha_inspeccion, plazo_dias, fecha_salida, observaciones, direccion, numero_partida } = req.body;
 
+    // Normalizar campos opcionales de texto
+    const observacionesNorm = typeof observaciones === 'string' ? observaciones.replace(/\s+/g, ' ').trim() : observaciones;
+    const direccionNorm = titleCase(direccion);
+
     // Insertar expediente
     const sql = `
       INSERT INTO expedientes (fecha, numero_expediente, nombre_apellido, dni, motivo, direccion, numero_partida, estado, barrio_id, fecha_inspeccion, plazo_dias, fecha_salida, observaciones)
@@ -178,14 +191,14 @@ exports.crearExpediente = async (req, res) => {
       nombre_apellido,
       dni,
       motivo,
-      direccion || null,
+      direccionNorm || null,
       numero_partida || null,
       estadoFinal,
       barrio_id || null,
       fecha_inspeccion || null,
       plazo_dias || null,
       fecha_salida || null,
-      observaciones || null
+      observacionesNorm || null
     ]);
 
     console.log('✅ Expediente creado con ID:', result.insertId);
@@ -217,7 +230,13 @@ exports.crearExpediente = async (req, res) => {
 exports.actualizarExpediente = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fecha, numero_expediente, nombre_apellido, dni, motivo, estado, barrio_id } = req.body;
+    let { fecha, numero_expediente, nombre_apellido, dni, motivo, estado, barrio_id } = req.body;
+
+    // Normalizar campos de texto ingresados por operadores
+    numero_expediente = upper(numero_expediente);
+    nombre_apellido = titleCase(nombre_apellido);
+    dni = normalizarDni(dni);
+    motivo = normalizarObstruccion(motivo);
 
     // Verificar que el expediente existe
     const checkSql = 'SELECT id, numero_expediente FROM expedientes WHERE id = ?';
@@ -294,12 +313,13 @@ exports.actualizarExpediente = async (req, res) => {
       valores.push(fecha_salida || null);
     }
     if (observaciones !== undefined) {
+      const obsNorm = typeof observaciones === 'string' ? observaciones.replace(/\s+/g, ' ').trim() : observaciones;
       campos.push('observaciones = ?');
-      valores.push(observaciones || null);
+      valores.push(obsNorm || null);
     }
     if (direccion !== undefined) {
       campos.push('direccion = ?');
-      valores.push(direccion || null);
+      valores.push(titleCase(direccion) || null);
     }
     if (numero_partida !== undefined) {
       campos.push('numero_partida = ?');

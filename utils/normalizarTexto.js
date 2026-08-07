@@ -20,15 +20,22 @@ function normalizarDni(val) {
   return val.replace(/[\s.\-]/g, '');
 }
 
+function fraseCase(val) {
+  if (typeof val !== 'string') return val;
+  const limpio = val.replace(/\s+/g, ' ').trim();
+  if (!limpio) return limpio;
+  return limpio.charAt(0).toUpperCase() + limpio.slice(1).toLowerCase();
+}
+
 function normalizarObstruccion(val) {
   if (typeof val !== 'string') return val;
   const limpio = val.replace(/\s+/g, ' ').trim();
   if (!limpio) return limpio;
   const match = limpio.match(/^otros\s*:\s*(.*)$/i);
   if (match && match[1]) {
-    return `Otros: ${titleCase(match[1])} `;
+    return `Otros: ${fraseCase(match[1])}`;
   }
   return limpio;
 }
 
-module.exports = { titleCase, upper, normalizarDni, normalizarObstruccion };
+module.exports = { titleCase, fraseCase, upper, normalizarDni, normalizarObstruccion };
