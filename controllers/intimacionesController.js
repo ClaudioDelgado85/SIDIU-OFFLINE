@@ -2,6 +2,7 @@
 // Controlador para gestión de intimaciones
 
 const db = require('../config/database');
+const { titleCase, upper, normalizarObstruccion } = require('../utils/normalizarTexto');
 
 // Función para calcular el estado automáticamente
 function calcularEstadoAutomatico(intimacion) {
@@ -182,7 +183,7 @@ exports.obtenerIntimaciones = async (req, res) => {
 // Crear nueva intimación
 exports.crearIntimacion = async (req, res) => {
   try {
-    const {
+    let {
       fecha, tipo, nombre_apellido, dni, direccion, tipo_obstruccion,
       plazo_dias, numero_intimacion, observaciones, barrio_id,
       rubro_comercial,
@@ -191,6 +192,17 @@ exports.crearIntimacion = async (req, res) => {
       // Campos Vehículos
       marca, modelo, color, dominio, fecha_retiro, lugar_deposito
     } = req.body;
+
+    // Normalizar campos de texto ingresados por operadores
+    nombre_apellido = titleCase(nombre_apellido);
+    direccion = titleCase(direccion);
+    tipo_obstruccion = normalizarObstruccion(tipo_obstruccion);
+    observaciones = typeof observaciones === 'string' ? observaciones.replace(/\s+/g, ' ').trim() : observaciones;
+    marca = titleCase(marca);
+    modelo = titleCase(modelo);
+    color = titleCase(color);
+    dominio = upper(dominio);
+    lugar_deposito = titleCase(lugar_deposito);
 
     // Validar campos obligatorios comunes
     if (!fecha || !tipo || !nombre_apellido || !dni || !direccion) {
@@ -263,7 +275,23 @@ exports.crearIntimacion = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Intimación creada exitosamente.',
-      data: { id: result.insertId, ...req.body, estado }
+      data: {
+        id: result.insertId,
+        fecha, tipo, nombre_apellido, dni, direccion,
+        tipo_obstruccion: tipo_obstruccion || null,
+        rubro_comercial: rubro_comercial || null,
+        plazo_dias: plazo_dias || 0,
+        numero_intimacion: numero_intimacion || 1,
+        observaciones: observaciones || null,
+        estado,
+        infraccion_realizada: esInfraccionada || false,
+        numero_infraccion: numero_infraccion || null,
+        fecha_infraccion: esInfraccionada ? (fecha_infraccion || new Date().toISOString().substring(0, 10)) : (fecha_infraccion || null),
+        propietario_no_ubicado: propietario_no_ubicado || false,
+        marca: marca || null, modelo: modelo || null, color: color || null,
+        dominio: dominio || null, fecha_retiro: fecha_retiro || null,
+        lugar_deposito: lugar_deposito || null, barrio_id: barrio_id || null
+      }
     });
 
   } catch (error) {
@@ -298,6 +326,26 @@ exports.actualizarIntimacion = async (req, res) => {
     // Si el tipo cambia de comercio a otro, limpiar rubro_comercial
     if (updates.tipo && updates.tipo !== 'comercio') {
       updates.rubro_comercial = null;
+    }
+
+    // Normalizar campos de texto ingresados por operadores
+    const camposNormalizables = {
+      nombre_apellido: titleCase,
+      direccion: titleCase,
+      tipo_obstruccion: normalizarObstruccion,
+      marca: titleCase,
+      modelo: titleCase,
+      color: titleCase,
+      lugar_deposito: titleCase,
+      dominio: upper
+    };
+    for (const [campo, fn] of Object.entries(camposNormalizables)) {
+      if (updates[campo] !== undefined) {
+        updates[campo] = fn(updates[campo]);
+      }
+    }
+    if (typeof updates.observaciones === 'string') {
+      updates.observaciones = updates.observaciones.replace(/\s+/g, ' ').trim();
     }
 
     // Construir query dinámica
