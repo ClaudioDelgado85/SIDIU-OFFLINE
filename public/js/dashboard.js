@@ -95,7 +95,7 @@ function renderEscalamiento(rawData) {
         },
         {
             nivel: 3,
-            titulo: '3ª Intimación',
+            titulo: '3ª o más Intimaciones',
             subtitulo: 'Vencidas',
             accion: 'Labrar acta de infracción',
             color: 'esc-red',
