@@ -76,12 +76,8 @@ exports.obtenerIntimaciones = async (req, res) => {
       params.push(tipo);
     }
 
-    if (numero) {
-      whereClause += ' AND numero_intimacion = ?';
-      params.push(numero);
-    }
-
-    // Nota: El filtro por estado se aplicará DESPUÉS de calcular el estado automático
+    // Nota: El filtro por estado y el filtro por número (total de actas del caso)
+    // se aplicarán DESPUÉS de calcular el estado automático (en memoria).
     const filtroEstado = estado;
 
     if (fecha_desde) {
@@ -152,10 +148,18 @@ exports.obtenerIntimaciones = async (req, res) => {
       };
     });
 
-    // Aplicar filtro de estado si se especificó
+    // Aplicar filtros en memoria: estado calculado y número de intimación.
+    // El número compara el DENOMINADOR (total_instancias_grupo = cantidad exacta
+    // de actas reales del caso), no el numerador (numero_intimacion): así una fila
+    // #3/2 (caso con 2 actas reales) NO aparece al filtrar por N=3.
+    const numeroTotal = numero !== undefined && numero !== '' ? parseInt(numero, 10) : null;
     let intimacionesFiltradas = intimacionesConEstado;
-    if (filtroEstado) {
-      intimacionesFiltradas = intimacionesConEstado.filter(i => i.estado === filtroEstado);
+    if (filtroEstado || numeroTotal !== null) {
+      intimacionesFiltradas = intimacionesConEstado.filter(i => {
+        if (filtroEstado && i.estado !== filtroEstado) return false;
+        if (numeroTotal !== null && (i.total_instancias_grupo || 1) !== numeroTotal) return false;
+        return true;
+      });
     }
 
     // Calcular estadísticas

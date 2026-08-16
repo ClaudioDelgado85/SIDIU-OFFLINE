@@ -334,5 +334,96 @@ describe('📋 Intimaciones (/api/intimaciones)', () => {
         await limpiarPorDni(dni);
       }
     });
+
+    // ─── FILTRO POR Nº DE INTIMACIÓN (total de actas del caso) ────────────
+    describe('Filtro ?numero=N por total de actas del caso', () => {
+
+      test('?numero=2 sobre un caso de 2 actas devuelve ambas filas del caso (y nada con otro total)', async () => {
+        const dni = '77777774';
+        const base = { fecha: hoy(), tipo: 'general', nombre_apellido: 'TEST FILTRO NUMERO', dni, direccion: 'CALLE FILTRO 2', plazo_dias: 3 };
+        const ids = [];
+        try {
+          const r1 = await request(app).post('/api/intimaciones').set(auth()).send(base);
+          expect(r1.statusCode).toBe(201);
+          expect(r1.body.data.numero_intimacion).toBe(1);
+          ids.push(r1.body.data.id);
+
+          const r2 = await request(app).post('/api/intimaciones').set(auth()).send({ ...base, grupo_id: r1.body.data.grupo_id });
+          expect(r2.statusCode).toBe(201);
+          expect(r2.body.data.numero_intimacion).toBe(2);
+          ids.push(r2.body.data.id);
+
+          // El filtro compara total_instancias_grupo (denominador), no numero_intimacion
+          const res = await request(app).get('/api/intimaciones?numero=2&limit=100').set(auth());
+          expect(res.statusCode).toBe(200);
+          const idsCaso = [r1.body.data.id, r2.body.data.id];
+          const filasCaso = res.body.data.filter(i => idsCaso.includes(i.id));
+          expect(filasCaso.length).toBe(2);
+          filasCaso.forEach(i => expect(i.total_instancias_grupo).toBe(2));
+          // Ninguna fila devuelta puede tener un total distinto de 2
+          res.body.data.forEach(i => expect(i.total_instancias_grupo).toBe(2));
+          expect(res.body.stats.total).toBeGreaterThanOrEqual(2);
+
+          // La exportación usa el mismo flujo filtrado
+          const exp = await request(app).get('/api/intimaciones?numero=2&exportar=true').set(auth());
+          expect(exp.statusCode).toBe(200);
+          const filasExp = exp.body.data.filter(i => idsCaso.includes(i.id));
+          expect(filasExp.length).toBe(2);
+          exp.body.data.forEach(i => expect(i.total_instancias_grupo).toBe(2));
+        } finally {
+          await borrarIds(ids);
+          await limpiarPorDni(dni);
+        }
+      });
+
+      test('?numero=3 NO devuelve fila #3/2 (caso con 2 actas tras borrado); ?numero=2 SÍ la devuelve', async () => {
+        const dni = '77777775';
+        const base = { fecha: hoy(), tipo: 'general', nombre_apellido: 'TEST FILTRO BORRADO', dni, direccion: 'CALLE FILTRO 3', plazo_dias: 3 };
+        const ids = [];
+        try {
+          const r1 = await request(app).post('/api/intimaciones').set(auth()).send(base);
+          expect(r1.statusCode).toBe(201);
+          ids.push(r1.body.data.id);
+
+          const r2 = await request(app).post('/api/intimaciones').set(auth()).send({ ...base, grupo_id: r1.body.data.grupo_id });
+          expect(r2.statusCode).toBe(201);
+          ids.push(r2.body.data.id);
+
+          const r3 = await request(app).post('/api/intimaciones').set(auth()).send({ ...base, grupo_id: r1.body.data.grupo_id });
+          expect(r3.statusCode).toBe(201);
+          expect(r3.body.data.numero_intimacion).toBe(3);
+          ids.push(r3.body.data.id);
+
+          // Borrar físicamente la intermedia (#2): el caso queda con 2 actas reales
+          // (#1 y #3), pero la #3 conserva numero_intimacion = 3 → badge #3/2
+          const del = await request(app).delete(`/api/intimaciones/${r2.body.data.id}`).set(auth());
+          expect(del.statusCode).toBe(200);
+
+          // Sanity: la fila #3/2 sigue visible en el listado con total_instancias_grupo = 2
+          const todo = await request(app).get('/api/intimaciones?limit=200').set(auth());
+          const fila32 = todo.body.data.find(i => i.id === r3.body.data.id);
+          expect(fila32).toBeDefined();
+          expect(fila32.numero_intimacion).toBe(3);
+          expect(fila32.total_instancias_grupo).toBe(2);
+
+          // ?numero=3 → NO debe aparecer la fila #3/2 ni la #1 (el caso no tiene 3 actas)
+          const filtro3 = await request(app).get('/api/intimaciones?numero=3&limit=200').set(auth());
+          expect(filtro3.statusCode).toBe(200);
+          expect(filtro3.body.data.find(i => i.id === r3.body.data.id)).toBeUndefined();
+          expect(filtro3.body.data.find(i => i.id === r1.body.data.id)).toBeUndefined();
+          filtro3.body.data.forEach(i => expect(i.total_instancias_grupo).toBe(3));
+
+          // ?numero=2 → SÍ debe aparecer la fila #3/2 (y la #1): el caso tiene 2 actas
+          const filtro2 = await request(app).get('/api/intimaciones?numero=2&limit=200').set(auth());
+          expect(filtro2.statusCode).toBe(200);
+          const filasCaso = filtro2.body.data.filter(i => i.id === r3.body.data.id || i.id === r1.body.data.id);
+          expect(filasCaso.length).toBe(2);
+          filtro2.body.data.forEach(i => expect(i.total_instancias_grupo).toBe(2));
+        } finally {
+          await borrarIds(ids);
+          await limpiarPorDni(dni);
+        }
+      });
+    });
   });
 });
