@@ -225,7 +225,9 @@ exports.crearIntimacion = async (req, res) => {
 
     // Normalizar campos de texto ingresados por operadores
     nombre_apellido = titleCase(nombre_apellido);
-    dni = normalizarDni(dni);
+    // dni es OPCIONAL (sin DNI se agrupa por nombre+dirección): garantizar string
+    // para la columna NOT NULL aunque el payload no traiga la clave (defensivo).
+    dni = dni ? normalizarDni(dni) : '';
     direccion = titleCase(direccion);
     tipo_obstruccion = normalizarObstruccion(tipo_obstruccion);
     observaciones = typeof observaciones === 'string' ? observaciones.replace(/\s+/g, ' ').trim() : observaciones;
