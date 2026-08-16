@@ -116,10 +116,10 @@ function mostrarIntimaciones() {
         const tr = document.createElement('tr');
         tr.setAttribute('data-estado', item.estado);
 
-        // Badge de instancia dentro del caso (grupo): #X/Y con tooltip
+        // Badge de instancia dentro del caso (grupo): #X/Y con tooltip (formato uniforme incluso con 1 instancia)
         const totalGrupo = item.total_instancias_grupo || item.numero_intimacion || 1;
         const numActual = item.numero_intimacion || 1;
-        const badgeClase = totalGrupo > 1 ? 'celda-numero-grupo' : 'celda-numero';
+        const badgeClase = 'celda-numero-grupo';
 
         tr.innerHTML = `
             <td>${formatearFecha(item.fecha)}</td>
@@ -129,7 +129,7 @@ function mostrarIntimaciones() {
                 <div class="celda-sub">DNI: ${item.dni}</div>
             </td>
             <td>${item.direccion}</td>
-            <td style="text-align:center"><span class="${badgeClase}" title="Instancia ${numActual} de ${totalGrupo} (Caso ${item.grupo_id || 'S/N'})">#${numActual}${totalGrupo > 1 ? `<small style="opacity:0.75">/${totalGrupo}</small>` : ''}</span></td>
+            <td style="text-align:center"><span class="${badgeClase}" title="Instancia ${numActual} de ${totalGrupo} (Caso ${item.grupo_id || 'S/N'})">#${numActual}<small style="opacity:0.75">/${totalGrupo}</small></span></td>
             <td style="text-align:center">${item.plazo_dias}d</td>
             <td>
                 <span style="color:${item.estado === 'vencida' ? 'var(--si-red)' : item.estado === 'proxima_vencer' ? 'var(--si-amber)' : 'var(--si-green)'}; font-weight:500">
