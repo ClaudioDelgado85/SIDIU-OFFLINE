@@ -67,15 +67,15 @@ describe('📋 Intimaciones (/api/intimaciones)', () => {
       });
     });
 
-    test('La última intimación por grupo DNI+dirección NO es reiterada (a menos que sea cumplida/infraccionada)', async () => {
+    test('La última intimación por grupo (grupo_id) NO es reiterada (a menos que sea cumplida/infraccionada)', async () => {
       const res = await request(app)
         .get('/api/intimaciones')
         .set('Authorization', `Bearer ${token}`);
 
-      // Agrupar por DNI+dirección y encontrar la de mayor ID
+      // Agrupar por grupo_id (fallback dni|direccion para filas pre-migración) y encontrar la de mayor ID
       const grupos = {};
       res.body.data.forEach(item => {
-        const key = `${item.dni}|${item.direccion}`;
+        const key = item.grupo_id || `${item.dni}|${item.direccion}`;
         if (!grupos[key] || item.id > grupos[key].id) {
           grupos[key] = item;
         }
