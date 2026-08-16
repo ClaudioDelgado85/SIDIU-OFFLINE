@@ -115,6 +115,12 @@ function mostrarIntimaciones() {
         const esReiterada = item.estado === 'reiterada';
         const tr = document.createElement('tr');
         tr.setAttribute('data-estado', item.estado);
+
+        // Badge de instancia dentro del caso (grupo): #X/Y con tooltip
+        const totalGrupo = item.total_instancias_grupo || item.numero_intimacion || 1;
+        const numActual = item.numero_intimacion || 1;
+        const badgeClase = totalGrupo > 1 ? 'celda-numero-grupo' : 'celda-numero';
+
         tr.innerHTML = `
             <td>${formatearFecha(item.fecha)}</td>
             <td><span class="celda-tag">${item.tipo.toUpperCase()}</span></td>
@@ -123,7 +129,7 @@ function mostrarIntimaciones() {
                 <div class="celda-sub">DNI: ${item.dni}</div>
             </td>
             <td>${item.direccion}</td>
-            <td style="text-align:center"><span class="celda-numero">#${item.numero_intimacion}</span></td>
+            <td style="text-align:center"><span class="${badgeClase}" title="Instancia ${numActual} de ${totalGrupo} (Caso ${item.grupo_id || 'S/N'})">#${numActual}${totalGrupo > 1 ? `<small style="opacity:0.75">/${totalGrupo}</small>` : ''}</span></td>
             <td style="text-align:center">${item.plazo_dias}d</td>
             <td>
                 <span style="color:${item.estado === 'vencida' ? 'var(--si-red)' : item.estado === 'proxima_vencer' ? 'var(--si-amber)' : 'var(--si-green)'}; font-weight:500">
@@ -148,7 +154,7 @@ function mostrarIntimaciones() {
             </td>
             <td class="col-extra">
                 <div class="action-buttons">
-                    ${!esReiterada && !item.dio_cumplimiento && item.numero_intimacion < 3 ?
+                    ${!esReiterada && !item.dio_cumplimiento ?
                 `<button class="btn-icon btn-next" data-id="${item.id}" title="Generar Siguiente Instancia">
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
                             <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
@@ -248,14 +254,6 @@ function abrirModal(plantilla) {
                             <div class="form-group-modal">
                                 <label>Plazo (días)</label>
                                 <input type="number" id="plazo_dias" value="3">
-                            </div>
-                            <div class="form-group-modal">
-                                <label>Nro. Intimación</label>
-                                <select id="numero_intimacion">
-                                    <option value="1">1ra</option>
-                                    <option value="2">2da</option>
-                                    <option value="3">3ra</option>
-                                </select>
                             </div>
 
                             <div class="form-group-modal form-grid-full">
@@ -392,6 +390,16 @@ function abrirModal(plantilla) {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
+    // Hilo conductor del caso: si esta nueva instancia continúa un grupo,
+    // mostrar el identificador del caso y transmitirlo al guardar
+    if (plantilla?.grupo_id) {
+        const modalTitle = document.getElementById('modalTitle');
+        if (modalTitle) {
+            modalTitle.insertAdjacentHTML('beforeend', `<span class="modal-caso-tag">🔗 Caso ${plantilla.grupo_id}</span>`);
+        }
+    }
+    document.getElementById('formIntimacion').dataset.grupoId = plantilla?.grupo_id || '';
+
     cargarSelectBarrios('barrio_id', plantilla?.barrio_id || intimacionEditando?.barrio_id);
 
     cargarSelectCatalogo('tipo', 'tipo_intimacion', plantilla?.tipo || intimacionEditando?.tipo || 'general', { incluirVacio: false }).then(() => {
@@ -509,7 +517,9 @@ async function guardarIntimacion(e) {
         tipo_obstruccion: tipoObstruccionFinal,
         rubro_comercial: document.getElementById('rubro_comercial')?.value || null,
         plazo_dias: document.getElementById('plazo_dias').value,
-        numero_intimacion: document.getElementById('numero_intimacion').value,
+        // grupo_id se transmite solo desde el flujo "Siguiente Instancia"
+        // (el backend valida pertenencia; en edición/PUT se ignora por allowedFields)
+        grupo_id: document.getElementById('formIntimacion').dataset.grupoId || null,
         observaciones: document.getElementById('observaciones').value,
 
         // Baldios
@@ -619,7 +629,6 @@ function cargarDatosFormulario() {
     document.getElementById('direccion').value = i.direccion;
     // tipo_obstruccion se carga en el callback de cargarSelectCatalogo via _setTipoObstruccionDesdeEdicion
     document.getElementById('plazo_dias').value = i.plazo_dias;
-    document.getElementById('numero_intimacion').value = i.numero_intimacion;
     document.getElementById('observaciones').value = i.observaciones || '';
 
     // Campos Baldios
@@ -891,20 +900,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const id = (e.target.dataset.id || e.target.closest('.btn-next').dataset.id);
             const original = intimaciones.find(i => i.id == id);
 
-            // Seguridad: no permitir escalar más allá de la 3ª intimación
-            if (original.numero_intimacion >= 3) {
-                alert('La 3ª intimación es el tope del escalamiento. Para continuar, edite esta intimación y agregue los datos de la infracción.');
-                return;
-            }
-
-            // Preparar nueva instancia
+            // Preparar nueva instancia (sin tope: la cadena es infinita)
             intimacionEditando = null; // Es una NUEVA, no edición
 
             // Plantilla: precarga los selects asíncronos (tipo, tipo_obstruccion, rubro_comercial)
-            const plantilla = { ...original, id: undefined };
+            // y TRANSMITE el grupo_id del caso para continuar la misma cadena
+            const plantilla = { ...original, id: undefined, grupo_id: original.grupo_id };
             let nextNum = (parseInt(original.numero_intimacion) || 1) + 1;
-            if (nextNum > 3) nextNum = 3; // Tope visual del select
-            plantilla.numero_intimacion = nextNum;
 
             abrirModal(plantilla);
 
@@ -914,8 +916,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('dni').value = original.dni;
             document.getElementById('direccion').value = original.direccion;
             document.getElementById('plazo_dias').value = original.plazo_dias; // Mismo plazo por defecto
-
-            document.getElementById('numero_intimacion').value = nextNum;
 
             document.getElementById('observaciones').value = `Continuación de intimación #${original.numero_intimacion}. \n` + (original.observaciones || '');
 
