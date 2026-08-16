@@ -39,6 +39,7 @@ async function cargarDashboard() {
         if (data.success) {
             actualizarKPIs(data.data.kpis);
             renderEscalamiento(data.data.escalamiento);
+            renderAccionInmediata(data.data.tablas.accion_inmediata);
             renderReclamos(data.data.tablas.reclamos_prioridad);
         }
     } catch (error) {
@@ -95,7 +96,7 @@ function renderEscalamiento(rawData) {
         },
         {
             nivel: 3,
-            titulo: '3ª Intimación',
+            titulo: '3ª o más Intimaciones',
             subtitulo: 'Vencidas',
             accion: 'Labrar acta de infracción',
             color: 'esc-red',
@@ -200,6 +201,79 @@ function renderReclamos(items) {
                 <div class="mobile-card-field">
                     <span class="mobile-card-field-label">Días sin resolver</span>
                     <span class="mobile-card-field-value" style="color:#d97706; font-weight:700;">${r.dias_sin_resolver} días</span>
+                </div>
+            </div>
+        </div>`;
+    });
+
+    htmlTable += '</tbody></table>';
+    htmlCards += '</div>';
+
+    container.innerHTML = htmlTable + htmlCards;
+}
+
+// ── Acción Inmediata ────────────────────────
+function formatearFecha(fecha) {
+    if (!fecha) return '-';
+    const fechaStr = String(fecha).substring(0, 10);
+    const parts = fechaStr.split('-');
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function renderAccionInmediata(items) {
+    const container = document.getElementById('panelAccionInmediata');
+
+    if (!items || items.length === 0) {
+        container.innerHTML = `<div class="dash-empty">
+            <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p>✅ Sin casos críticos — ningún caso con 4+ intimaciones tiene su última acta vencida</p>
+        </div>`;
+        return;
+    }
+
+    let htmlTable = `<table class="dash-table tabla-accion mobile-hidden-by-cards"><thead><tr>
+        <th>Caso</th><th>Contribuyente</th><th>Dirección</th><th>Actas</th><th>Última acta</th><th>Vencimiento</th><th>Tipo</th>
+    </tr></thead><tbody>`;
+
+    let htmlCards = `<div class="mobile-cards-container dashboard-mobile-reclamos">`;
+
+    items.forEach(r => {
+        const tipoLabel = (r.tipo || 'general').charAt(0).toUpperCase() + (r.tipo || 'general').slice(1);
+        const vencimiento = formatearFecha(r.fecha_vencimiento);
+
+        // Fila de tabla para escritorio
+        htmlTable += `<tr class="row-danger">
+            <td style="font-weight:700;">#${r.grupo_id}</td>
+            <td>${r.nombre_apellido}</td>
+            <td style="max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${r.direccion}">${r.direccion}</td>
+            <td><span class="badge-actas badge-danger">${r.total_instancias}</span></td>
+            <td>#${r.ultima_instancia}</td>
+            <td class="col-vencido">${vencimiento}</td>
+            <td style="text-transform:capitalize;">${tipoLabel}</td>
+        </tr>`;
+
+        // Tarjeta para móvil
+        htmlCards += `
+        <div class="mobile-card is-danger">
+            <div class="mobile-card-top">
+                <div>
+                    <h3 class="mobile-card-title">${r.nombre_apellido}</h3>
+                    <p class="mobile-card-subtitle">${r.direccion}</p>
+                </div>
+                <span class="badge-actas badge-danger">${r.total_instancias} actas</span>
+            </div>
+            <div class="mobile-card-summary">
+                <div class="mobile-card-field">
+                    <span class="mobile-card-field-label">Caso</span>
+                    <span class="mobile-card-field-value">#${r.grupo_id}</span>
+                </div>
+                <div class="mobile-card-field">
+                    <span class="mobile-card-field-label">Última acta</span>
+                    <span class="mobile-card-field-value">#${r.ultima_instancia} — ${tipoLabel}</span>
+                </div>
+                <div class="mobile-card-field">
+                    <span class="mobile-card-field-label">Vencimiento</span>
+                    <span class="mobile-card-field-value" style="color:var(--cl-naranja); font-weight:700;">${vencimiento}</span>
                 </div>
             </div>
         </div>`;

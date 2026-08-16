@@ -32,12 +32,12 @@ exports.buscarGlobal = async (req, res) => {
                  WHERE numero_expediente LIKE ? OR motivo LIKE ? OR nombre_apellido LIKE ? OR dni LIKE ?`,
                 [termino, termino, termino, termino]
             ),
-            // 2. Intimaciones (buscar por numero, nombre, dni)
+            // 2. Intimaciones (buscar por numero, nombre, dni, grupo_id)
             db.pool.execute(
-                `SELECT id, fecha, numero_intimacion as numero, tipo as descripcion, estado, nombre_apellido, dni, 'intimacion' as tipo
+                `SELECT id, fecha, numero_intimacion as numero, grupo_id, tipo as descripcion, estado, nombre_apellido, dni, 'intimacion' as tipo
                  FROM intimaciones 
-                 WHERE numero_intimacion LIKE ? OR nombre_apellido LIKE ? OR dni LIKE ?`,
-                [termino, termino, termino]
+                 WHERE numero_intimacion LIKE ? OR nombre_apellido LIKE ? OR dni LIKE ? OR grupo_id LIKE ?`,
+                [termino, termino, termino, termino]
             ),
             // 3. Infracciones (buscar por numero, nombre, dni)
             db.pool.execute(
@@ -111,6 +111,7 @@ exports.buscarGlobal = async (req, res) => {
                 estado: item.estado,
                 nombre: item.nombre_apellido || null,
                 dni: item.dni || null,
+                grupo_id: item.grupo_id || null,
                 link: `/intimaciones.html?id=${item.id}`
             })));
         }

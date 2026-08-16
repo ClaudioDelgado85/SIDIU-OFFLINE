@@ -172,11 +172,16 @@ CREATE TABLE IF NOT EXISTS intimaciones (
   foto_inicial TEXT,
   foto_actual TEXT,
   rubro_comercial TEXT,
+  grupo_id TEXT,
   fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
   fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP,
   barrio_id INTEGER,
   FOREIGN KEY(barrio_id) REFERENCES barrios(id)
 );
+
+-- Índice de agrupamiento por caso explícito (grupo_id)
+CREATE INDEX IF NOT EXISTS idx_intimaciones_grupo_id
+ON intimaciones(grupo_id);
 
 -- Tabla: reclamos (Soporta 'baldio' y 'baldío' por insensibilidad a acentos de MySQL en tests)
 CREATE TABLE IF NOT EXISTS reclamos (

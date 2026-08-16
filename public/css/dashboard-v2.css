@@ -469,6 +469,30 @@ body.dashboard {
     color: var(--cl-texto-muted);
 }
 
+/* ─── Panel Acción Inmediata ──────────────── */
+.tabla-accion td.col-vencido {
+    color: var(--si-red);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.badge-actas {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.badge-actas.badge-danger {
+    background: rgba(220, 38, 38, 0.12);
+    color: var(--si-red);
+}
+
 /* Empty state */
 .dash-empty {
     text-align: center;

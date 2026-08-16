@@ -2,7 +2,24 @@
 // Controlador para gestión de intimaciones
 
 const db = require('../config/database');
-const { titleCase, upper, normalizarDni, normalizarObstruccion } = require('../utils/normalizarTexto');
+const { titleCase, upper, normalizarDni, normalizarObstruccion, normalizarDireccionParaGrupo, normalizarNombreParaGrupo } = require('../utils/normalizarTexto');
+
+// Genera un grupo_id único con formato GRP-YYYYMM-XXXX (XXXX aleatorio).
+// Verifica contra la BD y reintenta hasta 5 veces si colisiona.
+async function generarGrupoId(fechaStr) {
+  const d = fechaStr ? new Date(fechaStr) : new Date();
+  const yyyymm = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`;
+  let gid, colisiona = true, intentos = 0;
+  do {
+    gid = `GRP-${yyyymm}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const [rows] = await db.pool.execute(
+      'SELECT id FROM intimaciones WHERE grupo_id = ? LIMIT 1',
+      [gid]
+    );
+    colisiona = rows.length > 0;
+  } while (colisiona && ++intentos < 5);
+  return gid;
+}
 
 // Función para calcular el estado automáticamente
 function calcularEstadoAutomatico(intimacion) {
@@ -59,12 +76,8 @@ exports.obtenerIntimaciones = async (req, res) => {
       params.push(tipo);
     }
 
-    if (numero) {
-      whereClause += ' AND numero_intimacion = ?';
-      params.push(numero);
-    }
-
-    // Nota: El filtro por estado se aplicará DESPUÉS de calcular el estado automático
+    // Nota: El filtro por estado y el filtro por número (total de actas del caso)
+    // se aplicarán DESPUÉS de calcular el estado automático (en memoria).
     const filtroEstado = estado;
 
     if (fecha_desde) {
@@ -77,11 +90,11 @@ exports.obtenerIntimaciones = async (req, res) => {
       params.push(fecha_hasta);
     }
 
-    // Búsqueda general
+    // Búsqueda general (dni, nombre, dirección y grupo_id — UPPER para tolerar minúsculas, patrón de expedientes)
     if (busqueda) {
       const dniTerm = busqueda.replace(/[\s.\-]/g, '');
-      whereClause += ` AND (REPLACE(REPLACE(REPLACE(dni, '.', ''), ' ', ''), '-', '') LIKE ? OR nombre_apellido LIKE ? OR direccion LIKE ?)`;
-      params.push(`%${dniTerm}%`, `%${busqueda}%`, `%${busqueda}%`);
+      whereClause += ` AND (REPLACE(REPLACE(REPLACE(dni, '.', ''), ' ', ''), '-', '') LIKE ? OR nombre_apellido LIKE ? OR direccion LIKE ? OR UPPER(grupo_id) LIKE ?)`;
+      params.push(`%${dniTerm}%`, `%${busqueda}%`, `%${busqueda}%`, `%${busqueda.toUpperCase()}%`);
     }
 
     // Filtros específicos
@@ -102,21 +115,27 @@ exports.obtenerIntimaciones = async (req, res) => {
 
     const [allIntimaciones] = await db.pool.execute(sql, params);
 
-    // ── Determinar la última intimación por grupo DNI+dirección ──
-    // Esto nos permite saber cuáles son "reiteradas" (las anteriores)
-    // y cuál es la "activa" (la más reciente) que debe recalcular su estado.
+    // ── Determinar la última intimación por grupo explícito (grupo_id) ──
+    // Esto permite saber cuáles son "reiteradas" (las anteriores al último id)
+    // y cuál es la "activa" (la de mayor id) que debe recalcular su estado.
     const [latestPerGroup] = await db.pool.execute(
-      `SELECT MAX(id) as ultimo_id FROM intimaciones GROUP BY dni, direccion`
+      `SELECT grupo_id, MAX(id) as ultimo_id, COUNT(*) as total_grupo
+       FROM intimaciones
+       WHERE grupo_id IS NOT NULL AND grupo_id != ''
+       GROUP BY grupo_id`
     );
-    const latestIds = new Set(latestPerGroup.map(r => r.ultimo_id));
+    const latestMap = new Map();
+    latestPerGroup.forEach(r => latestMap.set(r.grupo_id, { ultimo_id: r.ultimo_id, total_grupo: r.total_grupo }));
 
     // Calcular estado automático para cada intimación
     const intimacionesConEstado = allIntimaciones.map(item => {
       let estadoCalculado = calcularEstadoAutomatico(item);
 
-      // Si NO es la última de su grupo DNI+dirección y no está cumplida/infraccionada,
+      // Si NO es la última de su grupo (grupo_id) y no está cumplida/infraccionada,
       // entonces es "reiterada" (fue superada por una intimación más reciente)
-      const esUltima = latestIds.has(item.id);
+      const infoGrupo = item.grupo_id ? latestMap.get(item.grupo_id) : null;
+      const esUltima = infoGrupo ? infoGrupo.ultimo_id === item.id : true;
+      const totalInstancias = infoGrupo ? infoGrupo.total_grupo : 1;
       if (!esUltima && estadoCalculado !== 'cumplida' && estadoCalculado !== 'infraccionado') {
         estadoCalculado = 'reiterada';
       }
@@ -124,14 +143,23 @@ exports.obtenerIntimaciones = async (req, res) => {
       return {
         ...item,
         estado: estadoCalculado,
+        total_instancias_grupo: totalInstancias,
         fecha_vencimiento: new Date(new Date(item.fecha).getTime() + (item.plazo_dias || 0) * 24 * 60 * 60 * 1000)
       };
     });
 
-    // Aplicar filtro de estado si se especificó
+    // Aplicar filtros en memoria: estado calculado y número de intimación.
+    // El número compara el DENOMINADOR (total_instancias_grupo = cantidad exacta
+    // de actas reales del caso), no el numerador (numero_intimacion): así una fila
+    // #3/2 (caso con 2 actas reales) NO aparece al filtrar por N=3.
+    const numeroTotal = numero !== undefined && numero !== '' ? parseInt(numero, 10) : null;
     let intimacionesFiltradas = intimacionesConEstado;
-    if (filtroEstado) {
-      intimacionesFiltradas = intimacionesConEstado.filter(i => i.estado === filtroEstado);
+    if (filtroEstado || numeroTotal !== null) {
+      intimacionesFiltradas = intimacionesConEstado.filter(i => {
+        if (filtroEstado && i.estado !== filtroEstado) return false;
+        if (numeroTotal !== null && (i.total_instancias_grupo || 1) !== numeroTotal) return false;
+        return true;
+      });
     }
 
     // Calcular estadísticas
@@ -188,7 +216,7 @@ exports.crearIntimacion = async (req, res) => {
     let {
       fecha, tipo, nombre_apellido, dni, direccion, tipo_obstruccion,
       plazo_dias, numero_intimacion, observaciones, barrio_id,
-      rubro_comercial,
+      rubro_comercial, grupo_id,
       // Campos Baldíos
       infraccion_realizada, numero_infraccion, fecha_infraccion, propietario_no_ubicado,
       // Campos Vehículos
@@ -197,7 +225,9 @@ exports.crearIntimacion = async (req, res) => {
 
     // Normalizar campos de texto ingresados por operadores
     nombre_apellido = titleCase(nombre_apellido);
-    dni = normalizarDni(dni);
+    // dni es OPCIONAL (sin DNI se agrupa por nombre+dirección): garantizar string
+    // para la columna NOT NULL aunque el payload no traiga la clave (defensivo).
+    dni = dni ? normalizarDni(dni) : '';
     direccion = titleCase(direccion);
     tipo_obstruccion = normalizarObstruccion(tipo_obstruccion);
     observaciones = typeof observaciones === 'string' ? observaciones.replace(/\s+/g, ' ').trim() : observaciones;
@@ -207,11 +237,12 @@ exports.crearIntimacion = async (req, res) => {
     dominio = upper(dominio);
     lugar_deposito = titleCase(lugar_deposito);
 
-    // Validar campos obligatorios comunes
-    if (!fecha || !tipo || !nombre_apellido || !dni || !direccion) {
+    // Validar campos obligatorios comunes (dni y direccion son OPCIONALES:
+    // sin DNI se agrupa por nombre+dirección; sin ambos es caso único)
+    if (!fecha || !tipo || !nombre_apellido) {
       return res.status(400).json({
         success: false,
-        message: 'Faltan campos obligatorios (fecha, tipo, nombre, dni, dirección).'
+        message: 'Faltan campos obligatorios (fecha, tipo, nombre).'
       });
     }
 
@@ -238,42 +269,130 @@ exports.crearIntimacion = async (req, res) => {
       estado = 'infraccionado';
     }
 
+    // ── Determinar grupo_id y numero_intimacion (SIEMPRE automático) ──
+    let numeroCalculado = 1;
+    const dniNorm = dni ? normalizarDni(dni) : '';
+    const dirNorm = normalizarDireccionParaGrupo(direccion);
+
+    if (grupo_id) {
+      // Caso A: grupo_id explícito (ej: botón "Siguiente Instancia")
+      // → validar pertenencia: 400 si el grupo no existe o no corresponde al infractor
+      const [representantes] = await db.pool.execute(
+        'SELECT dni, nombre_apellido, direccion FROM intimaciones WHERE grupo_id = ? ORDER BY id ASC LIMIT 1',
+        [grupo_id]
+      );
+      if (representantes.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'El grupo especificado no existe.'
+        });
+      }
+      const representante = representantes[0];
+      if (dniNorm) {
+        if (dniNorm !== normalizarDni(representante.dni)) {
+          return res.status(400).json({
+            success: false,
+            message: 'El grupo no corresponde al infractor indicado.'
+          });
+        }
+      } else {
+        const coincideNombre = normalizarNombreParaGrupo(nombre_apellido) === normalizarNombreParaGrupo(representante.nombre_apellido);
+        const coincideDireccion = dirNorm === normalizarDireccionParaGrupo(representante.direccion);
+        if (!coincideNombre || !coincideDireccion) {
+          return res.status(400).json({
+            success: false,
+            message: 'El grupo no corresponde al infractor indicado.'
+          });
+        }
+      }
+      // Autonumeración sin tope: MAX+1 del grupo
+      const [previas] = await db.pool.execute(
+        'SELECT MAX(numero_intimacion) as max_num FROM intimaciones WHERE grupo_id = ?',
+        [grupo_id]
+      );
+      numeroCalculado = ((previas[0] && previas[0].max_num) || 0) + 1;
+    } else {
+      // Caso B: creación desde cero → búsqueda jerárquica de caso activo
+      // (1) DNI presente → DNI + dirección normalizada
+      // (2) sin DNI con dirección → nombre + dirección normalizada
+      // (3) sin DNI ni dirección → caso único, nunca se adosa
+      let coincidencia = null;
+
+      if (dniNorm) {
+        const [candidatas] = await db.pool.execute(
+          'SELECT id, grupo_id, direccion, estado, dio_cumplimiento FROM intimaciones WHERE dni = ? ORDER BY id DESC',
+          [dniNorm]
+        );
+        coincidencia = candidatas.find(c =>
+          c.grupo_id &&
+          normalizarDireccionParaGrupo(c.direccion) === dirNorm &&
+          !c.dio_cumplimiento &&
+          c.estado !== 'cumplida'
+        );
+      } else if (dirNorm) {
+        // Subconjunto acotado: filas sin DNI (decenas) → filtrado en memoria
+        const [candidatas] = await db.pool.execute(
+          "SELECT id, grupo_id, nombre_apellido, direccion, estado, dio_cumplimiento FROM intimaciones WHERE dni = '' OR dni IS NULL ORDER BY id DESC"
+        );
+        const nombreNorm = normalizarNombreParaGrupo(nombre_apellido);
+        coincidencia = candidatas.find(c =>
+          c.grupo_id &&
+          normalizarNombreParaGrupo(c.nombre_apellido) === nombreNorm &&
+          normalizarDireccionParaGrupo(c.direccion) === dirNorm &&
+          !c.dio_cumplimiento &&
+          c.estado !== 'cumplida'
+        );
+      }
+
+      if (coincidencia) {
+        grupo_id = coincidencia.grupo_id;
+        const [previas] = await db.pool.execute(
+          'SELECT MAX(numero_intimacion) as max_num FROM intimaciones WHERE grupo_id = ?',
+          [grupo_id]
+        );
+        numeroCalculado = ((previas[0] && previas[0].max_num) || 0) + 1;
+      } else {
+        grupo_id = await generarGrupoId(fecha);
+        numeroCalculado = 1;
+      }
+    }
+
+    // numero_intimacion es SIEMPRE automático: se ignora el valor del cliente
+    numero_intimacion = numeroCalculado;
+
     const sql = `
       INSERT INTO intimaciones (
         fecha, tipo, nombre_apellido, dni, direccion, tipo_obstruccion, rubro_comercial,
         plazo_dias, numero_intimacion, observaciones, estado,
         infraccion_realizada, numero_infraccion, fecha_infraccion, propietario_no_ubicado,
-        marca, modelo, color, dominio, fecha_retiro, lugar_deposito, barrio_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        marca, modelo, color, dominio, fecha_retiro, lugar_deposito, barrio_id, grupo_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const values = [
       fecha, tipo, nombre_apellido, dni, direccion, tipo_obstruccion || null,
       rubro_comercial || null,
-      plazo_dias || 0, numero_intimacion || 1, observaciones || null, estado,
+      plazo_dias || 0, numero_intimacion, observaciones || null, estado,
       esInfraccionada || false, numero_infraccion || null,
       esInfraccionada ? (fecha_infraccion || new Date().toISOString().substring(0, 10)) : (fecha_infraccion || null),
       propietario_no_ubicado || false,
       marca || null, modelo || null, color || null, dominio || null, fecha_retiro || null, lugar_deposito || null,
-      barrio_id || null
+      barrio_id || null, grupo_id
     ];
 
     const [result] = await db.pool.execute(sql, values);
 
-    // ── Marcar intimaciones anteriores como 'reiterada' ──
-    // Si existe otra intimación para el mismo DNI + dirección que no sea
-    // cumplida ni ya reiterada, la marcamos como reiterada
-    if (dni && direccion) {
-      await db.pool.execute(
-        `UPDATE intimaciones
-         SET estado = 'reiterada'
-         WHERE dni = ? AND direccion = ?
-           AND id != ?
-           AND estado NOT IN ('cumplida', 'reiterada')
-           AND dio_cumplimiento = 0`,
-        [dni, direccion, result.insertId]
-      );
-    }
+    // ── Marcar instancias previas del grupo como 'reiterada' ──
+    // Respeta cumplida, ya-reiterada e infraccionado (NOT IN 3 estados)
+    await db.pool.execute(
+      `UPDATE intimaciones
+       SET estado = 'reiterada'
+       WHERE grupo_id = ?
+         AND id != ?
+         AND estado NOT IN ('cumplida', 'reiterada', 'infraccionado')
+         AND dio_cumplimiento = 0`,
+      [grupo_id, result.insertId]
+    );
 
     res.status(201).json({
       success: true,
@@ -284,7 +403,8 @@ exports.crearIntimacion = async (req, res) => {
         tipo_obstruccion: tipo_obstruccion || null,
         rubro_comercial: rubro_comercial || null,
         plazo_dias: plazo_dias || 0,
-        numero_intimacion: numero_intimacion || 1,
+        numero_intimacion,
+        grupo_id,
         observaciones: observaciones || null,
         estado,
         infraccion_realizada: esInfraccionada || false,
@@ -353,9 +473,11 @@ exports.actualizarIntimacion = async (req, res) => {
     }
 
     // Construir query dinámica
+    // grupo_id y numero_intimacion son INMUTABLES: nunca se editan desde PUT
+    delete updates.grupo_id;
     const allowedFields = [
       'fecha', 'tipo', 'nombre_apellido', 'dni', 'direccion', 'tipo_obstruccion', 'rubro_comercial',
-      'plazo_dias', 'numero_intimacion', 'observaciones', 'estado', 'dio_cumplimiento', 'fecha_subsanacion',
+      'plazo_dias', 'observaciones', 'estado', 'dio_cumplimiento', 'fecha_subsanacion',
       'infraccion_realizada', 'numero_infraccion', 'fecha_infraccion', 'propietario_no_ubicado',
       'marca', 'modelo', 'color', 'dominio', 'fecha_retiro', 'lugar_deposito', 'barrio_id',
       'foto_inicial', 'foto_actual'

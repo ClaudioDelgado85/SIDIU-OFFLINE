@@ -70,6 +70,36 @@ exports.obtenerResumenDashboard = async (req, res) => {
             LIMIT 10
         `);
 
+        // ─── ACCIÓN INMEDIATA ───────────────────────
+        // Casos (grupos) con 4+ actas cuya última acta está vencida
+        const [accionInmediata] = await db.pool.execute(`
+            SELECT g.grupo_id,
+                   g.total_instancias,
+                   i.numero_intimacion AS ultima_instancia,
+                   i.nombre_apellido,
+                   i.dni,
+                   i.direccion,
+                   i.tipo,
+                   DATE_ADD(i.fecha, INTERVAL i.plazo_dias DAY) AS fecha_vencimiento,
+                   i.estado
+            FROM (
+                SELECT grupo_id, COUNT(*) AS total_instancias
+                FROM intimaciones
+                WHERE grupo_id IS NOT NULL AND grupo_id <> ''
+                GROUP BY grupo_id
+                HAVING COUNT(*) >= 4
+            ) g
+            JOIN intimaciones i
+              ON i.grupo_id = g.grupo_id
+             AND i.numero_intimacion = (SELECT MAX(i2.numero_intimacion)
+                                        FROM intimaciones i2
+                                        WHERE i2.grupo_id = g.grupo_id)
+            WHERE i.dio_cumplimiento = 0
+              AND i.estado NOT IN ('reiterada', 'infraccionado')
+              AND DATE_ADD(i.fecha, INTERVAL i.plazo_dias DAY) < CURDATE()
+            ORDER BY g.total_instancias DESC, fecha_vencimiento ASC
+        `);
+
         // ─── RESPUESTA ──────────────────────────────
 
         res.json({
@@ -84,7 +114,8 @@ exports.obtenerResumenDashboard = async (req, res) => {
                 },
                 escalamiento,
                 tablas: {
-                    reclamos_prioridad: recDetalle
+                    reclamos_prioridad: recDetalle,
+                    accion_inmediata: accionInmediata
                 }
             }
         });

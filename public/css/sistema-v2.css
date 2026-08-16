@@ -207,6 +207,66 @@
     letter-spacing: -0.01em;
 }
 
+/* Badge de instancia dentro de un caso (grupo_id): #X/Y */
+.page-modulo .celda-numero-grupo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(37, 99, 235, 0.12);
+    color: #1d4ed8;
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.page-modulo .celda-numero-grupo small {
+    opacity: .75;
+}
+
+[data-theme="dark"] .page-modulo .celda-numero-grupo {
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+/* Número de caso (grupo_id) visible sin hover, debajo del badge #X/Y */
+.page-modulo .celda-grupo-tag {
+    display: block;
+    margin-top: 3px;
+    font-family: var(--si-mono);
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    color: var(--si-text-muted);
+    background: var(--si-surface-subtle, #f1f5f9);
+    border: 1px solid var(--si-border);
+    border-radius: 4px;
+    padding: 1px 5px;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+[data-theme="dark"] .page-modulo .celda-grupo-tag {
+    background: rgba(148, 163, 184, 0.12);
+    color: #94a3b8;
+    border-color: rgba(148, 163, 184, 0.3);
+}
+
+/* Indicador de Caso en el modal (hilo conductor) */
+.modal-caso-tag {
+    font-size: 11px;
+    background: var(--si-surface-subtle, #f1f5f9);
+    border: 1px solid var(--si-border);
+    padding: 3px 8px;
+    border-radius: 4px;
+    color: var(--si-text-muted);
+    margin-left: 8px;
+    font-weight: 500;
+}
+
 .page-modulo .celda-nombre {
     font-weight: 600;
     color: var(--si-text-primary);
