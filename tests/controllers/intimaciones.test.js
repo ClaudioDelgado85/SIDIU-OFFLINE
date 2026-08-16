@@ -176,4 +176,163 @@ describe('📋 Intimaciones (/api/intimaciones)', () => {
       expect(res.statusCode).toBe(404);
     });
   });
+
+  // ─── GRUPOS DE INTIMACIONES (grupo_id) ────────────
+  describe('Grupos de intimaciones (grupo_id)', () => {
+
+    const auth = () => ({ 'Authorization': `Bearer ${token}` });
+    const hoy = () => new Date().toISOString().substring(0, 10);
+
+    // Limpieza defensiva: borra filas creadas por tests con DNI exacto
+    async function limpiarPorDni(dni) {
+      const res = await request(app)
+        .get(`/api/intimaciones?dni=${dni}&limit=50`)
+        .set(auth());
+      if (res.body.data) {
+        for (const item of res.body.data) {
+          if (String(item.dni) === String(dni)) {
+            await request(app)
+              .delete(`/api/intimaciones/${item.id}`)
+              .set(auth());
+          }
+        }
+      }
+    }
+
+    async function borrarIds(ids) {
+      for (const id of ids) {
+        await request(app).delete(`/api/intimaciones/${id}`).set(auth());
+      }
+    }
+
+    test('POST con grupo_id válido → 201, numero=2, mismo grupo; la 1ª pasa a reiterada', async () => {
+      const dni = '77777777';
+      const base = { fecha: hoy(), tipo: 'general', nombre_apellido: 'TEST GRUPO UNO', dni, direccion: 'CALLE GRUPO 100', plazo_dias: 3 };
+      const ids = [];
+      try {
+        const r1 = await request(app).post('/api/intimaciones').set(auth()).send(base);
+        expect(r1.statusCode).toBe(201);
+        expect(r1.body.data.grupo_id).toBeTruthy();
+        expect(r1.body.data.numero_intimacion).toBe(1);
+        ids.push(r1.body.data.id);
+
+        const r2 = await request(app).post('/api/intimaciones').set(auth()).send({ ...base, grupo_id: r1.body.data.grupo_id });
+        expect(r2.statusCode).toBe(201);
+        expect(r2.body.data.grupo_id).toBe(r1.body.data.grupo_id);
+        expect(r2.body.data.numero_intimacion).toBe(2);
+        ids.push(r2.body.data.id);
+
+        // La 1ª instancia pasa a 'reiterada' en el listado
+        const res = await request(app).get('/api/intimaciones').set(auth());
+        const primera = res.body.data.find(i => i.id === r1.body.data.id);
+        expect(primera).toBeDefined();
+        expect(primera.estado).toBe('reiterada');
+        expect(primera.total_instancias_grupo).toBe(2);
+      } finally {
+        await borrarIds(ids);
+        await limpiarPorDni(dni);
+      }
+    });
+
+    test('Adosamiento sin grupo_id con variante tipográfica de dirección', async () => {
+      const dni = '66666666';
+      const base = { fecha: hoy(), tipo: 'general', nombre_apellido: 'TEST ADOSA TIPO', dni, plazo_dias: 3 };
+      const ids = [];
+      try {
+        const r1 = await request(app).post('/api/intimaciones').set(auth()).send({ ...base, direccion: 'Calle Adosa 100.' });
+        expect(r1.statusCode).toBe(201);
+        ids.push(r1.body.data.id);
+
+        const r2 = await request(app).post('/api/intimaciones').set(auth()).send({ ...base, direccion: 'calle adosa 100' });
+        expect(r2.statusCode).toBe(201);
+        ids.push(r2.body.data.id);
+
+        // Misma dirección normalizada → mismo grupo, numero=2
+        expect(r2.body.data.grupo_id).toBe(r1.body.data.grupo_id);
+        expect(r2.body.data.numero_intimacion).toBe(2);
+      } finally {
+        await borrarIds(ids);
+        await limpiarPorDni(dni);
+      }
+    });
+
+    test('POST con grupo_id ajeno → 400', async () => {
+      const dniBase = '55555555';
+      const dniAjeno = '44444444';
+      const base = { fecha: hoy(), tipo: 'general', nombre_apellido: 'TEST GRUPO AJENO', plazo_dias: 3 };
+      const ids = [];
+      try {
+        const r1 = await request(app).post('/api/intimaciones').set(auth()).send({ ...base, dni: dniBase, direccion: 'CALLE AJENA 10' });
+        expect(r1.statusCode).toBe(201);
+        ids.push(r1.body.data.id);
+
+        const r2 = await request(app).post('/api/intimaciones').set(auth()).send({ ...base, dni: dniAjeno, direccion: 'CALLE AJENA 10', grupo_id: r1.body.data.grupo_id });
+        expect(r2.statusCode).toBe(400);
+        expect(r2.body.success).toBe(false);
+        expect(r2.body.message).toMatch(/no corresponde|no existe/i);
+      } finally {
+        await borrarIds(ids);
+        await limpiarPorDni(dniBase);
+        await limpiarPorDni(dniAjeno);
+      }
+    });
+
+    test('PUT no altera grupo_id ni numero_intimacion (inmutables)', async () => {
+      const dni = '77777778';
+      const base = { fecha: hoy(), tipo: 'general', nombre_apellido: 'TEST PUT PROTEGIDO', dni, direccion: 'CALLE PUT 50', plazo_dias: 3 };
+      const ids = [];
+      try {
+        const r1 = await request(app).post('/api/intimaciones').set(auth()).send(base);
+        expect(r1.statusCode).toBe(201);
+        expect(r1.body.data.numero_intimacion).toBe(1);
+        ids.push(r1.body.data.id);
+        const grupoOriginal = r1.body.data.grupo_id;
+
+        const put = await request(app)
+          .put(`/api/intimaciones/${r1.body.data.id}`)
+          .set(auth())
+          .send({ numero_intimacion: 9, grupo_id: 'GRP-FAKE', observaciones: 'PUT protegido' });
+        expect(put.statusCode).toBe(200);
+
+        const res = await request(app).get(`/api/intimaciones/${r1.body.data.id}`).set(auth());
+        expect(res.body.data.numero_intimacion).toBe(1);
+        expect(res.body.data.grupo_id).toBe(grupoOriginal);
+        expect(res.body.data.grupo_id).not.toBe('GRP-FAKE');
+      } finally {
+        await borrarIds(ids);
+        await limpiarPorDni(dni);
+      }
+    });
+
+    test('Autonumeración sin tope: 3ª instancia con numero=3 y total_instancias_grupo=3', async () => {
+      const dni = '77777776';
+      const base = { fecha: hoy(), tipo: 'general', nombre_apellido: 'TEST ESCALADO INFINITO', dni, direccion: 'CALLE ESCALADO 1', plazo_dias: 3 };
+      const ids = [];
+      try {
+        const r1 = await request(app).post('/api/intimaciones').set(auth()).send(base);
+        expect(r1.statusCode).toBe(201);
+        expect(r1.body.data.numero_intimacion).toBe(1);
+        ids.push(r1.body.data.id);
+
+        const r2 = await request(app).post('/api/intimaciones').set(auth()).send({ ...base, grupo_id: r1.body.data.grupo_id });
+        expect(r2.statusCode).toBe(201);
+        expect(r2.body.data.numero_intimacion).toBe(2);
+        ids.push(r2.body.data.id);
+
+        // Sin tope de 3: la 3ª instancia se crea sin 400 y se numera 3
+        const r3 = await request(app).post('/api/intimaciones').set(auth()).send({ ...base, grupo_id: r1.body.data.grupo_id });
+        expect(r3.statusCode).toBe(201);
+        expect(r3.body.data.numero_intimacion).toBe(3);
+        ids.push(r3.body.data.id);
+
+        const res = await request(app).get('/api/intimaciones').set(auth());
+        const items = res.body.data.filter(i => i.grupo_id === r1.body.data.grupo_id);
+        expect(items.length).toBe(3);
+        items.forEach(i => expect(i.total_instancias_grupo).toBe(3));
+      } finally {
+        await borrarIds(ids);
+        await limpiarPorDni(dni);
+      }
+    });
+  });
 });
