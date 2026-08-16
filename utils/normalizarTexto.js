@@ -38,4 +38,32 @@ function normalizarObstruccion(val) {
   return limpio;
 }
 
-module.exports = { titleCase, fraseCase, upper, normalizarDni, normalizarObstruccion };
+/**
+ * Normaliza una dirección exclusivamente para propósitos de comparación y
+ * agrupamiento (NO para presentación). Minúsculas, sin acentos, signos de
+ * puntuación por espacios, unifica abreviaturas comunes y colapsa espacios.
+ * @param {string} val
+ * @returns {string}
+ */
+function normalizarDireccionParaGrupo(val) {
+  if (typeof val !== 'string') return '';
+  return val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[.,\-\/\\#]/g, ' ')
+    .replace(/\b(av|avda|avenida)\b/g, 'av')
+    .replace(/\b(pso|piso|depto|dpto)\b/g, '')
+    .replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Normaliza un nombre para comparación/agrupamiento (NO para presentación).
+ * Minúsculas, sin acentos; conserva solo letras y espacios.
+ * @param {string} val
+ * @returns {string}
+ */
+function normalizarNombreParaGrupo(val) {
+  if (typeof val !== 'string') return '';
+  return val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+module.exports = { titleCase, fraseCase, upper, normalizarDni, normalizarObstruccion, normalizarDireccionParaGrupo, normalizarNombreParaGrupo };
