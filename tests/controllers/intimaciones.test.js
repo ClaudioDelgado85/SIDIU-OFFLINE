@@ -335,6 +335,56 @@ describe('📋 Intimaciones (/api/intimaciones)', () => {
       }
     });
 
+    // ─── BÚSQUEDA POR Nº DE GRUPO (grupo_id) ────────────
+    describe('Búsqueda por grupo_id', () => {
+
+      test('?busqueda=GRP-... devuelve las intimaciones del grupo (módulo y búsqueda global)', async () => {
+        const dni = '77777773';
+        const base = { fecha: hoy(), tipo: 'general', nombre_apellido: 'TEST BUSQUEDA GRUPO', dni, direccion: 'CALLE BUSQUEDA 7', plazo_dias: 3 };
+        const ids = [];
+        try {
+          const r1 = await request(app).post('/api/intimaciones').set(auth()).send(base);
+          expect(r1.statusCode).toBe(201);
+          ids.push(r1.body.data.id);
+          const grupo = r1.body.data.grupo_id;
+          expect(grupo).toMatch(/^GRP-\d{6}-\d{4}$/);
+
+          const r2 = await request(app).post('/api/intimaciones').set(auth()).send({ ...base, grupo_id: grupo });
+          expect(r2.statusCode).toBe(201);
+          ids.push(r2.body.data.id);
+
+          // Módulo: búsqueda por el grupo completo (mayúsculas)
+          const res = await request(app).get(`/api/intimaciones?busqueda=${grupo}&limit=100`).set(auth());
+          expect(res.statusCode).toBe(200);
+          const filas = res.body.data.filter(i => ids.includes(i.id));
+          expect(filas.length).toBe(2);
+
+          // Módulo: búsqueda por el grupo en minúsculas (UPPER lo tolera)
+          const resLower = await request(app).get(`/api/intimaciones?busqueda=${grupo.toLowerCase()}&limit=100`).set(auth());
+          expect(resLower.statusCode).toBe(200);
+          const filasLower = resLower.body.data.filter(i => ids.includes(i.id));
+          expect(filasLower.length).toBe(2);
+
+          // Módulo: búsqueda por parte del grupo (prefijo GRP-YYYYMM)
+          const prefijo = grupo.substring(0, 8); // GRP-YYYYMM
+          const resPrefijo = await request(app).get(`/api/intimaciones?busqueda=${prefijo}&limit=100`).set(auth());
+          expect(resPrefijo.statusCode).toBe(200);
+          const filasPrefijo = resPrefijo.body.data.filter(i => ids.includes(i.id));
+          expect(filasPrefijo.length).toBe(2);
+
+          // Búsqueda global: devuelve las intimaciones del grupo y expone grupo_id
+          const global = await request(app).get(`/api/busqueda/global?q=${grupo}`).set(auth());
+          expect(global.statusCode).toBe(200);
+          const intimacionesGlobal = global.body.data.filter(i => i.tipo === 'intimacion' && ids.includes(i.id));
+          expect(intimacionesGlobal.length).toBe(2);
+          intimacionesGlobal.forEach(i => expect(i.grupo_id).toBe(grupo));
+        } finally {
+          await borrarIds(ids);
+          await limpiarPorDni(dni);
+        }
+      });
+    });
+
     // ─── FILTRO POR Nº DE INTIMACIÓN (total de actas del caso) ────────────
     describe('Filtro ?numero=N por total de actas del caso', () => {
 

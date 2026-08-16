@@ -147,6 +147,9 @@
                 const direccion = helpers.cellText(row, 3);
                 const tipo = helpers.cellText(row, 1);
                 const estado = helpers.badgeText(row) || helpers.cellText(row, 7);
+                const grupo = helpers.findText(row, '.celda-grupo-tag') || null;
+                // "Nro" usa SOLO el badge #X/Y (no el tag de grupo, que va aparte en el campo Grupo)
+                const badgeInstancia = helpers.findText(row, '.celda-numero-grupo') || helpers.cellText(row, 4);
 
                 // Extraer fotos del array global de intimaciones
                 let fotoInicial = null;
@@ -169,7 +172,8 @@
                     photos: { inicial: fotoInicial, actual: fotoActual },
                     summary: helpers.compact([
                         helpers.field('Tipo', tipo),
-                        helpers.field('Nro', helpers.cellText(row, 4)),
+                        helpers.field('Nro', badgeInstancia),
+                        helpers.field('Grupo', grupo),
                         helpers.field('Dias', helpers.cellText(row, 5)),
                         helpers.field('Vence', helpers.cellText(row, 6))
                     ]),
@@ -177,8 +181,9 @@
                         helpers.field('Nombre', nombre),
                         helpers.field('DNI', dni),
                         helpers.field('Direccion', direccion),
+                        helpers.field('Grupo', grupo),
                         helpers.field('Tipo', tipo),
-                        helpers.field('Numero intimacion', helpers.cellText(row, 4)),
+                        helpers.field('Numero intimacion', badgeInstancia),
                         helpers.field('Plazo', helpers.cellText(row, 5)),
                         helpers.field('Vence', helpers.cellText(row, 6)),
                         helpers.field('Estado', estado)

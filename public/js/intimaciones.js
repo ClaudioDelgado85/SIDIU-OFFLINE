@@ -129,7 +129,7 @@ function mostrarIntimaciones() {
                 <div class="celda-sub">DNI: ${item.dni}</div>
             </td>
             <td>${item.direccion}</td>
-            <td style="text-align:center"><span class="${badgeClase}" title="Instancia ${numActual} de ${totalGrupo} (Caso ${item.grupo_id || 'S/N'})">#${numActual}<small style="opacity:0.75">/${totalGrupo}</small></span></td>
+            <td style="text-align:center"><span class="${badgeClase}" title="Instancia ${numActual} de ${totalGrupo} (Caso ${item.grupo_id || 'S/N'})">#${numActual}<small style="opacity:0.75">/${totalGrupo}</small></span>${item.grupo_id ? `<small class="celda-grupo-tag" title="Número de caso (grupo)">${item.grupo_id}</small>` : ''}</td>
             <td style="text-align:center">${item.plazo_dias}d</td>
             <td>
                 <span style="color:${item.estado === 'vencida' ? 'var(--si-red)' : item.estado === 'proxima_vencer' ? 'var(--si-amber)' : 'var(--si-green)'}; font-weight:500">

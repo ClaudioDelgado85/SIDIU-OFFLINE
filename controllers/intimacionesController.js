@@ -90,11 +90,11 @@ exports.obtenerIntimaciones = async (req, res) => {
       params.push(fecha_hasta);
     }
 
-    // Búsqueda general
+    // Búsqueda general (dni, nombre, dirección y grupo_id — UPPER para tolerar minúsculas, patrón de expedientes)
     if (busqueda) {
       const dniTerm = busqueda.replace(/[\s.\-]/g, '');
-      whereClause += ` AND (REPLACE(REPLACE(REPLACE(dni, '.', ''), ' ', ''), '-', '') LIKE ? OR nombre_apellido LIKE ? OR direccion LIKE ?)`;
-      params.push(`%${dniTerm}%`, `%${busqueda}%`, `%${busqueda}%`);
+      whereClause += ` AND (REPLACE(REPLACE(REPLACE(dni, '.', ''), ' ', ''), '-', '') LIKE ? OR nombre_apellido LIKE ? OR direccion LIKE ? OR UPPER(grupo_id) LIKE ?)`;
+      params.push(`%${dniTerm}%`, `%${busqueda}%`, `%${busqueda}%`, `%${busqueda.toUpperCase()}%`);
     }
 
     // Filtros específicos
