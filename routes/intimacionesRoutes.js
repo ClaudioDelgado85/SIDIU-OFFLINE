@@ -19,6 +19,9 @@ router.post('/', requireCargaOrAdmin, intimacionesController.crearIntimacion);
 // PUT /api/intimaciones/:id (requiere carga o admin)
 router.put('/:id', requireCargaOrAdmin, intimacionesController.actualizarIntimacion);
 
+// POST /api/intimaciones/:id/plazo (requiere carga o admin) — otorgar plazo
+router.post('/:id/plazo', requireCargaOrAdmin, intimacionesController.otorgarPlazo);
+
 // DELETE /api/intimaciones/:id (requiere carga o admin)
 router.delete('/:id', requireCargaOrAdmin, intimacionesController.eliminarIntimacion);
 
