@@ -476,4 +476,441 @@ describe('📋 Intimaciones (/api/intimaciones)', () => {
       });
     });
   });
+
+      // ─── OTORGAR PLAZO (plazos_intimacion) ──────────
+  describe('POST /api/intimaciones/:id/plazo', () => {
+    const auth = () => ({ 'Authorization': `Bearer ${token}` });
+    const hoy = () => new Date().toISOString().substring(0, 10);
+    const db = require('../../config/database');
+
+    // Fecha esperada con el MISMO patrón del backend (fecha + dias * 86400000 ms)
+    const fechaSumada = (fecha, dias) =>
+      new Date(new Date(fecha).getTime() + dias * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
+
+    async function crearIntimacion(extra = {}) {
+      const base = {
+        fecha: hoy(),
+        tipo: 'general',
+        nombre_apellido: 'TEST PLAZO',
+        dni: '77777771',
+        direccion: 'CALLE PLAZO 1',
+        plazo_dias: 3
+      };
+      const res = await request(app).post('/api/intimaciones').set(auth()).send({ ...base, ...extra });
+      return res;
+    }
+
+    async function borrarIds(ids) {
+      for (const id of ids) {
+        await request(app).delete(`/api/intimaciones/${id}`).set(auth());
+      }
+    }
+
+    async function querySql(sql, params) {
+      const [rows] = await db.pool.execute(sql, params);
+      return rows;
+    }
+
+    // R1: vigente + plazo 20 → 201; fecha_vencimiento = fecha_otorgamiento + 20 en GET lista
+    test('R1: plazo de 20 días a vigente → 201 y vencimiento efectivo extendido', async () => {
+      const ids = [];
+      try {
+        const creada = await crearIntimacion({ dni: '77777771' });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        const res = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 20 });
+        expect(res.statusCode).toBe(201);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.plazo).toBeDefined();
+        expect(res.body.data.plazo.dias).toBe(20);
+        expect(res.body.data.fecha_vencimiento).toBeDefined();
+
+        // En el listado, fecha_vencimiento = fecha_otorgamiento (hoy) + 20
+        const lista = await request(app).get('/api/intimaciones?limit=200').set(auth());
+        const item = lista.body.data.find(i => i.id === creada.body.data.id);
+        expect(item).toBeDefined();
+        const esperado = fechaSumada(hoy(), 20);
+        expect(String(item.fecha_vencimiento).substring(0, 10)).toBe(esperado);
+        expect(item.ultimo_plazo).toBeDefined();
+        expect(item.ultimo_plazo.dias).toBe(20);
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R1: dias ausente/0/negativo → 400 sin insertar (historial vacío vía GET /:id)
+    test('R1: dias ausente, 0 o negativo → 400 sin insertar plazo', async () => {
+      const ids = [];
+      try {
+        const creada = await crearIntimacion({ dni: '77777772' });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        for (const body of [{}, { dias: 0 }, { dias: -5 }]) {
+          const res = await request(app)
+            .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+            .set(auth())
+            .send(body);
+          expect(res.statusCode).toBe(400);
+        }
+
+        const detalle = await request(app).get(`/api/intimaciones/${creada.body.data.id}`).set(auth());
+        expect(detalle.body.data.plazos).toEqual([]);
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R1: id inexistente → 404
+    test('R1: intimación inexistente → 404 sin insertar', async () => {
+      const res = await request(app)
+        .post('/api/intimaciones/999999/plazo')
+        .set(auth())
+        .send({ dias: 15 });
+      expect(res.statusCode).toBe(404);
+    });
+
+    // R2: segundo plazo vence al primero (fecha_otorgamiento + dias del más reciente)
+    test('R2: segundo plazo vence al primero', async () => {
+      const ids = [];
+      try {
+        const creada = await crearIntimacion({ dni: '77777773' });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        const p1 = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 10 });
+        expect(p1.statusCode).toBe(201);
+
+        const p2 = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 30 });
+        expect(p2.statusCode).toBe(201);
+
+        const lista = await request(app).get('/api/intimaciones?limit=200').set(auth());
+        const item = lista.body.data.find(i => i.id === creada.body.data.id);
+        expect(String(item.fecha_vencimiento).substring(0, 10)).toBe(fechaSumada(hoy(), 30));
+        expect(item.ultimo_plazo.id).toBe(p2.body.data.plazo.id);
+
+        // Historial conserva ambos (inmutabilidad R2)
+        const detalle = await request(app).get(`/api/intimaciones/${creada.body.data.id}`).set(auth());
+        expect(detalle.body.data.plazos.length).toBe(2);
+        expect(detalle.body.data.plazos[0].id).toBe(p2.body.data.plazo.id); // orden DESC
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R2: desempate por id — dos plazos con igual fecha_otorgamiento → gana el mayor id
+    test('R2: desempate por id con igual fecha_otorgamiento → gana el mayor id', async () => {
+      const ids = [];
+      try {
+        const creada = await crearIntimacion({ dni: '77777774' });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        const p1 = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 10 });
+        const p2 = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 25 });
+
+        // Forzar igual fecha_otorgamiento (UPDATE directo del 1º) → gana mayor id (p2)
+        await querySql(
+          'UPDATE plazos_intimacion SET fecha_otorgamiento = ? WHERE id = ?',
+          [hoy(), p1.body.data.plazo.id]
+        );
+
+        const lista = await request(app).get('/api/intimaciones?limit=200').set(auth());
+        const item = lista.body.data.find(i => i.id === creada.body.data.id);
+        expect(item.ultimo_plazo.id).toBe(p2.body.data.plazo.id);
+        expect(String(item.fecha_vencimiento).substring(0, 10)).toBe(fechaSumada(hoy(), 25));
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R3: sin plazos → fecha_vencimiento = fecha + plazo_dias (regresión)
+    test('R3: sin plazos el vencimiento efectivo = fecha + plazo_dias (regresión)', async () => {
+      const ids = [];
+      try {
+        const creada = await crearIntimacion({ dni: '77777775', fecha: hoy(), plazo_dias: 15 });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        const lista = await request(app).get('/api/intimaciones?limit=200').set(auth());
+        const item = lista.body.data.find(i => i.id === creada.body.data.id);
+        expect(item.ultimo_plazo).toBeNull();
+        expect(String(item.fecha_vencimiento).substring(0, 10)).toBe(fechaSumada(hoy(), 15));
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R4: vencida (fecha −30d) + plazo 20 → estado calculado vigente; estado BD intacto
+    test('R4: vencida con plazo de 20 días → estado calculado vigente sin tocar BD', async () => {
+      const ids = [];
+      try {
+        const hace30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
+        const creada = await crearIntimacion({ dni: '77777776', fecha: hace30, plazo_dias: 3 });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        // Sanity: calculada como vencida sin plazos
+        const antes = await request(app).get('/api/intimaciones?limit=200').set(auth());
+        expect(antes.body.data.find(i => i.id === creada.body.data.id).estado).toBe('vencida');
+
+        // Forzar estado persistido 'vencida' para verificar que el POST no lo toca
+        await querySql("UPDATE intimaciones SET estado = 'vencida' WHERE id = ?", [creada.body.data.id]);
+
+        const res = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 20 });
+        expect(res.statusCode).toBe(201);
+        expect(res.body.data.estado).toBe('vigente');
+
+        const lista = await request(app).get('/api/intimaciones?limit=200').set(auth());
+        expect(lista.body.data.find(i => i.id === creada.body.data.id).estado).toBe('vigente');
+
+        // estado en BD sigue 'vencida' (nunca se escribe)
+        const fila = await querySql('SELECT estado FROM intimaciones WHERE id = ?', [creada.body.data.id]);
+        expect(fila[0].estado).toBe('vencida');
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R4: plazo corto (2 días) sobre vencida → proxima_vencer
+    test('R4: plazo corto de 2 días sobre vencida → proxima_vencer', async () => {
+      const ids = [];
+      try {
+        const hace30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
+        const creada = await crearIntimacion({ dni: '77777777', fecha: hace30, plazo_dias: 3 });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        const res = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 2 });
+        expect(res.statusCode).toBe(201);
+        expect(res.body.data.estado).toBe('proxima_vencer');
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R8: vencida sin plazo sigue vencida (regresión)
+    test('R8: vencida sin plazo sigue vencida', async () => {
+      const ids = [];
+      try {
+        const hace30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
+        const creada = await crearIntimacion({ dni: '77777778', fecha: hace30, plazo_dias: 3 });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        const lista = await request(app).get('/api/intimaciones?limit=200').set(auth());
+        expect(lista.body.data.find(i => i.id === creada.body.data.id).estado).toBe('vencida');
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R5: dio_cumplimiento=true (PUT) → POST plazo → 400
+    test('R5: plazo sobre cumplida (dio_cumplimiento=1) → 400 sin insertar', async () => {
+      const ids = [];
+      try {
+        const creada = await crearIntimacion({ dni: '77777779' });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        await request(app)
+          .put(`/api/intimaciones/${creada.body.data.id}`)
+          .set(auth())
+          .send({ dio_cumplimiento: true });
+
+        const res = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 15 });
+        expect(res.statusCode).toBe(400);
+
+        const detalle = await request(app).get(`/api/intimaciones/${creada.body.data.id}`).set(auth());
+        expect(detalle.body.data.plazos).toEqual([]);
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R5: reiterada (1ª instancia de grupo de 2) → 400
+    test('R5: plazo sobre reiterada → 400 sin insertar', async () => {
+      const ids = [];
+      try {
+        const base = { fecha: hoy(), tipo: 'general', nombre_apellido: 'TEST PLAZO REITERADA', dni: '77777780', direccion: 'CALLE REITERADA 1', plazo_dias: 3 };
+        const r1 = await request(app).post('/api/intimaciones').set(auth()).send(base);
+        expect(r1.statusCode).toBe(201);
+        ids.push(r1.body.data.id);
+
+        const r2 = await request(app).post('/api/intimaciones').set(auth()).send({ ...base, grupo_id: r1.body.data.grupo_id });
+        expect(r2.statusCode).toBe(201);
+        ids.push(r2.body.data.id);
+
+        // Sanity: la 1ª es reiterada en el listado
+        const lista = await request(app).get('/api/intimaciones?limit=200').set(auth());
+        expect(lista.body.data.find(i => i.id === r1.body.data.id).estado).toBe('reiterada');
+
+        const res = await request(app)
+          .post(`/api/intimaciones/${r1.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 15 });
+        expect(res.statusCode).toBe(400);
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R5: infraccionado → 400
+    test('R5: plazo sobre infraccionado → 400 sin insertar', async () => {
+      const ids = [];
+      try {
+        const creada = await crearIntimacion({
+          dni: '77777781',
+          infraccion_realizada: true,
+          numero_infraccion: 'INF-PLAZO-TEST'
+        });
+        expect(creada.statusCode).toBe(201);
+        expect(creada.body.data.estado).toBe('infraccionado');
+        ids.push(creada.body.data.id);
+
+        const res = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 15 });
+        expect(res.statusCode).toBe(400);
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R5 caso límite: estado persistido 'vigente' + dio_cumplimiento=1 (UPDATE directo) → 400
+    test('R5: estado persistido vigente con dio_cumplimiento=1 → 400 (usa estado calculado)', async () => {
+      const ids = [];
+      try {
+        const creada = await crearIntimacion({ dni: '77777782' });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        await querySql(
+          "UPDATE intimaciones SET estado = 'vigente', dio_cumplimiento = 1 WHERE id = ?",
+          [creada.body.data.id]
+        );
+
+        const res = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 15 });
+        expect(res.statusCode).toBe(400);
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R6: sin motivo ni usuario → motivo NULL, usuario del token
+    test('R6: {dias} sin motivo → motivo NULL y usuario del token', async () => {
+      const ids = [];
+      try {
+        const creada = await crearIntimacion({ dni: '77777783' });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        const res = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 15 });
+        expect(res.statusCode).toBe(201);
+        expect(res.body.data.plazo.motivo).toBeNull();
+        expect(res.body.data.plazo.usuario).toBe('admin');
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R6: con motivo y usuario → persiste ambos
+    test('R6: {dias, motivo} → persiste motivo y usuario', async () => {
+      const ids = [];
+      try {
+        const creada = await crearIntimacion({ dni: '77777784' });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        const res = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 15, motivo: 'Trámite en curso' });
+        expect(res.statusCode).toBe(201);
+        expect(res.body.data.plazo.motivo).toBe('Trámite en curso');
+        expect(res.body.data.plazo.usuario).toBe('admin');
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R1: grupo y fecha de emisión intactos; sin acta nueva (grupo_id/numero_intimacion/fecha)
+    test('R1: grupo_id, numero_intimacion y fecha intactos tras otorgar plazo', async () => {
+      const ids = [];
+      try {
+        const creada = await crearIntimacion({ dni: '77777785', fecha: '2026-01-15' });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+        const { grupo_id, numero_intimacion, fecha } = creada.body.data;
+
+        const res = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 20 });
+        expect(res.statusCode).toBe(201);
+
+        const detalle = await request(app).get(`/api/intimaciones/${creada.body.data.id}`).set(auth());
+        expect(detalle.body.data.grupo_id).toBe(grupo_id);
+        expect(detalle.body.data.numero_intimacion).toBe(numero_intimacion);
+        expect(detalle.body.data.fecha.substring(0, 10)).toBe(fecha.substring(0, 10));
+        expect(detalle.body.data.estado).not.toBe('reiterada');
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // 2.6: DELETE de intimación con plazos → sin huérfanos (CASCADE)
+    test('DELETE cascada: borrar intimación elimina sus plazos', async () => {
+      const creada = await crearIntimacion({ dni: '77777786' });
+      expect(creada.statusCode).toBe(201);
+      const id = creada.body.data.id;
+
+      const res = await request(app)
+        .post(`/api/intimaciones/${id}/plazo`)
+        .set(auth())
+        .send({ dias: 15 });
+      expect(res.statusCode).toBe(201);
+
+      const antes = await querySql('SELECT COUNT(*) AS c FROM plazos_intimacion WHERE intimacion_id = ?', [id]);
+      expect(antes[0].c).toBe(1);
+
+      const del = await request(app).delete(`/api/intimaciones/${id}`).set(auth());
+      expect(del.statusCode).toBe(200);
+
+      const despues = await querySql('SELECT COUNT(*) AS c FROM plazos_intimacion WHERE intimacion_id = ?', [id]);
+      expect(despues[0].c).toBe(0);
+    });
+  });
 });

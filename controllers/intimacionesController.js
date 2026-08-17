@@ -512,9 +512,20 @@ exports.otorgarPlazo = async (req, res) => {
 
     // R5: estado CALCULADO con el vencimiento efectivo actual.
     // Solo se permite otorgar plazo a vigente/proxima_vencer/vencida.
+    // La lógica de reiterada replica la del mapeo de obtenerIntimaciones:
+    // una instancia previa del grupo (no la de mayor id) es 'reiterada'.
     const ultimoPlazo = await cargarUltimoPlazo(id);
     const fechaVenc = fechaVencimientoEfectiva({ ...intimacion, ultimo_plazo: ultimoPlazo });
-    const estadoCalculado = calcularEstadoAutomatico({ ...intimacion, ultimo_plazo: ultimoPlazo, fecha_vencimiento_efectiva: fechaVenc });
+    let estadoCalculado = calcularEstadoAutomatico({ ...intimacion, ultimo_plazo: ultimoPlazo, fecha_vencimiento_efectiva: fechaVenc });
+    if (intimacion.grupo_id && estadoCalculado !== 'cumplida' && estadoCalculado !== 'infraccionado') {
+      const [grupo] = await db.pool.execute(
+        'SELECT MAX(id) AS ultimo_id FROM intimaciones WHERE grupo_id = ?',
+        [intimacion.grupo_id]
+      );
+      if (!grupo[0] || grupo[0].ultimo_id !== intimacion.id) {
+        estadoCalculado = 'reiterada';
+      }
+    }
     if (!['vigente', 'proxima_vencer', 'vencida'].includes(estadoCalculado)) {
       return res.status(400).json({
         success: false,
