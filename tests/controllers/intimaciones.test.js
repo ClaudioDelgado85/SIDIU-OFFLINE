@@ -1007,4 +1007,147 @@ describe('📋 Intimaciones (/api/intimaciones)', () => {
       }
     });
   });
+
+  // ─── R10: FILTRO "CON PLAZO" (REV 4) ─────────────────
+  // ?con_plazo=1 → only intimations with at least one granted plazo;
+  // ?con_plazo=0 → only those without any plazo. Combines with the existing
+  // in-memory filters (estado, numero, busqueda) via logical AND.
+  describe('Filtro ?con_plazo (R10)', () => {
+    const auth = () => ({ 'Authorization': `Bearer ${token}` });
+    const hoy = () => new Date().toISOString().substring(0, 10);
+
+    // Local replica of the plazo-describe helper (not in scope here) with a
+    // distinct DNI range (7777780x) to avoid collisions with other tests.
+    async function crearIntimacion(extra = {}) {
+      const base = {
+        fecha: hoy(),
+        tipo: 'general',
+        nombre_apellido: 'TEST CON PLAZO',
+        dni: '77777800',
+        direccion: 'CALLE CON PLAZO 1',
+        plazo_dias: 3
+      };
+      const res = await request(app).post('/api/intimaciones').set(auth()).send({ ...base, ...extra });
+      return res;
+    }
+
+    async function borrarIds(ids) {
+      for (const id of ids) {
+        await request(app).delete(`/api/intimaciones/${id}`).set(auth());
+      }
+    }
+
+    // R10 (a) + (c): mixed list — ?con_plazo=1 → only rows WITH a plazo,
+    // ?con_plazo=0 → only rows WITHOUT; no parameter → both appear (regression).
+    test('R10: con_plazo=1 / con_plazo=0 on mixed list; no parameter keeps both (regression)', async () => {
+      const ids = [];
+      try {
+        const conPlazo = await crearIntimacion({ dni: '77777801' });
+        expect(conPlazo.statusCode).toBe(201);
+        ids.push(conPlazo.body.data.id);
+
+        const sinPlazo = await crearIntimacion({ dni: '77777802', plazo_dias: 10 });
+        expect(sinPlazo.statusCode).toBe(201);
+        ids.push(sinPlazo.body.data.id);
+
+        // Grant a plazo ONLY to the first one
+        const otorgar = await request(app)
+          .post(`/api/intimaciones/${conPlazo.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 10 });
+        expect(otorgar.statusCode).toBe(201);
+
+        // con_plazo=1 → only the row with a plazo; every returned row has one
+        const con = await request(app).get('/api/intimaciones?con_plazo=1&limit=200').set(auth());
+        expect(con.statusCode).toBe(200);
+        const idsCon = con.body.data.map(i => i.id);
+        expect(idsCon).toContain(conPlazo.body.data.id);
+        expect(idsCon).not.toContain(sinPlazo.body.data.id);
+        con.body.data.forEach(i => expect(i.ultimo_plazo).toBeTruthy());
+
+        // con_plazo=0 → only the row without a plazo; no returned row has one
+        const sin = await request(app).get('/api/intimaciones?con_plazo=0&limit=200').set(auth());
+        expect(sin.statusCode).toBe(200);
+        const idsSin = sin.body.data.map(i => i.id);
+        expect(idsSin).toContain(sinPlazo.body.data.id);
+        expect(idsSin).not.toContain(conPlazo.body.data.id);
+        sin.body.data.forEach(i => expect(i.ultimo_plazo).toBeFalsy());
+
+        // No parameter → identical to pre-change behavior: both appear
+        const todas = await request(app).get('/api/intimaciones?limit=200').set(auth());
+        expect(todas.statusCode).toBe(200);
+        const idsTodas = todas.body.data.map(i => i.id);
+        expect(idsTodas).toContain(conPlazo.body.data.id);
+        expect(idsTodas).toContain(sinPlazo.body.data.id);
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R10 (b): combination with estado — both fixtures end up 'vigente'
+    // (fecha hoy + 10d); estado=vigente&con_plazo=1 → the one WITH plazo;
+    // estado=vigente&con_plazo=0 → the one WITHOUT.
+    test('R10: combination con_plazo=1/0 with estado=vigente (logical AND)', async () => {
+      const ids = [];
+      try {
+        const conPlazo = await crearIntimacion({ dni: '77777803' });
+        expect(conPlazo.statusCode).toBe(201);
+        ids.push(conPlazo.body.data.id);
+
+        const sinPlazo = await crearIntimacion({ dni: '77777804', plazo_dias: 10 });
+        expect(sinPlazo.statusCode).toBe(201);
+        ids.push(sinPlazo.body.data.id);
+
+        const otorgar = await request(app)
+          .post(`/api/intimaciones/${conPlazo.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 10 });
+        expect(otorgar.statusCode).toBe(201);
+
+        const res1 = await request(app).get('/api/intimaciones?estado=vigente&con_plazo=1&limit=200').set(auth());
+        expect(res1.statusCode).toBe(200);
+        const ids1 = res1.body.data.map(i => i.id);
+        expect(ids1).toContain(conPlazo.body.data.id);
+        expect(ids1).not.toContain(sinPlazo.body.data.id);
+
+        const res0 = await request(app).get('/api/intimaciones?estado=vigente&con_plazo=0&limit=200').set(auth());
+        expect(res0.statusCode).toBe(200);
+        const ids0 = res0.body.data.map(i => i.id);
+        expect(ids0).toContain(sinPlazo.body.data.id);
+        expect(ids0).not.toContain(conPlazo.body.data.id);
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R10 (d): combination with busqueda — ?con_plazo=1&busqueda=<dni> → only
+    // the row matching the search AND having a plazo.
+    test('R10: combination con_plazo=1 with busqueda by DNI (logical AND)', async () => {
+      const ids = [];
+      try {
+        const conPlazo = await crearIntimacion({ dni: '77777805' });
+        expect(conPlazo.statusCode).toBe(201);
+        ids.push(conPlazo.body.data.id);
+
+        const sinPlazo = await crearIntimacion({ dni: '77777806', plazo_dias: 10 });
+        expect(sinPlazo.statusCode).toBe(201);
+        ids.push(sinPlazo.body.data.id);
+
+        const otorgar = await request(app)
+          .post(`/api/intimaciones/${conPlazo.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 10 });
+        expect(otorgar.statusCode).toBe(201);
+
+        const res = await request(app).get('/api/intimaciones?con_plazo=1&busqueda=77777805&limit=200').set(auth());
+        expect(res.statusCode).toBe(200);
+        const idsRes = res.body.data.map(i => i.id);
+        expect(idsRes).toContain(conPlazo.body.data.id);
+        expect(idsRes).not.toContain(sinPlazo.body.data.id);
+        res.body.data.forEach(i => expect(i.ultimo_plazo).toBeTruthy());
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+  });
 });

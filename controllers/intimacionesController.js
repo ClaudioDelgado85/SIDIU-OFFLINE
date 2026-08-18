@@ -90,7 +90,8 @@ async function cargarUltimoPlazo(intimacionId) {
 // Obtener todas las intimaciones (con filtros y paginación)
 exports.obtenerIntimaciones = async (req, res) => {
   try {
-    const { tipo, estado, numero, dni, nombre, fecha_desde, fecha_hasta, busqueda, page, limit, exportar } = req.query;
+    const { tipo, estado, numero, dni, nombre, fecha_desde, fecha_hasta, busqueda, page, limit, exportar, con_plazo } = req.query;
+    const conPlazo = con_plazo === '1' ? 1 : (con_plazo === '0' ? 0 : null);
     const esExportacion = exportar === 'true' || exportar === '1';
 
     // Configuración de paginación
@@ -210,11 +211,13 @@ exports.obtenerIntimaciones = async (req, res) => {
     // de actas reales del caso), no el numerador (numero_intimacion): así una fila
     // #3/2 (caso con 2 actas reales) NO aparece al filtrar por N=3.
     const numeroTotal = numero !== undefined && numero !== '' ? parseInt(numero, 10) : null;
+    const conPlazoFiltro = conPlazo !== null;
     let intimacionesFiltradas = intimacionesConEstado;
-    if (filtroEstado || numeroTotal !== null) {
+    if (filtroEstado || numeroTotal !== null || conPlazoFiltro) {
       intimacionesFiltradas = intimacionesConEstado.filter(i => {
         if (filtroEstado && i.estado !== filtroEstado) return false;
         if (numeroTotal !== null && (i.total_instancias_grupo || 1) !== numeroTotal) return false;
+        if (conPlazoFiltro && ((i.ultimo_plazo ? 1 : 0) !== conPlazo)) return false;
         return true;
       });
     }

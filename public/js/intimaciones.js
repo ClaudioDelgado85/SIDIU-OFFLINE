@@ -52,6 +52,7 @@ async function cargarIntimaciones(filtros = null, pagina = 1) {
         if (filtrosActuales.numero) params.append('numero', filtrosActuales.numero);
         if (filtrosActuales.fecha_desde) params.append('fecha_desde', filtrosActuales.fecha_desde);
         if (filtrosActuales.fecha_hasta) params.append('fecha_hasta', filtrosActuales.fecha_hasta);
+        if (filtrosActuales.con_plazo) params.append('con_plazo', filtrosActuales.con_plazo);
 
         // Búsqueda desde el input principal
         const busqueda = document.getElementById('searchInput').value;
@@ -964,6 +965,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (filtrosActuales.numero) params.append('numero', filtrosActuales.numero);
             if (filtrosActuales.fecha_desde) params.append('fecha_desde', filtrosActuales.fecha_desde);
             if (filtrosActuales.fecha_hasta) params.append('fecha_hasta', filtrosActuales.fecha_hasta);
+            if (filtrosActuales.con_plazo) params.append('con_plazo', filtrosActuales.con_plazo);
             const busqueda = document.getElementById('searchInput').value;
             if (busqueda) params.append('busqueda', busqueda);
             params.append('exportar', 'true');
@@ -1010,6 +1012,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const filtros = {
             tipo: document.getElementById('filterTipo').value,
             estado: document.getElementById('filterEstado').value,
+            con_plazo: document.getElementById('filterConPlazo').value,
             numero: document.getElementById('filterNumero').value,
             fecha_desde: document.getElementById('filterFechaDesde').value,
             fecha_hasta: document.getElementById('filterFechaHasta').value
@@ -1020,6 +1023,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnLimpiarFiltros').addEventListener('click', () => {
         document.getElementById('filterTipo').value = '';
         document.getElementById('filterEstado').value = '';
+        document.getElementById('filterConPlazo').value = '';
         document.getElementById('filterNumero').value = '';
         document.getElementById('filterFechaDesde').value = '';
         document.getElementById('filterFechaHasta').value = '';
