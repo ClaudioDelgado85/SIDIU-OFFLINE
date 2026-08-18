@@ -912,5 +912,99 @@ describe('📋 Intimaciones (/api/intimaciones)', () => {
       const despues = await querySql('SELECT COUNT(*) AS c FROM plazos_intimacion WHERE intimacion_id = ?', [id]);
       expect(despues[0].c).toBe(0);
     });
+
+    // R9: carga retroactiva — fecha pasada → 201 y fecha_otorgamiento persistida tal cual
+    test('R9: fecha pasada {dias:10, fecha_otorgamiento:"2026-08-15"} → 201 y fecha persistida', async () => {
+      const ids = [];
+      try {
+        const creada = await crearIntimacion({ dni: '77777787' });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        const res = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 10, fecha_otorgamiento: '2026-08-15' });
+        expect(res.statusCode).toBe(201);
+        expect(res.body.data.plazo.fecha_otorgamiento).toBe('2026-08-15');
+
+        // Persistida en BD: verificable vía GET /:id (plazos[0] por orden DESC)
+        const detalle = await request(app).get(`/api/intimaciones/${creada.body.data.id}`).set(auth());
+        expect(detalle.body.data.plazos[0].fecha_otorgamiento).toBe('2026-08-15');
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R9: adelanto — fecha futura → 201 y vencimiento efectivo = fecha_otorgamiento + dias
+    test('R9: fecha futura {dias:30, fecha_otorgamiento:"2026-09-01"} → vencimiento = fecha+30d', async () => {
+      const ids = [];
+      try {
+        const creada = await crearIntimacion({ dni: '77777788' });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        const res = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 30, fecha_otorgamiento: '2026-09-01' });
+        expect(res.statusCode).toBe(201);
+        expect(res.body.data.plazo.fecha_otorgamiento).toBe('2026-09-01');
+
+        // En el listado, fecha_vencimiento = fecha_otorgamiento (2026-09-01) + 30
+        const lista = await request(app).get('/api/intimaciones?limit=200').set(auth());
+        const item = lista.body.data.find(i => i.id === creada.body.data.id);
+        expect(item).toBeDefined();
+        expect(String(item.fecha_vencimiento).substring(0, 10)).toBe(fechaSumada('2026-09-01', 30));
+        expect(item.ultimo_plazo.fecha_otorgamiento).toBe('2026-09-01');
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R9: fecha por defecto = hoy
+    test('R9: sin fecha_otorgamiento → se persiste la fecha actual (hoy)', async () => {
+      const ids = [];
+      try {
+        const creada = await crearIntimacion({ dni: '77777789' });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        const res = await request(app)
+          .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+          .set(auth())
+          .send({ dias: 15 });
+        expect(res.statusCode).toBe(201);
+        expect(res.body.data.plazo.fecha_otorgamiento).toBe(hoy());
+
+        const detalle = await request(app).get(`/api/intimaciones/${creada.body.data.id}`).set(auth());
+        expect(detalle.body.data.plazos[0].fecha_otorgamiento).toBe(hoy());
+      } finally {
+        await borrarIds(ids);
+      }
+    });
+
+    // R9: formato inválido → 400 sin insertar (historial vacío vía GET /:id)
+    test('R9: fecha_otorgamiento inválida ("15-08-2026", "no-es-fecha") → 400 sin insertar', async () => {
+      const ids = [];
+      try {
+        const creada = await crearIntimacion({ dni: '77777790' });
+        expect(creada.statusCode).toBe(201);
+        ids.push(creada.body.data.id);
+
+        for (const fechaInvalida of ['15-08-2026', 'no-es-fecha']) {
+          const res = await request(app)
+            .post(`/api/intimaciones/${creada.body.data.id}/plazo`)
+            .set(auth())
+            .send({ dias: 10, fecha_otorgamiento: fechaInvalida });
+          expect(res.statusCode).toBe(400);
+        }
+
+        const detalle = await request(app).get(`/api/intimaciones/${creada.body.data.id}`).set(auth());
+        expect(detalle.body.data.plazos).toEqual([]);
+      } finally {
+        await borrarIds(ids);
+      }
+    });
   });
 });

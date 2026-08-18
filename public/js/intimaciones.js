@@ -535,7 +535,7 @@ function cerrarModal() {
 // OTORGAR PLAZO
 // ============================================
 
-// Modal compacto para otorgar un plazo a la intimación (dias obligatorio, motivo opcional)
+// Compact modal to grant a plazo to an intimación (dias required, motivo optional, fecha_otorgamiento editable with free range)
 function abrirModalPlazo(id) {
     const intimacion = intimaciones.find(i => i.id == id);
     const titulo = intimacion
@@ -555,6 +555,10 @@ function abrirModalPlazo(id) {
                             <div class="form-group-modal form-grid-full">
                                 <label>Días de plazo *</label>
                                 <input type="number" id="plazo_dias_otorgar" min="1" step="1" required placeholder="Ej: 15">
+                            </div>
+                            <div class="form-group-modal form-grid-full">
+                                <label>Fecha de otorgamiento</label>
+                                <input type="date" id="plazo_fecha_otorgar" value="${new Date().toISOString().substring(0, 10)}">
                             </div>
                             <div class="form-group-modal form-grid-full">
                                 <label>Motivo (opcional)</label>
@@ -598,6 +602,7 @@ async function otorgarPlazo(id) {
     if (!sesion) return;
 
     const dias = parseInt(document.getElementById('plazo_dias_otorgar').value, 10);
+    const fechaOtorgamiento = document.getElementById('plazo_fecha_otorgar').value;
     const motivo = document.getElementById('plazo_motivo_otorgar').value;
 
     if (!dias || dias <= 0) {
@@ -615,7 +620,7 @@ async function otorgarPlazo(id) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${sesion.token}`
             },
-            body: JSON.stringify({ dias, motivo: motivo || null })
+            body: JSON.stringify({ dias, fecha_otorgamiento: fechaOtorgamiento, motivo: motivo || null })
         });
 
         const result = await response.json();

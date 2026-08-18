@@ -484,12 +484,12 @@ exports.crearIntimacion = async (req, res) => {
 };
 
 // Otorgar plazo a una intimación (extiende el vencimiento sin crear instancia nueva)
-// POST /api/intimaciones/:id/plazo — body { dias, motivo? }
+// POST /api/intimaciones/:id/plazo — body { dias, motivo?, fecha_otorgamiento? }
 // Solo inserta en plazos_intimacion; NO toca intimaciones (fecha/plazo_dias/estado intactos).
 exports.otorgarPlazo = async (req, res) => {
   try {
     const { id } = req.params;
-    const { dias, motivo } = req.body;
+    const { dias, motivo, fecha_otorgamiento } = req.body;
 
     // R1/R6: dias obligatorio (>0); motivo opcional (vacío → null, patrón crearIntimacion)
     const diasNum = Number(dias);
@@ -502,6 +502,22 @@ exports.otorgarPlazo = async (req, res) => {
     const motivoFinal = typeof motivo === 'string'
       ? (motivo.replace(/\s+/g, ' ').trim() || null)
       : (motivo || null);
+
+    // R9: optional fecha_otorgamiento with FREE range (past/today/future).
+    // If present, it must be parseable as an ISO date (YYYY-MM-DD) and is
+    // normalized to YYYY-MM-DD; invalid format → 400 without inserting.
+    // If absent, today is used.
+    let fechaOtorgamiento = new Date().toISOString().substring(0, 10);
+    if (fecha_otorgamiento !== undefined && fecha_otorgamiento !== null && fecha_otorgamiento !== '') {
+      const fechaParseada = new Date(fecha_otorgamiento);
+      if (Number.isNaN(fechaParseada.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'El campo fecha_otorgamiento debe ser una fecha válida (YYYY-MM-DD).'
+        });
+      }
+      fechaOtorgamiento = fechaParseada.toISOString().substring(0, 10);
+    }
 
     // Validar existencia (R1)
     const [exists] = await db.pool.execute('SELECT * FROM intimaciones WHERE id = ?', [id]);
@@ -534,7 +550,6 @@ exports.otorgarPlazo = async (req, res) => {
     }
 
     // Persistir el plazo (R2, R6: usuario del token si viene; no exigido)
-    const fechaOtorgamiento = new Date().toISOString().substring(0, 10);
     const usuario = (req.usuario && req.usuario.usuario) || null;
     const [result] = await db.pool.execute(
       `INSERT INTO plazos_intimacion (intimacion_id, fecha_otorgamiento, dias, motivo, usuario)
