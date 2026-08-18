@@ -383,10 +383,6 @@ function abrirModal(plantilla) {
                                     <input type="date" id="fecha_subsanacion">
                                 </div>
                             </div>
-                            <div class="form-group-modal form-grid-full" id="historialPlazos" style="background:var(--si-surface); padding:10px; border-radius:8px; display:none;">
-                                <label style="font-weight:600; margin-bottom:8px;">📋 Historial de plazos otorgados</label>
-                                <div id="historialPlazosLista" style="font-size:12px; color:var(--si-text-muted);">Cargando...</div>
-                            </div>
                             ` : ''}
 
                         </div>
@@ -480,11 +476,10 @@ function abrirModal(plantilla) {
         document.getElementById('fecha').valueAsDate = new Date();
     } else {
         cargarDatosFormulario();
-        cargarHistorialPlazos(intimacionEditando.id);
     }
 }
 
-// Carga el historial de plazos otorgados y lo muestra en el modal de edición (R7)
+// Carga el historial de plazos otorgados y lo muestra en el modal de otorgar plazo (R7)
 async function cargarHistorialPlazos(id) {
     const contenedor = document.getElementById('historialPlazos');
     const lista = document.getElementById('historialPlazosLista');
@@ -564,6 +559,10 @@ function abrirModalPlazo(id) {
                                 <label>Motivo (opcional)</label>
                                 <textarea id="plazo_motivo_otorgar" placeholder="Ej: Trámite en curso"></textarea>
                             </div>
+                            <div class="form-group-modal form-grid-full" id="historialPlazos" style="background:var(--si-surface); padding:10px; border-radius:8px; display:none;">
+                                <label style="font-weight:600; margin-bottom:8px;">📋 Historial de plazos otorgados</label>
+                                <div id="historialPlazosLista" style="font-size:12px; color:var(--si-text-muted);">Cargando...</div>
+                            </div>
                         </div>
                     </div>
                     <div class="panel-footer">
@@ -586,6 +585,9 @@ function abrirModalPlazo(id) {
         e.preventDefault();
         otorgarPlazo(id);
     });
+
+    // Muestra el historial de plazos ya otorgados en el mismo modal (R7)
+    cargarHistorialPlazos(id);
 }
 
 function cerrarModalPlazo() {
