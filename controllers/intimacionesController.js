@@ -34,10 +34,17 @@ function calcularEstadoAutomatico(intimacion) {
   }
 
   // Calcular fecha de vencimiento
+  // Si la fecha de vencimiento efectiva viene inyectada (por un plazo otorgado),
+  // se usa esa; si no, se calcula como antes: fecha + plazo_dias (retrocompatible).
   const fechaIntimacion = new Date(intimacion.fecha);
   const plazo = intimacion.plazo_dias || 0;
-  const fechaVencimiento = new Date(fechaIntimacion);
-  fechaVencimiento.setDate(fechaVencimiento.getDate() + plazo);
+  let fechaVencimiento;
+  if (intimacion.fecha_vencimiento_efectiva) {
+    fechaVencimiento = new Date(intimacion.fecha_vencimiento_efectiva);
+  } else {
+    fechaVencimiento = new Date(fechaIntimacion);
+    fechaVencimiento.setDate(fechaVencimiento.getDate() + plazo);
+  }
 
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0); // Normalizar a medianoche
@@ -56,10 +63,35 @@ function calcularEstadoAutomatico(intimacion) {
   }
 }
 
+// Vencimiento efectivo de una intimación (única fuente de verdad del módulo):
+// - Si tiene al menos un plazo otorgado (ultimo_plazo), el del ÚLTIMO plazo
+//   (fecha_otorgamiento + dias) — regla R2: fecha_otorgamiento DESC, id DESC.
+// - Si no, fecha + plazo_dias (comportamiento pre-cambio).
+function fechaVencimientoEfectiva(intimacion) {
+  if (intimacion.ultimo_plazo) {
+    return new Date(new Date(intimacion.ultimo_plazo.fecha_otorgamiento).getTime() +
+      intimacion.ultimo_plazo.dias * 24 * 60 * 60 * 1000);
+  }
+  return new Date(new Date(intimacion.fecha).getTime() + (intimacion.plazo_dias || 0) * 24 * 60 * 60 * 1000);
+}
+
+// Carga el último plazo otorgado de una intimación (regla R2:
+// fecha_otorgamiento DESC, id DESC). Retorna null si no hay plazos.
+async function cargarUltimoPlazo(intimacionId) {
+  const [plazos] = await db.pool.execute(
+    `SELECT id, intimacion_id, fecha_otorgamiento, dias, motivo, usuario
+     FROM plazos_intimacion WHERE intimacion_id = ?
+     ORDER BY fecha_otorgamiento DESC, id DESC LIMIT 1`,
+    [intimacionId]
+  );
+  return plazos[0] || null;
+}
+
 // Obtener todas las intimaciones (con filtros y paginación)
 exports.obtenerIntimaciones = async (req, res) => {
   try {
-    const { tipo, estado, numero, dni, nombre, fecha_desde, fecha_hasta, busqueda, page, limit, exportar } = req.query;
+    const { tipo, estado, numero, dni, nombre, fecha_desde, fecha_hasta, busqueda, page, limit, exportar, con_plazo } = req.query;
+    const conPlazo = con_plazo === '1' ? 1 : (con_plazo === '0' ? 0 : null);
     const esExportacion = exportar === 'true' || exportar === '1';
 
     // Configuración de paginación
@@ -127,9 +159,34 @@ exports.obtenerIntimaciones = async (req, res) => {
     const latestMap = new Map();
     latestPerGroup.forEach(r => latestMap.set(r.grupo_id, { ultimo_id: r.ultimo_id, total_grupo: r.total_grupo }));
 
+    // ── Cargar el último plazo otorgado por intimación (si existe) ──
+    // Consulta única con placeholders dinámicos por id (el adaptador SQLite no
+    // expande arrays dentro de un solo placeholder). El plazo vigente de cada
+    // intimación es el ÚLTIMO por regla R2: fecha_otorgamiento DESC, id DESC.
+    let plazosMap = new Map();
+    if (allIntimaciones.length > 0) {
+      const ids = allIntimaciones.map(i => i.id);
+      const [plazos] = await db.pool.execute(
+        `SELECT id, intimacion_id, fecha_otorgamiento, dias, motivo, usuario
+         FROM plazos_intimacion WHERE intimacion_id IN (${ids.map(() => '?').join(', ')})`,
+        ids
+      );
+      for (const p of plazos) {
+        const cur = plazosMap.get(p.intimacion_id) || null;
+        if (!cur || p.fecha_otorgamiento > cur.fecha_otorgamiento ||
+            (p.fecha_otorgamiento === cur.fecha_otorgamiento && p.id > cur.id)) {
+          plazosMap.set(p.intimacion_id, p);
+        }
+      }
+    }
+
     // Calcular estado automático para cada intimación
     const intimacionesConEstado = allIntimaciones.map(item => {
-      let estadoCalculado = calcularEstadoAutomatico(item);
+      // Orden fijo (spec R3): mapeo → estado. El vencimiento efectivo se inyecta
+      // ANTES de calcular el estado para que el plazo "resucite" la intimación.
+      const ultimoPlazo = plazosMap.get(item.id) || null;
+      const fechaVenc = fechaVencimientoEfectiva({ ...item, ultimo_plazo: ultimoPlazo });
+      let estadoCalculado = calcularEstadoAutomatico({ ...item, ultimo_plazo: ultimoPlazo, fecha_vencimiento_efectiva: fechaVenc });
 
       // Si NO es la última de su grupo (grupo_id) y no está cumplida/infraccionada,
       // entonces es "reiterada" (fue superada por una intimación más reciente)
@@ -142,9 +199,10 @@ exports.obtenerIntimaciones = async (req, res) => {
 
       return {
         ...item,
+        ultimo_plazo: ultimoPlazo,
         estado: estadoCalculado,
         total_instancias_grupo: totalInstancias,
-        fecha_vencimiento: new Date(new Date(item.fecha).getTime() + (item.plazo_dias || 0) * 24 * 60 * 60 * 1000)
+        fecha_vencimiento: fechaVenc
       };
     });
 
@@ -153,11 +211,13 @@ exports.obtenerIntimaciones = async (req, res) => {
     // de actas reales del caso), no el numerador (numero_intimacion): así una fila
     // #3/2 (caso con 2 actas reales) NO aparece al filtrar por N=3.
     const numeroTotal = numero !== undefined && numero !== '' ? parseInt(numero, 10) : null;
+    const conPlazoFiltro = conPlazo !== null;
     let intimacionesFiltradas = intimacionesConEstado;
-    if (filtroEstado || numeroTotal !== null) {
+    if (filtroEstado || numeroTotal !== null || conPlazoFiltro) {
       intimacionesFiltradas = intimacionesConEstado.filter(i => {
         if (filtroEstado && i.estado !== filtroEstado) return false;
         if (numeroTotal !== null && (i.total_instancias_grupo || 1) !== numeroTotal) return false;
+        if (conPlazoFiltro && ((i.ultimo_plazo ? 1 : 0) !== conPlazo)) return false;
         return true;
       });
     }
@@ -426,6 +486,108 @@ exports.crearIntimacion = async (req, res) => {
   }
 };
 
+// Otorgar plazo a una intimación (extiende el vencimiento sin crear instancia nueva)
+// POST /api/intimaciones/:id/plazo — body { dias, motivo?, fecha_otorgamiento? }
+// Solo inserta en plazos_intimacion; NO toca intimaciones (fecha/plazo_dias/estado intactos).
+exports.otorgarPlazo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { dias, motivo, fecha_otorgamiento } = req.body;
+
+    // R1/R6: dias obligatorio (>0); motivo opcional (vacío → null, patrón crearIntimacion)
+    const diasNum = Number(dias);
+    if (dias === undefined || dias === null || !Number.isInteger(diasNum) || diasNum <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'El campo dias es obligatorio y debe ser un entero mayor a 0.'
+      });
+    }
+    const motivoFinal = typeof motivo === 'string'
+      ? (motivo.replace(/\s+/g, ' ').trim() || null)
+      : (motivo || null);
+
+    // R9: optional fecha_otorgamiento with FREE range (past/today/future).
+    // If present, it must be parseable as an ISO date (YYYY-MM-DD) and is
+    // normalized to YYYY-MM-DD; invalid format → 400 without inserting.
+    // If absent, today is used.
+    let fechaOtorgamiento = new Date().toISOString().substring(0, 10);
+    if (fecha_otorgamiento !== undefined && fecha_otorgamiento !== null && fecha_otorgamiento !== '') {
+      const fechaParseada = new Date(fecha_otorgamiento);
+      if (Number.isNaN(fechaParseada.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'El campo fecha_otorgamiento debe ser una fecha válida (YYYY-MM-DD).'
+        });
+      }
+      fechaOtorgamiento = fechaParseada.toISOString().substring(0, 10);
+    }
+
+    // Validar existencia (R1)
+    const [exists] = await db.pool.execute('SELECT * FROM intimaciones WHERE id = ?', [id]);
+    if (exists.length === 0) {
+      return res.status(404).json({ success: false, message: 'Intimación no encontrada.' });
+    }
+    const intimacion = exists[0];
+
+    // R5: estado CALCULADO con el vencimiento efectivo actual.
+    // Solo se permite otorgar plazo a vigente/proxima_vencer/vencida.
+    // La lógica de reiterada replica la del mapeo de obtenerIntimaciones:
+    // una instancia previa del grupo (no la de mayor id) es 'reiterada'.
+    const ultimoPlazo = await cargarUltimoPlazo(id);
+    const fechaVenc = fechaVencimientoEfectiva({ ...intimacion, ultimo_plazo: ultimoPlazo });
+    let estadoCalculado = calcularEstadoAutomatico({ ...intimacion, ultimo_plazo: ultimoPlazo, fecha_vencimiento_efectiva: fechaVenc });
+    if (intimacion.grupo_id && estadoCalculado !== 'cumplida' && estadoCalculado !== 'infraccionado') {
+      const [grupo] = await db.pool.execute(
+        'SELECT MAX(id) AS ultimo_id FROM intimaciones WHERE grupo_id = ?',
+        [intimacion.grupo_id]
+      );
+      if (!grupo[0] || grupo[0].ultimo_id !== intimacion.id) {
+        estadoCalculado = 'reiterada';
+      }
+    }
+    if (!['vigente', 'proxima_vencer', 'vencida'].includes(estadoCalculado)) {
+      return res.status(400).json({
+        success: false,
+        message: `No se puede otorgar plazo a una intimación con estado ${estadoCalculado}.`
+      });
+    }
+
+    // Persistir el plazo (R2, R6: usuario del token si viene; no exigido)
+    const usuario = (req.usuario && req.usuario.usuario) || null;
+    const [result] = await db.pool.execute(
+      `INSERT INTO plazos_intimacion (intimacion_id, fecha_otorgamiento, dias, motivo, usuario)
+       VALUES (?, ?, ?, ?, ?)`,
+      [id, fechaOtorgamiento, diasNum, motivoFinal, usuario]
+    );
+
+    // Recargar el plazo insertado y recomputar vencimiento efectivo + estado
+    const [plazosInsertados] = await db.pool.execute(
+      'SELECT * FROM plazos_intimacion WHERE id = ?',
+      [result.insertId]
+    );
+    const plazo = plazosInsertados[0];
+    const nuevoUltimo = await cargarUltimoPlazo(id);
+    const fechaVencNueva = fechaVencimientoEfectiva({ ...intimacion, ultimo_plazo: nuevoUltimo });
+    const estadoNuevo = calcularEstadoAutomatico({ ...intimacion, ultimo_plazo: nuevoUltimo, fecha_vencimiento_efectiva: fechaVencNueva });
+
+    res.status(201).json({
+      success: true,
+      message: 'Plazo otorgado exitosamente.',
+      data: {
+        plazo,
+        fecha_vencimiento: fechaVencNueva,
+        estado: estadoNuevo
+      }
+    });
+  } catch (error) {
+    console.error('Error al otorgar plazo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al otorgar plazo.'
+    });
+  }
+};
+
 // Actualizar intimación
 exports.actualizarIntimacion = async (req, res) => {
   try {
@@ -616,7 +778,28 @@ exports.obtenerIntimacionPorId = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Intimación no encontrada' });
     }
 
-    res.json({ success: true, data: rows[0] });
+    const intimacion = rows[0];
+
+    // Historial de plazos otorgados (R2) — orden fecha_otorgamiento DESC, id DESC
+    const [plazos] = await db.pool.execute(
+      'SELECT * FROM plazos_intimacion WHERE intimacion_id = ? ORDER BY fecha_otorgamiento DESC, id DESC',
+      [id]
+    );
+
+    // Estado calculado con el vencimiento efectivo (último plazo si existe)
+    const ultimoPlazo = plazos[0] || null;
+    const fechaVenc = fechaVencimientoEfectiva({ ...intimacion, ultimo_plazo: ultimoPlazo });
+    const estadoCalculado = calcularEstadoAutomatico({ ...intimacion, ultimo_plazo: ultimoPlazo, fecha_vencimiento_efectiva: fechaVenc });
+
+    res.json({
+      success: true,
+      data: {
+        ...intimacion,
+        estado: estadoCalculado,
+        fecha_vencimiento: fechaVenc,
+        plazos
+      }
+    });
   } catch (error) {
     console.error('Error obtenerIntimacionPorId:', error);
     res.status(500).json({ success: false, message: 'Error al obtener intimación' });

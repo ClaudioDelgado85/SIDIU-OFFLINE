@@ -138,9 +138,19 @@
                     </select>
                 </div>
                 <div class="filter-item">
+                    <label>Plazo</label>
+                    <select id="filterConPlazo">
+                        <option value="">Todos</option>
+                        <option value="1">Con plazo</option>
+                        <option value="0">Sin plazo</option>
+                    </select>
+                </div>
+                <div class="filter-item">
                     <label>Nro. Intimación</label>
                     <input type="number" id="filterNumero" min="1" step="1" placeholder="Todas" style="width:100%">
                 </div>
+            </div>
+            <div class="filter-grid">
                 <div class="filter-item">
                     <label>Fecha desde</label>
                     <input type="date" id="filterFechaDesde">

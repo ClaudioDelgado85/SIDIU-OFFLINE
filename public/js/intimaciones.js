@@ -52,6 +52,7 @@ async function cargarIntimaciones(filtros = null, pagina = 1) {
         if (filtrosActuales.numero) params.append('numero', filtrosActuales.numero);
         if (filtrosActuales.fecha_desde) params.append('fecha_desde', filtrosActuales.fecha_desde);
         if (filtrosActuales.fecha_hasta) params.append('fecha_hasta', filtrosActuales.fecha_hasta);
+        if (filtrosActuales.con_plazo) params.append('con_plazo', filtrosActuales.con_plazo);
 
         // Búsqueda desde el input principal
         const busqueda = document.getElementById('searchInput').value;
@@ -130,11 +131,12 @@ function mostrarIntimaciones() {
             </td>
             <td>${item.direccion}</td>
             <td style="text-align:center"><span class="${badgeClase}" title="Instancia ${numActual} de ${totalGrupo} (Caso ${item.grupo_id || 'S/N'})">#${numActual}<small style="opacity:0.75">/${totalGrupo}</small></span>${item.grupo_id ? `<small class="celda-grupo-tag" title="Número de caso (grupo)">${item.grupo_id}</small>` : ''}</td>
-            <td style="text-align:center">${item.plazo_dias}d</td>
+            <td style="text-align:center">${item.ultimo_plazo ? `${item.ultimo_plazo.dias}d` : `${item.plazo_dias}d`}</td>
             <td>
                 <span style="color:${item.estado === 'vencida' ? 'var(--si-red)' : item.estado === 'proxima_vencer' ? 'var(--si-amber)' : 'var(--si-green)'}; font-weight:500">
                     ${formatearFecha(item.fecha_vencimiento)}
                 </span>
+                ${item.ultimo_plazo ? `<span class="plazo-badge" title="Plazo otorgado — vence el ${formatearFecha(item.fecha_vencimiento)}">PLAZO</span>` : ''}
             </td>
             <td><span class="estado-badge estado-${item.estado}">${item.estado.replace('_', ' ')}</span></td>
             <td class="col-extra">
@@ -154,6 +156,13 @@ function mostrarIntimaciones() {
             </td>
             <td class="col-extra">
                 <div class="action-buttons">
+                    ${['vigente', 'proxima_vencer', 'vencida'].includes(item.estado) ?
+                `<button class="btn-icon btn-plazo" data-id="${item.id}" title="Otorgar Plazo">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 001.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>`
+                : ''}
                     ${!esReiterada && !item.dio_cumplimiento ?
                 `<button class="btn-icon btn-next" data-id="${item.id}" title="Generar Siguiente Instancia">
                         <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" style="pointer-events:none;">
@@ -471,6 +480,50 @@ function abrirModal(plantilla) {
     }
 }
 
+// Escapa texto antes de insertarlo en innerHTML (previene XSS en campos de usuario)
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+}
+
+// Carga el historial de plazos otorgados y lo muestra en el modal de otorgar plazo (R7)
+async function cargarHistorialPlazos(id) {
+    const contenedor = document.getElementById('historialPlazos');
+    const lista = document.getElementById('historialPlazosLista');
+    if (!contenedor || !lista) return;
+
+    const sesion = verificarAutenticacion();
+    if (!sesion) return;
+
+    try {
+        const response = await fetch(`${API_URL}/intimaciones/${id}`, {
+            headers: { 'Authorization': `Bearer ${sesion.token}` }
+        });
+        if (!response.ok) return;
+
+        const result = await response.json();
+        const plazos = (result.data && result.data.plazos) || [];
+
+        if (plazos.length === 0) {
+            contenedor.style.display = 'none';
+            return;
+        }
+
+        lista.innerHTML = plazos.map(p => {
+            const motivo = p.motivo ? ` — ${escapeHtml(p.motivo)}` : '';
+            const usuario = p.usuario ? ` · ${escapeHtml(p.usuario)}` : '';
+            return `<div style="padding:4px 0; border-bottom:1px solid var(--si-border, rgba(0,0,0,0.08));">
+                <strong>${formatearFecha(p.fecha_otorgamiento)}</strong> · ${p.dias}d${motivo}<small style="opacity:0.7">${usuario}</small>
+            </div>`;
+        }).join('');
+        contenedor.style.display = 'block';
+    } catch (error) {
+        console.error('Error al cargar historial de plazos:', error);
+        contenedor.style.display = 'none';
+    }
+}
+
 function cerrarModal() {
     const panel = document.getElementById('panelLateral');
     const overlay = document.getElementById('modalOverlay');
@@ -479,6 +532,121 @@ function cerrarModal() {
         setTimeout(() => { if (overlay) overlay.remove(); }, 200);
     }
     intimacionEditando = null;
+}
+
+// ============================================
+// OTORGAR PLAZO
+// ============================================
+
+// Compact modal to grant a plazo to an intimación (dias required, motivo optional, fecha_otorgamiento editable with free range)
+function abrirModalPlazo(id) {
+    const intimacion = intimaciones.find(i => i.id == id);
+    const titulo = intimacion
+        ? `Otorgar Plazo — Intimación #${intimacion.numero_intimacion}`
+        : 'Otorgar Plazo';
+
+    const modalHTML = `
+        <div class="panel-overlay" id="modalOverlayPlazo">
+            <div class="panel-lateral" id="panelLateralPlazo">
+                <div class="panel-header">
+                    <h2 id="modalTitlePlazo">${titulo}</h2>
+                    <button class="btn-close-panel" id="btnCerrarModalPlazo">×</button>
+                </div>
+                <form id="formOtorgarPlazo">
+                    <div class="panel-body">
+                        <div class="form-grid">
+                            <div class="form-group-modal form-grid-full">
+                                <label>Días de plazo *</label>
+                                <input type="number" id="plazo_dias_otorgar" min="1" step="1" required placeholder="Ej: 15">
+                            </div>
+                            <div class="form-group-modal form-grid-full">
+                                <label>Fecha de otorgamiento</label>
+                                <input type="date" id="plazo_fecha_otorgar" value="${new Date().toISOString().substring(0, 10)}">
+                            </div>
+                            <div class="form-group-modal form-grid-full">
+                                <label>Motivo (opcional)</label>
+                                <textarea id="plazo_motivo_otorgar" placeholder="Ej: Trámite en curso"></textarea>
+                            </div>
+                            <div class="form-group-modal form-grid-full" id="historialPlazos" style="background:var(--si-surface); padding:10px; border-radius:8px; display:none;">
+                                <label style="font-weight:600; margin-bottom:8px;">📋 Historial de plazos otorgados</label>
+                                <div id="historialPlazosLista" style="font-size:12px; color:var(--si-text-muted);">Cargando...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-footer">
+                        <button type="button" class="btn-text" id="btnCancelarModalPlazo">Cancelar</button>
+                        <button type="submit" class="btn-primary">Otorgar Plazo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    document.getElementById('btnCerrarModalPlazo').addEventListener('click', cerrarModalPlazo);
+    document.getElementById('btnCancelarModalPlazo').addEventListener('click', cerrarModalPlazo);
+    document.getElementById('modalOverlayPlazo').addEventListener('click', (e) => {
+        if (e.target.id === 'modalOverlayPlazo') cerrarModalPlazo();
+    });
+    document.getElementById('formOtorgarPlazo').addEventListener('submit', (e) => {
+        e.preventDefault();
+        otorgarPlazo(id);
+    });
+
+    // Muestra el historial de plazos ya otorgados en el mismo modal (R7)
+    cargarHistorialPlazos(id);
+}
+
+function cerrarModalPlazo() {
+    const panel = document.getElementById('panelLateralPlazo');
+    const overlay = document.getElementById('modalOverlayPlazo');
+    if (panel) {
+        panel.classList.add('cerrando');
+        setTimeout(() => { if (overlay) overlay.remove(); }, 200);
+    }
+}
+
+async function otorgarPlazo(id) {
+    const sesion = verificarAutenticacion();
+    if (!sesion) return;
+
+    const dias = parseInt(document.getElementById('plazo_dias_otorgar').value, 10);
+    const fechaOtorgamiento = document.getElementById('plazo_fecha_otorgar').value;
+    const motivo = document.getElementById('plazo_motivo_otorgar').value;
+
+    if (!dias || dias <= 0) {
+        alert('Debe indicar una cantidad de días mayor a 0.');
+        return;
+    }
+
+    const btnSubmit = document.querySelector('#formOtorgarPlazo button[type="submit"]');
+    if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.textContent = 'Otorgando...'; }
+
+    try {
+        const response = await fetch(`${API_URL}/intimaciones/${id}/plazo`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${sesion.token}`
+            },
+            body: JSON.stringify({ dias, fecha_otorgamiento: fechaOtorgamiento, motivo: motivo || null })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || 'Error al otorgar plazo');
+        }
+
+        cerrarModalPlazo();
+        cargarIntimaciones();
+        alert('Plazo otorgado exitosamente');
+    } catch (error) {
+        console.error('Error al otorgar plazo:', error);
+        if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.textContent = 'Otorgar Plazo'; }
+        alert(error.message || 'Error al otorgar plazo');
+    }
 }
 
 
@@ -804,6 +972,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (filtrosActuales.numero) params.append('numero', filtrosActuales.numero);
             if (filtrosActuales.fecha_desde) params.append('fecha_desde', filtrosActuales.fecha_desde);
             if (filtrosActuales.fecha_hasta) params.append('fecha_hasta', filtrosActuales.fecha_hasta);
+            if (filtrosActuales.con_plazo) params.append('con_plazo', filtrosActuales.con_plazo);
             const busqueda = document.getElementById('searchInput').value;
             if (busqueda) params.append('busqueda', busqueda);
             params.append('exportar', 'true');
@@ -850,6 +1019,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const filtros = {
             tipo: document.getElementById('filterTipo').value,
             estado: document.getElementById('filterEstado').value,
+            con_plazo: document.getElementById('filterConPlazo').value,
             numero: document.getElementById('filterNumero').value,
             fecha_desde: document.getElementById('filterFechaDesde').value,
             fecha_hasta: document.getElementById('filterFechaHasta').value
@@ -860,6 +1030,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnLimpiarFiltros').addEventListener('click', () => {
         document.getElementById('filterTipo').value = '';
         document.getElementById('filterEstado').value = '';
+        document.getElementById('filterConPlazo').value = '';
         document.getElementById('filterNumero').value = '';
         document.getElementById('filterFechaDesde').value = '';
         document.getElementById('filterFechaHasta').value = '';
@@ -876,6 +1047,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Delegación tabla
     document.getElementById('intimacionesTableBody').addEventListener('click', (e) => {
+        if (e.target.classList.contains('btn-plazo') || e.target.closest('.btn-plazo')) {
+            const id = (e.target.dataset.id || e.target.closest('.btn-plazo').dataset.id);
+            abrirModalPlazo(id);
+        }
+
         if (e.target.classList.contains('btn-edit') || e.target.closest('.btn-edit')) {
             const id = (e.target.dataset.id || e.target.closest('.btn-edit').dataset.id);
             intimacionEditando = intimaciones.find(i => i.id == id);

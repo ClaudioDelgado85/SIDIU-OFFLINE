@@ -183,6 +183,25 @@ CREATE TABLE IF NOT EXISTS intimaciones (
 CREATE INDEX IF NOT EXISTS idx_intimaciones_grupo_id
 ON intimaciones(grupo_id);
 
+-- Tabla: plazos_intimacion (historial de plazos otorgados a intimaciones)
+-- El vencimiento efectivo de una intimación es el del ÚLTIMO plazo
+-- (orden fecha_otorgamiento DESC, id DESC); sin plazos, fecha + plazo_dias.
+-- Los plazos son inmutables: no hay edición ni borrado (auditoría).
+CREATE TABLE IF NOT EXISTS plazos_intimacion (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  intimacion_id INTEGER NOT NULL,
+  fecha_otorgamiento TEXT NOT NULL,
+  dias INTEGER NOT NULL CHECK (dias > 0),
+  motivo TEXT,
+  usuario TEXT,
+  fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (intimacion_id) REFERENCES intimaciones(id) ON DELETE CASCADE
+);
+
+-- Índice de plazos por intimación
+CREATE INDEX IF NOT EXISTS idx_plazos_intimacion_intimacion_id
+ON plazos_intimacion(intimacion_id);
+
 -- Tabla: reclamos (Soporta 'baldio' y 'baldío' por insensibilidad a acentos de MySQL en tests)
 CREATE TABLE IF NOT EXISTS reclamos (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
