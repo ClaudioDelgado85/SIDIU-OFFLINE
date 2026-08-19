@@ -20,5 +20,10 @@ CREATE TABLE IF NOT EXISTS plazos_intimacion (
     FOREIGN KEY (intimacion_id) REFERENCES intimaciones(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE INDEX IF NOT EXISTS idx_plazos_intimacion_intimacion_id
+-- MySQL 8 no admite CREATE INDEX IF NOT EXISTS (sintaxis MariaDB/SQLite).
+-- Antes de ejecutar este DDL, verificar que el índice no exista:
+--   SELECT COUNT(*) FROM information_schema.statistics
+--   WHERE table_schema = DATABASE() AND table_name = 'plazos_intimacion'
+--     AND index_name = 'idx_plazos_intimacion_intimacion_id';
+CREATE INDEX idx_plazos_intimacion_intimacion_id
 ON plazos_intimacion(intimacion_id);
