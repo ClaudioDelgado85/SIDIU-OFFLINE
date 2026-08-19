@@ -480,6 +480,13 @@ function abrirModal(plantilla) {
     }
 }
 
+// Escapa texto antes de insertarlo en innerHTML (previene XSS en campos de usuario)
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+}
+
 // Carga el historial de plazos otorgados y lo muestra en el modal de otorgar plazo (R7)
 async function cargarHistorialPlazos(id) {
     const contenedor = document.getElementById('historialPlazos');
@@ -504,8 +511,8 @@ async function cargarHistorialPlazos(id) {
         }
 
         lista.innerHTML = plazos.map(p => {
-            const motivo = p.motivo ? ` — ${p.motivo}` : '';
-            const usuario = p.usuario ? ` · ${p.usuario}` : '';
+            const motivo = p.motivo ? ` — ${escapeHtml(p.motivo)}` : '';
+            const usuario = p.usuario ? ` · ${escapeHtml(p.usuario)}` : '';
             return `<div style="padding:4px 0; border-bottom:1px solid var(--si-border, rgba(0,0,0,0.08));">
                 <strong>${formatearFecha(p.fecha_otorgamiento)}</strong> · ${p.dias}d${motivo}<small style="opacity:0.7">${usuario}</small>
             </div>`;
