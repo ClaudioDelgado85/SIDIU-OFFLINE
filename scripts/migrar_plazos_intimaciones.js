@@ -16,7 +16,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-const dbPath = path.join(__dirname, '..', 'database', 'gestion_municipal.db');
+const dbPath = process.env.SQLITE_DB_PATH || path.join(__dirname, '..', 'database', 'gestion_municipal.db');
 
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) { console.error('Error abriendo DB:', err.message); process.exit(1); }
