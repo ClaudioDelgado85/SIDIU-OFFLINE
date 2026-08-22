@@ -175,6 +175,89 @@
 }
 
 /* ============================================
+   DOCUMENTO FORMAL — vista de pantalla
+   Todo scoped a #informeRender para que los estilos
+   no filtren hacia otras páginas. [R7 Screen isolation]
+
+   Nota: las clases del plan .informe-documento y
+   .informe-encabezado no existen en el DOM actual; su rol
+   lo cubren el propio contenedor (#informeRender) y el
+   membrete/título existentes.
+   ============================================ */
+
+#informeRender {
+    font-family: Georgia, 'Times New Roman', 'Liberation Serif', serif;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--si-text-primary, #0F172A);
+}
+
+/* Párrafos narrativos justificados (texto de documento oficial) */
+#informeRender p {
+    text-align: justify;
+    margin: 0 0 14px;
+}
+
+#informeRender .informe-introduccion {
+    margin-bottom: 20px;
+}
+
+#informeRender .informe-resumen ul {
+    margin: 0 0 12px;
+    padding-left: 28px;
+}
+
+#informeRender .informe-resumen li {
+    margin-bottom: 4px;
+}
+
+#informeRender .informe-parrafo-resumen {
+    margin-bottom: 10px;
+}
+
+/* Lista formal numerada: ítems justificados y con quiebre
+   seguro de valores largos (DNI, direcciones, dominios). */
+#informeRender .informe-lista-formal {
+    margin: 0 0 14px;
+    padding-left: 32px;
+}
+
+#informeRender .informe-lista-formal li {
+    text-align: justify;
+    overflow-wrap: anywhere;
+    word-wrap: break-word;
+    margin-bottom: 6px;
+}
+
+/* Jerarquía tipográfica de secciones */
+#informeRender .informe-seccion-header h3 {
+    font-size: 15px;
+    letter-spacing: 0.5px;
+}
+
+/* Cierre formal separado del último módulo */
+#informeRender .informe-cierre {
+    margin-top: 24px;
+}
+
+/* Bloque de firma centrado al pie del documento */
+#informeRender .informe-firma {
+    margin-top: 48px;
+    text-align: center;
+}
+
+#informeRender .firma-linea {
+    letter-spacing: 2px;
+}
+
+#informeRender .firma-aclaracion,
+#informeRender .firma-cargo,
+#informeRender .firma-lugar-fecha {
+    font-size: 13px;
+    color: var(--si-text-secondary, #475569);
+}
+
+/* ============================================
    ESTILOS DE IMPRESIÓN (backup si alguien usa Ctrl+P)
    ============================================ */
 @media print {
@@ -195,13 +278,14 @@
     }
 
     @page {
-        margin: 18mm 14mm 18mm 14mm;
+        size: A4;
+        margin: 18mm 14mm;
     }
 
     body {
         background: white !important;
         margin: 0 !important;
-        padding: 10mm !important;
+        padding: 0 !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
@@ -237,5 +321,23 @@
 
     .informe-tabla tr:hover {
         background: transparent !important;
+    }
+
+    /* Integridad al paginar: ítems de lista, encabezados de sección
+       y bloque de firma no se parten entre páginas. [R7] */
+    .informe-lista-formal li {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .informe-seccion-header {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        break-after: avoid;
+    }
+
+    .informe-firma {
+        break-inside: avoid;
+        page-break-inside: avoid;
     }
 }

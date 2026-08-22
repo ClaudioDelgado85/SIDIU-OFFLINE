@@ -243,12 +243,17 @@ async function descargarPDF() {
     const nombreArchivo = `Informe_Diario_${d}-${m}-${y}.pdf`;
 
     const opciones = {
-        margin: [12, 12, 12, 12], // mm: arriba, derecha, abajo, izquierda
+        margin: [18, 14, 18, 14], // mm: alineado con @page del CSS de impresión (arriba, derecha, abajo, izquierda)
         filename: nombreArchivo,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        // Evitar cortes de página dentro de ítems de lista, encabezados
+        // de sección y el bloque de firma. [R7]
+        pagebreak: {
+            mode: ['avoid-all', 'css', 'legacy'],
+            avoid: ['.informe-lista-formal li', '.informe-seccion-header', '.informe-firma']
+        }
     };
 
     try {
