@@ -397,120 +397,32 @@ function renderizarInforme(data, destinatario) {
     const fechaMembrete = document.getElementById('renderFechaMembrete');
     if (fechaMembrete) fechaMembrete.textContent = fechaFormateada;
 
-    if (narrativa) {
-        renderizarBloquesFormales(narrativa);
+    const avisoPrevio = document.getElementById('avisoSinSecciones');
+    if (avisoPrevio) avisoPrevio.remove();
+
+    // Sin fuente narrativa no hay render silencioso: aviso visible en el
+    // contenedor del informe. [R5]
+    if (!narrativa || !Array.isArray(narrativa.secciones)) {
+        mostrarAvisoSinSecciones();
+        return;
     }
 
-    // PILOTO (Unidad 3): solo Tareas recorre el camino narrativo; la Unidad 4
-    // replicará el render genérico a los 7 módulos restantes.
-    const seccionTareas = narrativa &&
-        narrativa.secciones.find(sec => sec.clave === 'tareas');
-    if (seccionTareas) {
-        renderSeccionNarrativa(seccionTareas);
-    } else {
-        renderSectionTareas(data.tareas);
-    }
+    renderizarBloquesFormales(narrativa);
 
-    // Los otros 7 módulos conservan sus tablas legadas hasta la Unidad 4.
-    renderSectionExpedientes(data.expedientes);
-    renderSectionIntimaciones(data.intimaciones);
-    renderSectionInfracciones(data.infracciones);
-    renderSectionReclamos(data.reclamos);
-    renderSectionRelevamientos(data.relevamientos);
-    renderSectionComercios(data.comercios);
-    renderSectionVendedores(data.vendedores);
+    // Los 8 módulos comparten el mismo render genérico; títulos y textos
+    // provienen de la API (R5) y SUFIJOS_DOM resuelve el alias actas → Infracciones.
+    narrativa.secciones.forEach(renderSeccionNarrativa);
 }
 
-// ── RENDERS POR MÓDULO ──────────────────────
-
-function renderSectionTareas(tareas) {
-    setCount('countTareas', tareas.length);
-    const body = document.getElementById('bodyTareas');
-    if (tareas.length === 0) { body.innerHTML = '<p class="sin-registros">Sin tareas ni operativos registrados.</p>'; return; }
-    let html = `<table class="informe-tabla"><thead><tr><th>Categoría</th><th>Título</th><th>Descripción</th><th>Ubicación</th></tr></thead><tbody>`;
-    tareas.forEach(t => {
-        html += `<tr><td style="font-weight:600;">${t.categoria_nombre || '-'}</td><td>${t.titulo}</td><td>${t.descripcion}</td><td>${t.direccion || '-'} ${t.barrio_nombre ? `(${t.barrio_nombre})` : ''}</td></tr>`;
-    });
-    body.innerHTML = html + '</tbody></table>';
-}
-
-function renderSectionExpedientes(items) {
-    setCount('countExpedientes', items.length);
-    const body = document.getElementById('bodyExpedientes');
-    if (items.length === 0) { body.innerHTML = '<p class="sin-registros">Sin movimientos de expedientes.</p>'; return; }
-    let html = `<table class="informe-tabla"><thead><tr><th>Número</th><th>Contribuyente</th><th>Motivo</th><th>Estado</th></tr></thead><tbody>`;
-    items.forEach(i => {
-        html += `<tr><td style="font-weight:600;">${i.numero_expediente}</td><td>${i.nombre_apellido} <span style="font-size:11px;color:#94A3B8;">(${i.dni})</span></td><td>${i.motivo}</td><td>${formatearEstado(i.estado)}</td></tr>`;
-    });
-    body.innerHTML = html + '</tbody></table>';
-}
-
-function renderSectionIntimaciones(items) {
-    setCount('countIntimaciones', items.length);
-    const body = document.getElementById('bodyIntimaciones');
-    if (items.length === 0) { body.innerHTML = '<p class="sin-registros">Sin intimaciones.</p>'; return; }
-    let html = `<table class="informe-tabla"><thead><tr><th>Nro</th><th>Contribuyente</th><th>Dirección</th><th>Tipo</th><th>Plazo</th></tr></thead><tbody>`;
-    items.forEach(i => {
-        const tipo = i.tipo_obstruccion_label || i.tipo_label || i.tipo;
-        const rubro = i.rubro_comercial_label ? `<br><small style="color:#64748B;">${i.rubro_comercial_label}</small>` : '';
-        html += `<tr><td>${i.numero_intimacion}</td><td>${i.nombre_apellido}</td><td>${i.direccion}</td><td>${tipo}${rubro}</td><td>${i.plazo_dias > 0 ? `${i.plazo_dias} días` : 'Inmediato'}</td></tr>`;
-    });
-    body.innerHTML = html + '</tbody></table>';
-}
-
-function renderSectionInfracciones(items) {
-    setCount('countInfracciones', items.length);
-    const body = document.getElementById('bodyInfracciones');
-    if (items.length === 0) { body.innerHTML = '<p class="sin-registros">Sin actas de infracción.</p>'; return; }
-    let html = `<table class="informe-tabla"><thead><tr><th>Acta</th><th>Infractor</th><th>Dirección</th><th>Motivo</th></tr></thead><tbody>`;
-    items.forEach(i => {
-        html += `<tr><td>${i.numero_acta}</td><td>${i.nombre_apellido}</td><td>${i.direccion}</td><td>${i.motivo_infraccion}</td></tr>`;
-    });
-    body.innerHTML = html + '</tbody></table>';
-}
-
-function renderSectionReclamos(items) {
-    setCount('countReclamos', items.length);
-    const body = document.getElementById('bodyReclamos');
-    if (items.length === 0) { body.innerHTML = '<p class="sin-registros">Sin reclamos recibidos.</p>'; return; }
-    let html = `<table class="informe-tabla"><thead><tr><th>Reclamo</th><th>Tipo</th><th>Lugar</th><th>Descripción</th></tr></thead><tbody>`;
-    items.forEach(i => {
-        html += `<tr><td>${i.numero_reclamo}</td><td style="text-transform:capitalize;">${i.tipo_reclamo}</td><td>${i.direccion_incidente}</td><td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${i.descripcion}">${i.descripcion}</td></tr>`;
-    });
-    body.innerHTML = html + '</tbody></table>';
-}
-
-function renderSectionRelevamientos(items) {
-    setCount('countRelevamientos', items.length);
-    const body = document.getElementById('bodyRelevamientos');
-    if (items.length === 0) { body.innerHTML = '<p class="sin-registros">Sin relevamientos.</p>'; return; }
-    let html = `<table class="informe-tabla"><thead><tr><th>Número</th><th>Ubicación</th><th>Tipo</th><th>Responsable</th></tr></thead><tbody>`;
-    items.forEach(i => {
-        html += `<tr><td>${i.numero_relevamiento}</td><td>${i.ubicacion}</td><td style="text-transform:capitalize;">${i.tipo_relevamiento}</td><td>${i.responsable_nombre || 'No identificado'}</td></tr>`;
-    });
-    body.innerHTML = html + '</tbody></table>';
-}
-
-function renderSectionComercios(items) {
-    setCount('countComercios', items.length);
-    const body = document.getElementById('bodyComercios');
-    if (items.length === 0) { body.innerHTML = '<p class="sin-registros">Sin comercios relevados.</p>'; return; }
-    let html = `<table class="informe-tabla"><thead><tr><th>Propietario</th><th>Dirección</th><th>Rubro</th><th>Habilitado</th></tr></thead><tbody>`;
-    items.forEach(i => {
-        html += `<tr><td>${i.nombre_propietario || '-'}</td><td>${i.direccion_comercial}</td><td>${i.rubro || '-'}</td><td>${i.esta_habilitado ? 'Sí' : 'No'}</td></tr>`;
-    });
-    body.innerHTML = html + '</tbody></table>';
-}
-
-function renderSectionVendedores(items) {
-    setCount('countVendedores', items.length);
-    const body = document.getElementById('bodyVendedores');
-    if (items.length === 0) { body.innerHTML = '<p class="sin-registros">Sin vendedores ambulantes.</p>'; return; }
-    let html = `<table class="informe-tabla"><thead><tr><th>Vendedor</th><th>Ubicación</th><th>Rubro</th><th>Autorizado</th></tr></thead><tbody>`;
-    items.forEach(i => {
-        html += `<tr><td>${i.nombre_vendedor || '-'}</td><td>${i.ubicacion}</td><td>${i.rubro || '-'}</td><td>${i.tiene_autorizacion ? 'Sí' : 'No'}</td></tr>`;
-    });
-    body.innerHTML = html + '</tbody></table>';
+/** Aviso visible cuando la respuesta no incluye seccionesNarrativas. */
+function mostrarAvisoSinSecciones() {
+    const contenedor = document.getElementById('informeRender');
+    if (!contenedor || document.getElementById('avisoSinSecciones')) return;
+    const aviso = document.createElement('p');
+    aviso.id = 'avisoSinSecciones';
+    aviso.style.color = 'var(--si-red)';
+    aviso.textContent = 'No se pudieron cargar las secciones del informe.';
+    contenedor.insertBefore(aviso, contenedor.firstChild);
 }
 
 // ── Utilidades ──────────────────────────────
