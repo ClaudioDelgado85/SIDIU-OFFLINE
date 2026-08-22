@@ -129,9 +129,9 @@ describe('crearSeccionesNarrativas — forma con 2 tareas y 0 expedientes', () =
 
   test('fechaFormateada, lineasResumen, fraseTotalGeneral y totalGeneral coherentes', () => {
     expect(resultado.fechaFormateada).toBe('21/08/2026');
-    expect(resultado.lineasResumen).toHaveLength(8);
-    expect(resultado.lineasResumen[0]).toEqual({ etiqueta: 'Tareas', cantidad: 2 });
-    expect(resultado.lineasResumen[1]).toEqual({ etiqueta: 'Expedientes', cantidad: 0 });
+    // Pilot feedback: los módulos en 0 NO generan línea de resumen.
+    expect(resultado.lineasResumen).toEqual([{ etiqueta: 'Tareas', cantidad: 2 }]);
+    // R6 intacto: el total general suma las 8 secciones aunque no se listen.
     expect(resultado.totalGeneral).toBe(2);
     expect(resultado.fraseTotalGeneral).toContain('2');
   });
@@ -175,9 +175,41 @@ describe('introducción y cierre', () => {
     expect(resultado.introduccion).toContain('21/08/2026');
   });
 
-  test('el cierre no está vacío', () => {
-    expect(typeof resultado.cierre).toBe('string');
-    expect(resultado.cierre.length).toBeGreaterThan(30);
+  test('el cierre es el texto formal simplificado exacto', () => {
+    expect(resultado.cierre).toBe(
+      'Sin otro particular, se eleva el presente informe para su consideración y fines que estime corresponder.'
+    );
+  });
+});
+
+describe('resumen ejecutivo filtra módulos en cero (pilot feedback)', () => {
+  test('día con conteos mixtos: solo los módulos con registros generan línea', () => {
+    const resultado = svc.crearSeccionesNarrativas({
+      fecha: '2026-08-21',
+      tareas: [
+        { titulo: 'X', descripcion: 'Y' },
+        { titulo: 'Z', descripcion: 'W' },
+      ],
+      infracciones: [
+        { numero_acta: 'A-1', nombre_apellido: 'Fulano', direccion: 'Belgrano 45', motivo_infraccion: 'obstrucción de vereda' },
+        { numero_acta: 'A-2', nombre_apellido: 'Mengano', direccion: 'San Martín 123', motivo_infraccion: 'ruidos molestos' },
+        { numero_acta: 'A-3', nombre_apellido: 'Perengano', direccion: 'Belgrano 46', motivo_infraccion: 'basura' },
+      ],
+    });
+    expect(resultado.lineasResumen).toEqual([
+      { etiqueta: 'Tareas', cantidad: 2 },
+      { etiqueta: 'Actas de Infracción', cantidad: 3 },
+    ]);
+    // R6 intacto: el total general suma las 8 secciones aunque no se listen.
+    expect(resultado.totalGeneral).toBe(5);
+    expect(resultado.fraseTotalGeneral).toBe('Total general de gestiones: 5');
+  });
+
+  test('jornada sin registros: lineasResumen vacía y total general 0', () => {
+    const resultado = svc.crearSeccionesNarrativas({ fecha: '2026-08-21' });
+    expect(resultado.lineasResumen).toEqual([]);
+    expect(resultado.totalGeneral).toBe(0);
+    expect(resultado.fraseTotalGeneral).toBe('Total general de gestiones: 0');
   });
 });
 

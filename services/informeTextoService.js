@@ -14,10 +14,9 @@ const FIRMA = Object.freeze({
   lugarFecha: 'Lugar y fecha',
 });
 
-// Cierre formal del informe.
-const CIERRE = 'Sin otro particular, se eleva el presente informe a consideración de la ' +
-  'Dirección de Inspección Urbana, quedando a la espera de las instrucciones que se ' +
-  'estimen pertinentes disponer.';
+// Cierre formal del informe (texto simplificado según pilot feedback).
+const CIERRE =
+  'Sin otro particular, se eleva el presente informe para su consideración y fines que estime corresponder.';
 
 // Etiquetas legibles de estado de expediente (mismos textos que docxService).
 const ETIQUETAS_ESTADO_EXPEDIENTE = {
@@ -296,10 +295,14 @@ function crearSeccionesNarrativas(data) {
   const d = data || {};
   const secciones = MODULOS.map((definicion) => armarSeccion(definicion, d[definicion.propiedad]));
   const totalGeneral = calcularTotalGeneral(secciones);
-  const lineasResumen = secciones.map((seccion, indice) => ({
-    etiqueta: MODULOS[indice].etiqueta,
-    cantidad: seccion.totalSeccion,
-  }));
+  // Pilot feedback: el resumen ejecutivo solo lista módulos CON registros;
+  // totalGeneral sigue sumando las 8 secciones (R6 intacto).
+  const lineasResumen = secciones
+    .map((seccion, indice) => ({
+      etiqueta: MODULOS[indice].etiqueta,
+      cantidad: seccion.totalSeccion,
+    }))
+    .filter((linea) => linea.cantidad > 0);
   return {
     fechaFormateada: formatearFechaInforme(d.fecha),
     introduccion: crearResumenIntroductorio(d),
