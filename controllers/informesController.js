@@ -3,6 +3,7 @@
 
 const db = require('../config/database');
 const { generarDocx } = require('../services/docxService');
+const { crearSeccionesNarrativas } = require('../services/informeTextoService');
 
 // Generar informe diario consolidado
 exports.informeDiario = async (req, res) => {
@@ -91,30 +92,33 @@ exports.informeDiario = async (req, res) => {
             ORDER BY v.id ASC
         `, [fecha]);
 
-        res.json({
-            success: true,
-            data: {
-                fecha,
-                tareas,
-                expedientes,
-                intimaciones,
-                infracciones,
-                reclamos,
-                relevamientos,
-                comercios,
-                vendedores,
-                resumen: {
-                    total_tareas: tareas.length,
-                    total_expedientes: expedientes.length,
-                    total_intimaciones: intimaciones.length,
-                    total_infracciones: infracciones.length,
-                    total_reclamos: reclamos.length,
-                    total_relevamientos: relevamientos.length,
-                    total_comercios: comercios.length,
-                    total_vendedores: vendedores.length
-                }
+        const data = {
+            fecha,
+            tareas,
+            expedientes,
+            intimaciones,
+            infracciones,
+            reclamos,
+            relevamientos,
+            comercios,
+            vendedores,
+            resumen: {
+                total_tareas: tareas.length,
+                total_expedientes: expedientes.length,
+                total_intimaciones: intimaciones.length,
+                total_infracciones: infracciones.length,
+                total_reclamos: reclamos.length,
+                total_relevamientos: relevamientos.length,
+                total_comercios: comercios.length,
+                total_vendedores: vendedores.length
             }
-        });
+        };
+
+        // Secciones narrativas (D2): clave ADICIONAL junto a los arrays crudos,
+        // que permanecen intactos para Excel y demás consumidores.
+        data.seccionesNarrativas = crearSeccionesNarrativas(data);
+
+        res.json({ success: true, data });
     } catch (error) {
         console.error('Error al generar informe diario:', error);
         res.status(500).json({ success: false, message: 'Error al generar informe diario' });
