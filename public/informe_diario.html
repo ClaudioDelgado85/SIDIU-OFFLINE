@@ -50,7 +50,7 @@
                     style="font-size:12px; font-weight:600; color:var(--si-text-muted); text-transform:uppercase; letter-spacing:0.4px; white-space:nowrap;">Dirigido
                     a</label>
                 <input type="text" id="destinatarioInforme" placeholder="Ej: Dr. Juan Pérez - Secretario de Gobierno"
-                    value="Sr. Secretario de Gobierno"
+                    value="Al Señor Director de Inspección Urbana..."
                     style="flex:1; padding:9px 14px; border:1px solid var(--si-border-strong); border-radius:8px; font-size:13px;">
             </div>
             <div class="informe-actions-buttons" style="display:flex; gap:8px;">
@@ -120,15 +120,11 @@
             <!-- Contenedor Real del Informe (este div se convierte en PDF) -->
             <div id="informeRender" style="display: none;">
 
-                <!-- Membrete (visible en PDF, oculto en pantalla) -->
+                <!-- Membrete (visible en PDF, oculto en pantalla) — solo texto institucional -->
                 <div class="informe-membrete" id="membretePDF">
                     <div class="membrete-row">
-                        <div class="membrete-logo">
-                            <img src="img/logo_institucional.png" alt="Logo Institucional"
-                                onerror="this.style.display='none';">
-                        </div>
                         <div class="membrete-info">
-                            <h2>INFORME DIARIO DE GESTIÓN</h2>
+                            <h2>Informe Diario de Gestion</h2>
                             <p class="membrete-subtitulo">Dirección de Inspección Urbana — Municipalidad de Clorinda</p>
                         </div>
                     </div>
@@ -142,11 +138,22 @@
                 <!-- Título en Pantalla (se oculta en el PDF) -->
                 <div class="informe-titulo-pantalla" id="tituloPantalla" style="text-align:center; margin-bottom:24px;">
                     <h2 style="font-size:18px; font-weight:700; color:var(--si-text-primary); margin:0 0 4px;">Informe
-                        Consolidado</h2>
+                        Diario de Gestion</h2>
                     <div id="renderFechaPantalla" style="font-size:13px; color:var(--si-text-muted);"></div>
                 </div>
 
                 <hr style="border:none; border-top:1px solid var(--si-border); margin-bottom:24px;">
+
+                <!-- Introducción formal (redactada por el servidor) -->
+                <div class="informe-introduccion" id="bloqueIntroduccion">
+                    <p id="renderIntroduccion"></p>
+                </div>
+
+                <!-- Resumen ejecutivo (líneas por módulo + total general) -->
+                <div class="informe-resumen" id="bloqueResumen">
+                    <ul id="lineasResumen"></ul>
+                    <p id="fraseTotalGeneral"></p>
+                </div>
 
                 <!-- Secciones -->
                 <div class="informe-seccion" id="secTareas">
@@ -203,6 +210,25 @@
                         <h3>Vendedores Ambulantes</h3><span class="seccion-count" id="countVendedores">0</span>
                     </div>
                     <div id="bodyVendedores"></div>
+                </div>
+
+                <!-- Cierre formal (redactado por el servidor) -->
+                <div class="informe-cierre" id="bloqueCierre">
+                    <p id="renderCierre"></p>
+                </div>
+
+                <!-- Anexo fotográfico: espacio reservado (documento solo texto) -->
+                <div class="anexo-fotografico" id="anexoFotografico">
+                    <h4>Anexo Fotográfico</h4>
+                    <div class="anexo-espacio-reservado" style="min-height:120px;"></div>
+                </div>
+
+                <!-- Bloque de firma fijo (texto provisto por la fuente narrativa) -->
+                <div class="informe-firma" id="informeFirma">
+                    <div class="firma-linea" id="firmaLinea"></div>
+                    <div class="firma-aclaracion" id="firmaAclaracion"></div>
+                    <div class="firma-cargo" id="firmaCargo"></div>
+                    <div class="firma-lugar-fecha" id="firmaLugarFecha"></div>
                 </div>
 
             </div>

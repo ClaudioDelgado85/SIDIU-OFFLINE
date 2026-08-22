@@ -29,6 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
         descargarWord();
     });
 
+    // Sincronización en vivo: editar el destinatario actualiza el documento ya renderizado
+    document.getElementById('destinatarioInforme').addEventListener('input', (e) => {
+        document.getElementById('renderDestinatario').textContent = e.target.value || '_________________';
+    });
+
     // Checkbox listeners
     document.querySelectorAll('.check-modulo input').forEach(cb => {
         cb.addEventListener('change', aplicarFiltroModulos);
@@ -301,17 +306,112 @@ function aplicarFiltroModulos() {
     });
 }
 
+// ── Render narrativo formal (fuente: data.seccionesNarrativas) ──
+
+/**
+ * Escapa caracteres especiales de HTML en texto provisto por el servidor
+ * antes de interpolarlo en plantillas de marcado. [R3]
+ */
+function escaparHtml(str) {
+    return String(str === null || str === undefined ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/** Primera letra en mayúscula (para componer ids DOM a partir de una clave). */
+function capitalizarPrimera(str) {
+    return str ? str.charAt(0).toUpperCase() + str.slice(1) : str;
+}
+
+// Alias de sufijos DOM donde la clave del servicio difiere del id legado:
+// el módulo 'actas' del servicio vive en las secciones 'Infracciones' del DOM.
+const SUFIJOS_DOM = { actas: 'Infracciones' };
+
+/**
+ * Render genérico de UNA sección narrativa: título y contador desde la API,
+ * párrafo resumen + lista ordenada de items cuando hay registros, o leyenda
+ * formal vacía (textoVacio) cuando no los hay. Todo texto interpolado pasa
+ * por escaparHtml. [R5]
+ */
+function renderSeccionNarrativa(sec) {
+    if (!sec) return;
+    const sufijo = SUFIJOS_DOM[sec.clave] || capitalizarPrimera(sec.clave);
+
+    const tituloEl = document.querySelector(`#sec${sufijo} h3`);
+    if (tituloEl) tituloEl.textContent = sec.titulo;
+
+    setCount(`count${sufijo}`, sec.totalSeccion);
+
+    const body = document.getElementById(`body${sufijo}`);
+    if (!body) return;
+
+    if (sec.totalSeccion > 0 && Array.isArray(sec.items)) {
+        const items = sec.items.map(item => `<li>${escaparHtml(item)}</li>`).join('');
+        body.innerHTML =
+            `<p class="informe-parrafo-resumen">${escaparHtml(sec.parrafoResumen)}</p>` +
+            `<ol class="informe-lista-formal">${items}</ol>`;
+    } else {
+        body.innerHTML = `<p class="sin-registros">${escaparHtml(sec.textoVacio || '')}</p>`;
+    }
+}
+
+/**
+ * Completa los bloques formales del documento (introducción, resumen
+ * ejecutivo, cierre y firma) una única vez desde la fuente narrativa.
+ */
+function renderizarBloquesFormales(narrativa) {
+    document.getElementById('renderIntroduccion').textContent = narrativa.introduccion || '';
+
+    const lineasResumen = document.getElementById('lineasResumen');
+    lineasResumen.innerHTML = (narrativa.lineasResumen || []).map(linea =>
+        `<li>${escaparHtml(linea.etiqueta)}: ${Number(linea.cantidad) || 0}</li>`
+    ).join('');
+    document.getElementById('fraseTotalGeneral').textContent = narrativa.fraseTotalGeneral || '';
+
+    document.getElementById('renderCierre').textContent = narrativa.cierre || '';
+
+    const firma = narrativa.firma || {};
+    document.getElementById('firmaLinea').textContent = firma.linea || '';
+    document.getElementById('firmaAclaracion').textContent = firma.aclaracion || '';
+    document.getElementById('firmaCargo').textContent = firma.cargo || '';
+    document.getElementById('firmaLugarFecha').textContent = firma.lugarFecha || '';
+}
+
+/** Fecha ISO YYYY-MM-DD → DD/MM/YYYY (respaldo si falta la fuente narrativa). */
+function formatearFechaDesdeIso(fecha) {
+    const partes = String(fecha || '').split('-');
+    return partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : '';
+}
+
 // ── Renderizar Informe ──────────────────────
 function renderizarInforme(data, destinatario) {
-    const [year, month, day] = data.fecha.split('-');
-    const fechaFormateada = `${day}/${month}/${year}`;
+    const narrativa = data.seccionesNarrativas || null;
+    const fechaFormateada = (narrativa && narrativa.fechaFormateada) ||
+        formatearFechaDesdeIso(data.fecha);
 
     document.getElementById('renderDestinatario').textContent = destinatario || '_________________';
     document.getElementById('renderFechaPantalla').textContent = `Fecha: ${fechaFormateada}`;
     const fechaMembrete = document.getElementById('renderFechaMembrete');
     if (fechaMembrete) fechaMembrete.textContent = fechaFormateada;
 
-    renderSectionTareas(data.tareas);
+    if (narrativa) {
+        renderizarBloquesFormales(narrativa);
+    }
+
+    // PILOTO (Unidad 3): solo Tareas recorre el camino narrativo; la Unidad 4
+    // replicará el render genérico a los 7 módulos restantes.
+    const seccionTareas = narrativa &&
+        narrativa.secciones.find(sec => sec.clave === 'tareas');
+    if (seccionTareas) {
+        renderSeccionNarrativa(seccionTareas);
+    } else {
+        renderSectionTareas(data.tareas);
+    }
+
+    // Los otros 7 módulos conservan sus tablas legadas hasta la Unidad 4.
     renderSectionExpedientes(data.expedientes);
     renderSectionIntimaciones(data.intimaciones);
     renderSectionInfracciones(data.infracciones);
