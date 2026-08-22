@@ -208,7 +208,16 @@ exports.exportarDocx = async (req, res) => {
             }
         };
 
-        const buffer = await generarDocx(data);
+        // Secciones narrativas (D3): generadas desde las consultas propias de
+        // este handler; los arrays crudos quedan intactos.
+        data.seccionesNarrativas = crearSeccionesNarrativas(data);
+
+        // Destinatario opcional vía query string (R6). Se sanea y recorta;
+        // si queda vacío se omite y el documento aplica su valor por defecto.
+        const destinatarioQuery = req.query.destinatario;
+        const destinatarioTexto = typeof destinatarioQuery === 'string' ? destinatarioQuery.trim() : '';
+
+        const buffer = await generarDocx(data, destinatarioTexto || undefined);
         const [y, m, d] = fecha.split('-');
         const filename = `Informe_Diario_${d}-${m}-${y}.docx`;
 

@@ -147,8 +147,11 @@ async function descargarWord() {
 
     try {
         const fecha = document.getElementById('fechaInforme').value;
+        const destinatario = document.getElementById('destinatarioInforme').value;
         const [y, m, d] = fecha.split('-');
-        const res = await fetch(`${API_URL}/informes/diario/docx?fecha=${fecha}`, {
+        // Destinatario editado viaja por query string (R6); el servidor lo
+        // sanea y aplica el default si llega vacío.
+        const res = await fetch(`${API_URL}/informes/diario/docx?fecha=${fecha}&destinatario=${encodeURIComponent(destinatario || '')}`, {
             headers: { 'Authorization': `Bearer ${sesion.token}` }
         });
 
