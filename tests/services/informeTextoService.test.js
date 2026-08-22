@@ -99,11 +99,9 @@ describe('crearSeccionesNarrativas — forma con 2 tareas y 0 expedientes', () =
   };
   const resultado = svc.crearSeccionesNarrativas(data);
 
-  test('devuelve exactamente 8 secciones con claves = valores de checkboxes', () => {
-    expect(resultado.secciones.map((s) => s.clave)).toEqual([
-      'tareas', 'expedientes', 'intimaciones', 'actas',
-      'reclamos', 'relevamientos', 'comercios', 'vendedores',
-    ]);
+  test('omite las secciones sin registros: solo tareas llega al resultado', () => {
+    // Pilot feedback 2: los módulos en 0 NO aparecen en el documento.
+    expect(resultado.secciones.map((s) => s.clave)).toEqual(['tareas']);
   });
 
   test('sección tareas: resumen cita 2, exactamente 2 items, totalSeccion 2', () => {
@@ -115,16 +113,8 @@ describe('crearSeccionesNarrativas — forma con 2 tareas y 0 expedientes', () =
     tareas.items.forEach((item) => expect(item.match(REGEX_TOKEN_ROTO)).toBeNull());
   });
 
-  test('sección expedientes en 0: estructura válida con textoVacio', () => {
-    const expedientes = resultado.secciones.find((s) => s.clave === 'expedientes');
-    expect(expedientes.clave).toBe('expedientes');
-    expect(expedientes.titulo).toBe('Movimientos de Expedientes');
-    expect(expedientes.items).toEqual([]);
-    expect(expedientes.totalSeccion).toBe(0);
-    expect(typeof expedientes.textoVacio).toBe('string');
-    expect(expedientes.textoVacio.length).toBeGreaterThan(10);
-    expect(typeof expedientes.parrafoResumen).toBe('string');
-    expect(expedientes.parrafoResumen.length).toBeGreaterThan(10);
+  test('sección expedientes en 0: AUSENTE del resultado (sin leyenda de módulo vacío)', () => {
+    expect(resultado.secciones.find((s) => s.clave === 'expedientes')).toBeUndefined();
   });
 
   test('fechaFormateada, lineasResumen, fraseTotalGeneral y totalGeneral coherentes', () => {
@@ -210,6 +200,41 @@ describe('resumen ejecutivo filtra módulos en cero (pilot feedback)', () => {
     expect(resultado.lineasResumen).toEqual([]);
     expect(resultado.totalGeneral).toBe(0);
     expect(resultado.fraseTotalGeneral).toBe('Total general de gestiones: 0');
+  });
+});
+
+describe('secciones en cero se omiten del documento (pilot feedback 2)', () => {
+  test('día mixto: solo módulos con registros llegan a secciones, en orden de presentación', () => {
+    const resultado = svc.crearSeccionesNarrativas({
+      fecha: '2026-08-21',
+      tareas: [{ titulo: 'X', descripcion: 'Y' }],
+      infracciones: [
+        { numero_acta: 'A-1', nombre_apellido: 'Fulano', direccion: 'Belgrano 45', motivo_infraccion: 'obstrucción de vereda' },
+      ],
+    });
+    expect(resultado.secciones.map((s) => s.clave)).toEqual(['tareas', 'actas']);
+    // R6 intacto: el total se calcula ANTES del filtro y suma las 8 secciones.
+    expect(resultado.totalGeneral).toBe(2);
+    expect(resultado.fraseTotalGeneral).toBe('Total general de gestiones: 2');
+  });
+
+  test('día totalmente vacío: secciones [] con intro/resumen/cierre/firma y totalGeneral 0', () => {
+    const resultado = svc.crearSeccionesNarrativas({ fecha: '2026-08-21' });
+    expect(resultado.secciones).toEqual([]);
+    expect(resultado.lineasResumen).toEqual([]);
+    expect(resultado.totalGeneral).toBe(0);
+    expect(resultado.fraseTotalGeneral).toBe('Total general de gestiones: 0');
+    expect(resultado.fechaFormateada).toBe('21/08/2026');
+    expect(resultado.introduccion.length).toBeGreaterThan(50);
+    expect(resultado.cierre).toBe(
+      'Sin otro particular, se eleva el presente informe para su consideración y fines que estime corresponder.'
+    );
+    expect(resultado.firma).toEqual({
+      linea: '________________________',
+      aclaracion: 'Firma y aclaración',
+      cargo: 'Dirección de Inspección Urbana',
+      lugarFecha: 'Lugar y fecha',
+    });
   });
 });
 

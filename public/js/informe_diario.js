@@ -338,6 +338,26 @@ function capitalizarPrimera(str) {
 // el módulo 'actas' del servicio vive en las secciones 'Infracciones' del DOM.
 const SUFIJOS_DOM = { actas: 'Infracciones' };
 
+// Sufijos DOM de los 8 módulos, para limpiar cuerpos entre consultas:
+// como las secciones sin registros ya no se renderizan, sin esta limpieza
+// un contenedor conservaría los registros de la fecha anterior.
+const SUFIJOS_MODULOS = [
+    'Tareas', 'Expedientes', 'Intimaciones', 'Infracciones',
+    'Reclamos', 'Relevamientos', 'Comercios', 'Vendedores'
+];
+
+/** Vacía cuerpos y contadores de las 8 secciones antes de renderizar la
+ * consulta actual: sin esta limpieza, un módulo que pasa a cero conservaría
+ * registros y contador de la fecha anterior. */
+function limpiarCuerposSecciones() {
+    SUFIJOS_MODULOS.forEach((sufijo) => {
+        const cuerpo = document.getElementById(`body${sufijo}`);
+        if (cuerpo) cuerpo.innerHTML = '';
+        const contador = document.getElementById(`count${sufijo}`);
+        if (contador) contador.textContent = '';
+    });
+}
+
 /**
  * Render genérico de UNA sección narrativa: título y contador desde la API,
  * párrafo resumen + lista ordenada de items cuando hay registros, o leyenda
@@ -407,6 +427,10 @@ function renderizarInforme(data, destinatario) {
 
     const avisoPrevio = document.getElementById('avisoSinSecciones');
     if (avisoPrevio) avisoPrevio.remove();
+
+    // Limpiar SIEMPRE antes de cualquier salida (render o aviso de error):
+    // nunca debe convivir contenido de la consulta anterior con la actual. [R5]
+    limpiarCuerposSecciones();
 
     // Sin fuente narrativa no hay render silencioso: aviso visible en el
     // contenedor del informe. [R5]

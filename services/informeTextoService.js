@@ -289,27 +289,33 @@ function crearResumenIntroductorio(data) {
  * @param {object} data Payload crudo del informeDiario: { fecha, tareas, expedientes,
  *   intimaciones, infracciones, reclamos, relevamientos, comercios, vendedores }.
  * @returns Estructura { fechaFormateada, introduccion, lineasResumen, fraseTotalGeneral,
- *   totalGeneral, secciones, cierre, firma }.
+ *   totalGeneral, secciones, cierre, firma }. `secciones` omite los módulos sin
+ *   registros; `totalGeneral` y `fraseTotalGeneral` se calculan ANTES del filtro,
+ *   así que siguen sumando las 8 secciones (R6 intacto).
  */
 function crearSeccionesNarrativas(data) {
   const d = data || {};
   const secciones = MODULOS.map((definicion) => armarSeccion(definicion, d[definicion.propiedad]));
+  // R6: el total general se calcula sobre LAS 8 secciones, antes de cualquier
+  // filtro de vacíos; las secciones en cero aportan 0 al total.
   const totalGeneral = calcularTotalGeneral(secciones);
-  // Pilot feedback: el resumen ejecutivo solo lista módulos CON registros;
-  // totalGeneral sigue sumando las 8 secciones (R6 intacto).
+  // Pilot feedback: el resumen ejecutivo solo lista módulos CON registros.
   const lineasResumen = secciones
     .map((seccion, indice) => ({
       etiqueta: MODULOS[indice].etiqueta,
       cantidad: seccion.totalSeccion,
     }))
     .filter((linea) => linea.cantidad > 0);
+  // Pilot feedback 2: las secciones SIN registros se omiten por completo del
+  // documento (pantalla/PDF/Word); no hay leyendas de módulo vacío.
+  const seccionesConRegistros = secciones.filter((seccion) => seccion.totalSeccion >= 1);
   return {
     fechaFormateada: formatearFechaInforme(d.fecha),
     introduccion: crearResumenIntroductorio(d),
     lineasResumen,
     fraseTotalGeneral: `Total general de gestiones: ${totalGeneral}`,
     totalGeneral,
-    secciones,
+    secciones: seccionesConRegistros,
     cierre: CIERRE,
     firma: { ...FIRMA },
   };

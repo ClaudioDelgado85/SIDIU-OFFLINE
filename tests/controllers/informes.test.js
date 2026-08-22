@@ -67,7 +67,7 @@ describe('📊 Informes (/api/informes/diario)', () => {
       await limpiarFixtures();
     });
 
-    test('Adjunta seccionesNarrativas con exactamente 8 secciones coherentes', async () => {
+    test('Adjunta seccionesNarrativas solo con los módulos con registros (coherentes)', async () => {
       const res = await request(app)
         .get(`/api/informes/diario?fecha=${FECHA_FIXTURES}`)
         .set('Authorization', `Bearer ${token}`);
@@ -75,17 +75,27 @@ describe('📊 Informes (/api/informes/diario)', () => {
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
 
-      const narrativo = res.body.data.seccionesNarrativas;
+      const data = res.body.data;
+      const narrativo = data.seccionesNarrativas;
       expect(narrativo).toBeDefined();
 
-      // (a) Ocho secciones, una por módulo, con la forma del contrato D6.
-      expect(narrativo.secciones.length).toBe(8);
+      // Pilot feedback 2: las secciones en 0 se omiten; el largo debe coincidir
+      // con la cantidad de módulos NO vacíos del payload crudo.
+      const modulosConRegistros = [
+        data.tareas, data.expedientes, data.intimaciones, data.infracciones,
+        data.reclamos, data.relevamientos, data.comercios, data.vendedores,
+      ].filter((arr) => Array.isArray(arr) && arr.length > 0);
+      expect(modulosConRegistros.length).toBeGreaterThan(0);
+      expect(narrativo.secciones.length).toBe(modulosConRegistros.length);
+
+      // Cada sección conservada tiene la forma del contrato D6.
       narrativo.secciones.forEach((seccion) => {
         expect(Object.keys(seccion)).toEqual(expect.arrayContaining([
           'clave', 'titulo', 'parrafoResumen', 'items', 'totalSeccion', 'textoVacio'
         ]));
         expect(typeof seccion.parrafoResumen).toBe('string');
         expect(Array.isArray(seccion.items)).toBe(true);
+        expect(seccion.totalSeccion).toBeGreaterThan(0);
       });
 
       // Coherencia narrativa ↔ arrays crudos (misma fuente de datos).
@@ -143,7 +153,7 @@ describe('📊 Informes (/api/informes/diario)', () => {
   });
 
   describe('GET /api/informes/diario — jornada vacía', () => {
-    test('Retorna 200 con 8 secciones válidas y leyendas de módulo vacío', async () => {
+    test('Retorna 200 con secciones [] y bloque formal completo (intro/cierre/firma/total 0)', async () => {
       const res = await request(app)
         .get(`/api/informes/diario?fecha=${FECHA_VACIA}`)
         .set('Authorization', `Bearer ${token}`);
@@ -152,12 +162,17 @@ describe('📊 Informes (/api/informes/diario)', () => {
       expect(res.body.success).toBe(true);
 
       const narrativo = res.body.data.seccionesNarrativas;
-      expect(narrativo.secciones.length).toBe(8);
-      narrativo.secciones.forEach((seccion) => {
-        expect(seccion.totalSeccion).toBe(0);
-        expect(seccion.textoVacio.length).toBeGreaterThan(0);
-      });
+      // Pilot feedback 2: día sin registros → NINGUNA sección en la salida.
+      expect(narrativo.secciones).toEqual([]);
+      expect(narrativo.lineasResumen).toEqual([]);
+      // El bloque formal se mantiene intacto.
+      expect(narrativo.introduccion.length).toBeGreaterThan(0);
+      expect(narrativo.cierre).toBe(
+        'Sin otro particular, se eleva el presente informe para su consideración y fines que estime corresponder.'
+      );
+      expect(narrativo.firma.cargo).toBe('Dirección de Inspección Urbana');
       expect(narrativo.totalGeneral).toBe(0);
+      expect(narrativo.fraseTotalGeneral).toBe('Total general de gestiones: 0');
     });
   });
 });
