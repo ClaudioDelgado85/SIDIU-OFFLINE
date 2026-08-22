@@ -65,13 +65,16 @@ function emptyParagraph() {
 // El texto llega redactado desde informeTextoService; aquí solo se le da
 // forma de párrafos. TextRun escapa XML por sí solo, no se escapa a mano.
 
-/** Párrafo de texto simple con opciones de estilo. */
+/** Párrafo de texto simple con opciones de estilo.
+ * Interlineado 1,5 (line: 360) y espaciado posterior 12pt (after: 240)
+ * en todo párrafo del cuerpo, según pedido del usuario. El `before`
+ * puede ajustarse por llamada. */
 function paragraph(text, options = {}) {
-  const { bold = false, size = 20, color, alignment, spacing = { before: 60, after: 60 } } = options;
+  const { bold = false, size = 20, color, alignment, spacing = {} } = options;
   return new Paragraph({
     children: [new TextRun({ text: String(text === null || text === undefined ? '' : text), bold, font: FONT, size, color })],
     alignment,
-    spacing,
+    spacing: { before: spacing.before ?? 60, after: 240, line: 360 },
   });
 }
 
