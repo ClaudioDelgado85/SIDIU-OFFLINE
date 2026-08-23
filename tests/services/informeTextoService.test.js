@@ -81,6 +81,31 @@ describe('constructores de oraciones con registros incompletos', () => {
     expect(oracion).toContain('sin mayor detalle');
     expect(oracion.match(REGEX_TOKEN_ROTO)).toBeNull();
   });
+
+  test('acta sin motivo omite la cláusula "por ..." (nunca "por sin mayor detalle")', () => {
+    const oracion = svc.crearTextoInfraccion({
+      numero_acta: 'A-9',
+      nombre_apellido: 'Luis Gómez',
+      direccion: 'Av. 25 de Mayo 456',
+      motivo_infraccion: null,
+      observaciones: '',
+    });
+    expect(oracion).toBe(
+      'Se labró el acta de infracción N° A-9 a Luis Gómez, en Av. 25 de Mayo 456.'
+    );
+    expect(oracion).not.toContain('por ');
+
+    const conMotivo = svc.crearTextoInfraccion({
+      numero_acta: 'A-10',
+      nombre_apellido: 'Marta Rojas',
+      direccion: 'Calle 1',
+      motivo_infraccion: 'Obstrucción de vereda',
+      observaciones: 'Se notificó en el lugar',
+    });
+    expect(conMotivo).toContain(
+      ', por Obstrucción de vereda; observaciones: Se notificó en el lugar.'
+    );
+  });
 });
 
 describe('crearSeccionesNarrativas — forma con 2 tareas y 0 expedientes', () => {
@@ -267,7 +292,7 @@ describe('calcularVencimientoPlazo y crearTextoPlazo (addenda obs #403)', () => 
     expect(oracion.match(REGEX_TOKEN_ROTO)).toBeNull();
   });
 
-  test('sin motivo usa el defecto formal; 1 día queda en singular', () => {
+  test('sin motivo la cláusula se omite; 1 día queda en singular', () => {
     const oracion = svc.crearTextoPlazo({
       numero_intimacion: 'INT-101',
       nombre_apellido: 'María López',
@@ -277,8 +302,9 @@ describe('calcularVencimientoPlazo y crearTextoPlazo (addenda obs #403)', () => 
     });
     expect(oracion).toBe(
       'Se otorgó un plazo de 1 día a la intimación N° INT-101 de María López, ' +
-      'con motivo sin motivo indicado, con vencimiento al 22/08/2026.'
+      'con vencimiento al 22/08/2026.'
     );
+    expect(oracion).not.toContain('con motivo');
   });
 
   test('registro sucio: sin tokens rotos ni fechas rotas en la oración', () => {
@@ -291,7 +317,7 @@ describe('calcularVencimientoPlazo y crearTextoPlazo (addenda obs #403)', () => 
     });
     expect(oracion).toContain('sin número');
     expect(oracion).toContain('No identificado');
-    expect(oracion).toContain('sin motivo indicado');
+    expect(oracion).not.toContain('con motivo');
     expect(oracion).toContain('con vencimiento no determinado');
     expect(oracion.match(REGEX_TOKEN_ROTO)).toBeNull();
   });

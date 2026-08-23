@@ -201,9 +201,11 @@ function crearTextoInfraccion(registro) {
   const acta = texto(inf.numero_acta, 'sin número');
   const infractor = texto(inf.nombre_apellido, 'No identificado');
   const ubicacion = texto(inf.direccion, 'ubicación no registrada');
-  const motivo = texto(inf.motivo_infraccion, 'sin mayor detalle');
+  // Sin motivo la cláusula "por ..." se omite (evita "por sin mayor detalle").
+  const motivo = texto(inf.motivo_infraccion, '');
   let oracion = `Se labró el acta de infracción N° ${acta} a ${infractor}, ` +
-    `en ${ubicacion}, por ${motivo}`;
+    `en ${ubicacion}`;
+  if (motivo) oracion += `, por ${motivo}`;
   const observaciones = texto(inf.observaciones, '');
   if (observaciones) oracion += `; observaciones: ${observaciones}`;
   return cerrarOracion(oracion);
@@ -266,7 +268,8 @@ function crearTextoPlazo(registro) {
   const p = registro || {};
   const numero = texto(p.numero_intimacion, 'sin número');
   const contribuyente = texto(p.nombre_apellido, 'No identificado');
-  const motivo = texto(p.motivo, 'sin motivo indicado');
+  // Sin motivo la cláusula "con motivo ..." se omite (evita "con motivo sin motivo indicado").
+  const motivo = texto(p.motivo, '');
   const diasBruto = Number(p.dias);
   const dias = Number.isFinite(diasBruto) && diasBruto > 0 ? diasBruto : 0;
   // Guarda de fecha inválida: la cola del vencimiento se reemplaza por una
@@ -275,10 +278,12 @@ function crearTextoPlazo(registro) {
   const colaVencimiento = vencimiento
     ? `con vencimiento al ${vencimiento}`
     : 'con vencimiento no determinado';
-  return cerrarOracion(
-    `Se otorgó un plazo de ${dias} ${pluralizar(dias, 'día', 'días')} a la intimación N° ${numero} ` +
-    `de ${contribuyente}, con motivo ${motivo}, ${colaVencimiento}`
-  );
+  let oracion =
+    `Se otorgó un plazo de ${dias} ${pluralizar(dias, 'día', 'días')} ` +
+    `a la intimación N° ${numero} de ${contribuyente}`;
+  if (motivo) oracion += `, con motivo ${motivo}`;
+  oracion += `, ${colaVencimiento}`;
+  return cerrarOracion(oracion);
 }
 
 const CONSTRUCTORES_ITEMS = {
