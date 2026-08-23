@@ -131,7 +131,8 @@ function formatearFechaInforme(fecha) {
  * llamador decide el reemplazo formal.
  */
 function calcularVencimientoPlazo(fechaOtorgamiento, dias) {
-  const cruda = String(fechaOtorgamiento ?? '').trim();
+  // Compatibilidad Node viejo (Win7): sin ??.
+  const cruda = String((fechaOtorgamiento !== null && fechaOtorgamiento !== undefined) ? fechaOtorgamiento : '').trim();
   const coincidencia = cruda.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!coincidencia || !(Number(dias) > 0)) return '';
   const base = new Date(Number(coincidencia[1]), Number(coincidencia[2]) - 1, Number(coincidencia[3]));

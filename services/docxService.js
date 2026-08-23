@@ -74,7 +74,8 @@ function paragraph(text, options = {}) {
   return new Paragraph({
     children: [new TextRun({ text: String(text === null || text === undefined ? '' : text), bold, font: FONT, size, color })],
     alignment,
-    spacing: { before: spacing.before ?? 60, after: 240, line: 360 },
+    // Compatibilidad Node viejo (Win7): sin ?? — before=0 debe respetarse.
+    spacing: { before: (spacing.before !== null && spacing.before !== undefined) ? spacing.before : 60, after: 240, line: 360 },
   });
 }
 
