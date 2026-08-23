@@ -63,7 +63,8 @@ describe('constructores de oraciones con registros incompletos', () => {
     ];
 
     casos.forEach(([nombre, oracion]) => {
-      expect(oracion.startsWith('Se ')).toBe(true);
+      // Estilo nominal (obs #405): cada oración abre con artículo, no con verbo.
+      expect(/^(El|La) /.test(oracion)).toBe(true);
       expect(oracion.endsWith('.')).toBe(true);
       expect(oracion.match(REGEX_TOKEN_ROTO)).toBeNull();
       expect(oracion.length).toBeGreaterThan(40);
@@ -91,7 +92,7 @@ describe('constructores de oraciones con registros incompletos', () => {
       observaciones: '',
     });
     expect(oracion).toBe(
-      'Se labró el acta de infracción N° A-9 a Luis Gómez, en Av. 25 de Mayo 456.'
+      'El acta de infracción N° A-9, labrada a Luis Gómez, en Av. 25 de Mayo 456.'
     );
     expect(oracion).not.toContain('por ');
 
@@ -286,7 +287,7 @@ describe('calcularVencimientoPlazo y crearTextoPlazo (addenda obs #403)', () => 
       motivo: 'tramitación de planos',
     });
     expect(oracion).toBe(
-      'Se otorgó un plazo de 10 días a la intimación N° INT-100 de Juan Pérez, ' +
+      'El plazo de 10 días otorgado a la intimación N° INT-100 de Juan Pérez, ' +
       'con motivo tramitación de planos, con vencimiento al 31/08/2026.'
     );
     expect(oracion.match(REGEX_TOKEN_ROTO)).toBeNull();
@@ -301,7 +302,7 @@ describe('calcularVencimientoPlazo y crearTextoPlazo (addenda obs #403)', () => 
       motivo: null,
     });
     expect(oracion).toBe(
-      'Se otorgó un plazo de 1 día a la intimación N° INT-101 de María López, ' +
+      'El plazo de 1 día otorgado a la intimación N° INT-101 de María López, ' +
       'con vencimiento al 22/08/2026.'
     );
     expect(oracion).not.toContain('con motivo');
@@ -336,7 +337,7 @@ describe('noveno módulo: Plazos Otorgados (addenda obs #403)', () => {
     const plazos = resultado.secciones.find((s) => s.clave === 'plazos');
     expect(plazos.titulo).toBe('Plazos Otorgados');
     expect(plazos.totalSeccion).toBe(1);
-    expect(plazos.items[0]).toContain('Se otorgó un plazo de 10 días');
+    expect(plazos.items[0]).toContain('El plazo de 10 días otorgado');
     // R6 enmendado: el total general suma LAS 9 secciones.
     expect(resultado.totalGeneral).toBe(2);
     expect(resultado.fraseTotalGeneral).toBe('Total general de gestiones: 2');
@@ -429,5 +430,77 @@ describe('concordancia de género y número del participio', () => {
     });
     expect(resultado.totalGeneral).toBe(1);
     expect(resultado.introduccion).toContain('que se detalla en');
+  });
+});
+
+describe('conector "se detallan a continuación" en el párrafo resumen (obs #405)', () => {
+  test('1 tarea (f, singular): ", la cual se detalla a continuación."', () => {
+    const resultado = svc.crearSeccionesNarrativas({
+      fecha: '2026-08-21',
+      tareas: [{ titulo: 'X', descripcion: 'Y' }],
+    });
+    const tareas = resultado.secciones.find((s) => s.clave === 'tareas');
+    expect(tareas.parrafoResumen).toBe(
+      'Se consigna un total de 1 tarea registrada durante la jornada, la cual se detalla a continuación.'
+    );
+  });
+
+  test('3 expedientes (m, plural): ", los cuales se detallan a continuación."', () => {
+    const resultado = svc.crearSeccionesNarrativas({
+      fecha: '2026-08-21',
+      expedientes: [
+        { numero_expediente: 'EX-1', nombre_apellido: 'A', motivo: 'M1', estado: 'ingreso', direccion: 'D1' },
+        { numero_expediente: 'EX-2', nombre_apellido: 'B', motivo: 'M2', estado: 'salida', direccion: 'D2' },
+        { numero_expediente: 'EX-3', nombre_apellido: 'C', motivo: 'M3', estado: 'ingreso', direccion: 'D3' },
+      ],
+    });
+    const expedientes = resultado.secciones.find((s) => s.clave === 'expedientes');
+    expect(expedientes.parrafoResumen).toBe(
+      'Se consigna un total de 3 expedientes registrados durante la jornada, los cuales se detallan a continuación.'
+    );
+  });
+
+  test('2 tareas (f, plural): ", las cuales se detallan a continuación."', () => {
+    const resultado = svc.crearSeccionesNarrativas({
+      fecha: '2026-08-21',
+      tareas: [
+        { titulo: 'X', descripcion: 'Y' },
+        { titulo: 'Z', descripcion: 'W' },
+      ],
+    });
+    const tareas = resultado.secciones.find((s) => s.clave === 'tareas');
+    expect(tareas.parrafoResumen).toContain(', las cuales se detallan a continuación.');
+  });
+
+  test('1 expediente (m, singular): ", el cual se detalla a continuación."', () => {
+    const resultado = svc.crearSeccionesNarrativas({
+      fecha: '2026-08-21',
+      expedientes: [
+        { numero_expediente: 'EX-1', nombre_apellido: 'A', motivo: 'M1', estado: 'ingreso', direccion: 'D1' },
+      ],
+    });
+    const expedientes = resultado.secciones.find((s) => s.clave === 'expedientes');
+    expect(expedientes.parrafoResumen).toContain(', el cual se detalla a continuación.');
+  });
+
+  test('invariante #401: sin registros no hay sección ni conector colgante', () => {
+    const resultado = svc.crearSeccionesNarrativas({ fecha: '2026-08-21' });
+    expect(resultado.secciones).toEqual([]);
+    const textos = resultado.secciones.map((s) => s.parrafoResumen).join(' ');
+    expect(textos).not.toContain('a continuación');
+  });
+
+  test('etiquetas de estado nominales tras la cópula "cuyo estado actual es"', () => {
+    const ingreso = svc.crearTextoExpediente({
+      numero_expediente: 'EX-9', nombre_apellido: 'A', motivo: 'M',
+      estado: 'ingreso', direccion: 'D',
+    });
+    expect(ingreso).toContain('cuyo estado actual es Ingreso.');
+    const salida = svc.crearTextoExpediente({
+      numero_expediente: 'EX-10', nombre_apellido: 'B', motivo: 'M',
+      estado: 'salida', direccion: 'D',
+    });
+    expect(salida).toContain('cuyo estado actual es Salida.');
+    expect(salida).not.toContain('Dio salida');
   });
 });

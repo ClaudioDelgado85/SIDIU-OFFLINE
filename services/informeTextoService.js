@@ -18,68 +18,71 @@ const FIRMA = Object.freeze({
 const CIERRE =
   'Sin otro particular, se eleva el presente informe para su consideración y fines que estime corresponder.';
 
-// Etiquetas legibles de estado de expediente (mismos textos que docxService).
+// Etiquetas NOMINALES de estado de expediente: se interpolan tras la cópula
+// "cuyo estado actual es", por lo que deben ser sustantivos, no verbos
+// ("es Ingreso", no "es Ingresó").
 const ETIQUETAS_ESTADO_EXPEDIENTE = {
-  ingreso: 'Ingresó',
+  ingreso: 'Ingreso',
   en_inspeccion: 'En inspección',
   plazo_otorgado: 'Plazo otorgado',
-  salida: 'Dio salida',
+  salida: 'Salida',
 };
 
 // Definición de los 9 módulos del informe, en orden de presentación.
 // `clave` = valores de los checkboxes del filtro; `propiedad` = clave del array crudo en el payload.
+// `genero` concuerda el conector "el cual/la cual ... a continuación" del párrafo resumen.
 const MODULOS = [
   {
     clave: 'tareas', propiedad: 'tareas', titulo: 'Tareas y Operativos',
-    singular: 'tarea', plural: 'tareas', etiqueta: 'Tareas',
+    singular: 'tarea', plural: 'tareas', etiqueta: 'Tareas', genero: 'f',
     participioSingular: 'registrada', participioPlural: 'registradas',
     textoVacio: 'No se registraron tareas ni operativos durante la jornada.',
   },
   {
     clave: 'expedientes', propiedad: 'expedientes', titulo: 'Movimientos de Expedientes',
-    singular: 'expediente', plural: 'expedientes', etiqueta: 'Expedientes',
+    singular: 'expediente', plural: 'expedientes', etiqueta: 'Expedientes', genero: 'm',
     participioSingular: 'registrado', participioPlural: 'registrados',
     textoVacio: 'No se registraron movimientos de expedientes durante la jornada.',
   },
   {
     clave: 'intimaciones', propiedad: 'intimaciones', titulo: 'Intimaciones Realizadas',
-    singular: 'intimación', plural: 'intimaciones', etiqueta: 'Intimaciones',
+    singular: 'intimación', plural: 'intimaciones', etiqueta: 'Intimaciones', genero: 'f',
     participioSingular: 'registrada', participioPlural: 'registradas',
     textoVacio: 'No se realizaron intimaciones durante la jornada.',
   },
   {
     clave: 'actas', propiedad: 'infracciones', titulo: 'Actas de Infracción',
-    singular: 'acta de infracción', plural: 'actas de infracción', etiqueta: 'Actas de Infracción',
+    singular: 'acta de infracción', plural: 'actas de infracción', etiqueta: 'Actas de Infracción', genero: 'f',
     participioSingular: 'registrada', participioPlural: 'registradas',
     textoVacio: 'No se labraron actas de infracción durante la jornada.',
   },
   {
     clave: 'reclamos', propiedad: 'reclamos', titulo: 'Reclamos Recibidos',
-    singular: 'reclamo', plural: 'reclamos', etiqueta: 'Reclamos',
+    singular: 'reclamo', plural: 'reclamos', etiqueta: 'Reclamos', genero: 'm',
     participioSingular: 'registrado', participioPlural: 'registrados',
     textoVacio: 'No se recibieron reclamos durante la jornada.',
   },
   {
     clave: 'relevamientos', propiedad: 'relevamientos', titulo: 'Relevamientos Ejecutados',
-    singular: 'relevamiento', plural: 'relevamientos', etiqueta: 'Relevamientos',
+    singular: 'relevamiento', plural: 'relevamientos', etiqueta: 'Relevamientos', genero: 'm',
     participioSingular: 'registrado', participioPlural: 'registrados',
     textoVacio: 'No se efectuaron relevamientos durante la jornada.',
   },
   {
     clave: 'comercios', propiedad: 'comercios', titulo: 'Comercios Relevados',
-    singular: 'comercio', plural: 'comercios', etiqueta: 'Comercios Relevados',
+    singular: 'comercio', plural: 'comercios', etiqueta: 'Comercios Relevados', genero: 'm',
     participioSingular: 'registrado', participioPlural: 'registrados',
     textoVacio: 'No se relevaron comercios durante la jornada.',
   },
   {
     clave: 'vendedores', propiedad: 'vendedores', titulo: 'Vendedores Ambulantes',
-    singular: 'vendedor ambulante', plural: 'vendedores ambulantes', etiqueta: 'Vendedores Ambulantes',
+    singular: 'vendedor ambulante', plural: 'vendedores ambulantes', etiqueta: 'Vendedores Ambulantes', genero: 'm',
     participioSingular: 'registrado', participioPlural: 'registrados',
     textoVacio: 'No se relevaron vendedores ambulantes durante la jornada.',
   },
   {
     clave: 'plazos', propiedad: 'plazos', titulo: 'Plazos Otorgados',
-    singular: 'plazo otorgado', plural: 'plazos otorgados', etiqueta: 'Plazos',
+    singular: 'plazo otorgado', plural: 'plazos otorgados', etiqueta: 'Plazos', genero: 'm',
     participioSingular: 'otorgado', participioPlural: 'otorgados',
     textoVacio: 'No se otorgaron plazos durante la jornada.',
   },
@@ -100,6 +103,16 @@ function texto(valor, defecto) {
 /** Singular cuando la cantidad es 1, plural en cualquier otro caso. */
 function pluralizar(cantidad, singular, plural) {
   return Number(cantidad) === 1 ? singular : plural;
+}
+
+/**
+ * Conector del párrafo resumen con concordancia de género y número
+ * ("..., el cual se detalla a continuación"). Solo se usa cuando hay registros.
+ */
+function conectorDetalle(total, genero) {
+  return genero === 'f'
+    ? pluralizar(total, ', la cual se detalla a continuación', ', las cuales se detallan a continuación')
+    : pluralizar(total, ', el cual se detalla a continuación', ', los cuales se detallan a continuación');
 }
 
 /** Convierte una fecha 'YYYY-MM-DD' en 'DD/MM/YYYY'; otros formatos pasan intactos. */
@@ -160,7 +173,7 @@ function crearTextoTarea(registro) {
   const detalle = texto(t.descripcion, 'sin mayor detalle');
   const ubicacion = ubicacionCompuesta(t, 'direccion');
   return cerrarOracion(
-    `Se ejecutó la tarea "${titulo}" (categoría: ${categoria}) en ${ubicacion}; ${detalle}`
+    `La tarea "${titulo}" (categoría: ${categoria}), ejecutada en ${ubicacion}; ${detalle}`
   );
 }
 
@@ -172,7 +185,7 @@ function crearTextoExpediente(registro) {
   const estado = ETIQUETAS_ESTADO_EXPEDIENTE[e.estado] || texto(e.estado, 'sin especificar');
   const ubicacion = ubicacionCompuesta(e, 'direccion');
   return cerrarOracion(
-    `Se gestionó el expediente N° ${numero}, caratulado a nombre de ${contribuyente}, ` +
+    `El expediente N° ${numero}, caratulado a nombre de ${contribuyente}, ` +
     `por motivo "${motivo}", con ubicación en ${ubicacion}, cuyo estado actual es ${estado}`
   );
 }
@@ -190,7 +203,7 @@ function crearTextoIntimacion(registro) {
     ? `${dias} ${pluralizar(dias, 'día', 'días')}`
     : 'cumplimiento inmediato';
   return cerrarOracion(
-    `Se diligenció la intimación N° ${numero}, dirigida a ${contribuyente}, ` +
+    `La intimación N° ${numero}, dirigida a ${contribuyente}, ` +
     `con domicilio en ${domicilio}, referida a ${tipo} (rubro: ${rubro}), ` +
     `otorgándose un plazo de ${plazo}`
   );
@@ -203,7 +216,7 @@ function crearTextoInfraccion(registro) {
   const ubicacion = texto(inf.direccion, 'ubicación no registrada');
   // Sin motivo la cláusula "por ..." se omite (evita "por sin mayor detalle").
   const motivo = texto(inf.motivo_infraccion, '');
-  let oracion = `Se labró el acta de infracción N° ${acta} a ${infractor}, ` +
+  let oracion = `El acta de infracción N° ${acta}, labrada a ${infractor}, ` +
     `en ${ubicacion}`;
   if (motivo) oracion += `, por ${motivo}`;
   const observaciones = texto(inf.observaciones, '');
@@ -218,7 +231,7 @@ function crearTextoReclamo(registro) {
   const lugar = texto(r.direccion_incidente, 'ubicación no registrada');
   const detalle = texto(r.descripcion, 'sin mayor detalle');
   return cerrarOracion(
-    `Se recibió el reclamo N° ${numero}, correspondiente al tipo "${tipo}", ` +
+    `El reclamo N° ${numero}, correspondiente al tipo "${tipo}", ` +
     `con ubicación en ${lugar}; ${detalle}`
   );
 }
@@ -229,8 +242,8 @@ function crearTextoRelevamiento(registro) {
   const tipo = texto(rel.tipo_relevamiento, 'no especificado');
   const ubicacion = texto(rel.ubicacion, 'ubicación no registrada');
   const responsable = texto(rel.responsable_nombre, 'No identificado');
-  let oracion = `Se efectuó el relevamiento N° ${numero}, del tipo "${tipo}", ` +
-    `en ${ubicacion}, bajo responsabilidad de ${responsable}`;
+  let oracion = `El relevamiento N° ${numero}, del tipo "${tipo}", ` +
+    `efectuado en ${ubicacion}, bajo responsabilidad de ${responsable}`;
   const observaciones = texto(rel.observaciones, '');
   if (observaciones) oracion += `; observaciones: ${observaciones}`;
   return cerrarOracion(oracion);
@@ -245,7 +258,7 @@ function crearTextoComercio(registro) {
     ? 'se encuentra habilitado'
     : 'no se encuentra habilitado';
   return cerrarOracion(
-    `Se relevó el comercio sito en ${direccion}, perteneciente a ${propietario}, ` +
+    `El comercio sito en ${direccion}, perteneciente a ${propietario}, ` +
     `con rubro ${rubro}, el cual ${habilitacion}`
   );
 }
@@ -259,7 +272,7 @@ function crearTextoVendedor(registro) {
     ? 'cuenta con autorización vigente'
     : 'no cuenta con autorización registrada';
   return cerrarOracion(
-    `Se relevó al vendedor ambulante ${nombre}, ubicado en ${ubicacion}, ` +
+    `El vendedor ambulante ${nombre}, ubicado en ${ubicacion}, ` +
     `dedicado a la venta de rubro ${rubro}, quien ${autorizacion}`
   );
 }
@@ -279,8 +292,8 @@ function crearTextoPlazo(registro) {
     ? `con vencimiento al ${vencimiento}`
     : 'con vencimiento no determinado';
   let oracion =
-    `Se otorgó un plazo de ${dias} ${pluralizar(dias, 'día', 'días')} ` +
-    `a la intimación N° ${numero} de ${contribuyente}`;
+    `El plazo de ${dias} ${pluralizar(dias, 'día', 'días')} ` +
+    `otorgado a la intimación N° ${numero} de ${contribuyente}`;
   if (motivo) oracion += `, con motivo ${motivo}`;
   oracion += `, ${colaVencimiento}`;
   return cerrarOracion(oracion);
@@ -304,8 +317,11 @@ const CONSTRUCTORES_ITEMS = {
 function armarSeccion(definicion, registros) {
   const lista = Array.isArray(registros) ? registros : [];
   const totalSeccion = lista.length;
+  // El conector "se detallan a continuación" solo existe con registros: las
+  // secciones en cero se omiten por completo del documento (#401), así que no
+  // puede quedar un conector colgante.
   const parrafoResumen = totalSeccion > 0
-    ? `Se consigna un total de ${totalSeccion} ${pluralizar(totalSeccion, definicion.singular, definicion.plural)} ${pluralizar(totalSeccion, definicion.participioSingular, definicion.participioPlural)} durante la jornada.`
+    ? `Se consigna un total de ${totalSeccion} ${pluralizar(totalSeccion, definicion.singular, definicion.plural)} ${pluralizar(totalSeccion, definicion.participioSingular, definicion.participioPlural)} durante la jornada${conectorDetalle(totalSeccion, definicion.genero)}.`
     : `No se registraron ${definicion.plural} durante la jornada.`;
   const construir = CONSTRUCTORES_ITEMS[definicion.clave];
   return {

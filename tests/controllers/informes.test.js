@@ -166,7 +166,7 @@ describe('📊 Informes (/api/informes/diario)', () => {
       expect(porClave.plazos.totalSeccion).toBe(data.plazos.length);
       const itemPlazo = porClave.plazos.items.find((item) => item.includes('N° 9001'));
       expect(itemPlazo).toBeDefined();
-      expect(itemPlazo).toContain('Se otorgó un plazo de 10 días');
+      expect(itemPlazo).toContain('El plazo de 10 días otorgado');
       // Vencimiento = otorgamiento + dias: 2099-12-31 + 10 → 10/01/2100.
       expect(itemPlazo).toContain('vencimiento al 10/01/2100');
 
