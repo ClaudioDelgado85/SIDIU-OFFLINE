@@ -26,7 +26,7 @@ const ETIQUETAS_ESTADO_EXPEDIENTE = {
   salida: 'Dio salida',
 };
 
-// Definición de los 8 módulos del informe, en orden de presentación.
+// Definición de los 9 módulos del informe, en orden de presentación.
 // `clave` = valores de los checkboxes del filtro; `propiedad` = clave del array crudo en el payload.
 const MODULOS = [
   {
@@ -77,6 +77,12 @@ const MODULOS = [
     participioSingular: 'registrado', participioPlural: 'registrados',
     textoVacio: 'No se relevaron vendedores ambulantes durante la jornada.',
   },
+  {
+    clave: 'plazos', propiedad: 'plazos', titulo: 'Plazos Otorgados',
+    singular: 'plazo otorgado', plural: 'plazos otorgados', etiqueta: 'Plazos',
+    participioSingular: 'otorgado', participioPlural: 'otorgados',
+    textoVacio: 'No se otorgaron plazos durante la jornada.',
+  },
 ];
 
 /**
@@ -103,6 +109,24 @@ function formatearFechaInforme(fecha) {
   const coincidencia = cruda.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!coincidencia) return cruda;
   return `${coincidencia[3]}/${coincidencia[2]}/${coincidencia[1]}`;
+}
+
+/**
+ * Vencimiento efectivo de un plazo otorgado: fecha de otorgamiento
+ * ('YYYY-MM-DD') + dias, con aritmética pura de calendario sobre la cadena ISO.
+ * Devuelve '' si la fecha base es inválida o los días no son positivos; el
+ * llamador decide el reemplazo formal.
+ */
+function calcularVencimientoPlazo(fechaOtorgamiento, dias) {
+  const cruda = String(fechaOtorgamiento ?? '').trim();
+  const coincidencia = cruda.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!coincidencia || !(Number(dias) > 0)) return '';
+  const base = new Date(Number(coincidencia[1]), Number(coincidencia[2]) - 1, Number(coincidencia[3]));
+  if (Number.isNaN(base.getTime())) return '';
+  base.setDate(base.getDate() + Number(dias));
+  const dd = String(base.getDate()).padStart(2, '0');
+  const mm = String(base.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${base.getFullYear()}`;
 }
 
 /** Suma totalSeccion de todas las secciones; acepta números sueltos u objetos sección. */
@@ -238,6 +262,25 @@ function crearTextoVendedor(registro) {
   );
 }
 
+function crearTextoPlazo(registro) {
+  const p = registro || {};
+  const numero = texto(p.numero_intimacion, 'sin número');
+  const contribuyente = texto(p.nombre_apellido, 'No identificado');
+  const motivo = texto(p.motivo, 'sin motivo indicado');
+  const diasBruto = Number(p.dias);
+  const dias = Number.isFinite(diasBruto) && diasBruto > 0 ? diasBruto : 0;
+  // Guarda de fecha inválida: la cola del vencimiento se reemplaza por una
+  // fórmula formal en lugar de interpolar una fecha rota.
+  const vencimiento = calcularVencimientoPlazo(p.fecha_otorgamiento, dias);
+  const colaVencimiento = vencimiento
+    ? `con vencimiento al ${vencimiento}`
+    : 'con vencimiento no determinado';
+  return cerrarOracion(
+    `Se otorgó un plazo de ${dias} ${pluralizar(dias, 'día', 'días')} a la intimación N° ${numero} ` +
+    `de ${contribuyente}, con motivo ${motivo}, ${colaVencimiento}`
+  );
+}
+
 const CONSTRUCTORES_ITEMS = {
   tareas: crearTextoTarea,
   expedientes: crearTextoExpediente,
@@ -247,6 +290,7 @@ const CONSTRUCTORES_ITEMS = {
   relevamientos: crearTextoRelevamiento,
   comercios: crearTextoComercio,
   vendedores: crearTextoVendedor,
+  plazos: crearTextoPlazo,
 };
 
 // ── Composición ───────────────────────────────────────────────────────────
@@ -281,23 +325,24 @@ function crearResumenIntroductorio(data) {
     `Municipalidad de Clorinda desarrolla sus tareas habituales de inspección y fiscalización, ` +
     `registrando un total de ${totalGeneral} ${pluralizar(totalGeneral, 'gestión', 'gestiones')} ` +
     `que se ${pluralizar(totalGeneral, 'detalla', 'detallan')} en los siguientes módulos: tareas y operativos, movimientos de expedientes, ` +
-    `intimaciones, actas de infracción, reclamos, relevamientos, comercios relevados y vendedores ambulantes.`;
+    `intimaciones, actas de infracción, reclamos, relevamientos, comercios relevados, vendedores ambulantes y plazos otorgados.`;
 }
 
 /**
  * Redacta la estructura narrativa completa del informe diario.
  * @param {object} data Payload crudo del informeDiario: { fecha, tareas, expedientes,
- *   intimaciones, infracciones, reclamos, relevamientos, comercios, vendedores }.
+ *   intimaciones, infracciones, reclamos, relevamientos, comercios, vendedores, plazos }.
  * @returns Estructura { fechaFormateada, introduccion, lineasResumen, fraseTotalGeneral,
  *   totalGeneral, secciones, cierre, firma }. `secciones` omite los módulos sin
  *   registros; `totalGeneral` y `fraseTotalGeneral` se calculan ANTES del filtro,
- *   así que siguen sumando las 8 secciones (R6 intacto).
+ *   así que siguen sumando las 9 secciones (R6 enmendado por addenda obs #403).
  */
 function crearSeccionesNarrativas(data) {
   const d = data || {};
   const secciones = MODULOS.map((definicion) => armarSeccion(definicion, d[definicion.propiedad]));
-  // R6: el total general se calcula sobre LAS 8 secciones, antes de cualquier
-  // filtro de vacíos; las secciones en cero aportan 0 al total.
+  // R6: el total general se calcula sobre LAS 9 secciones, antes de cualquier
+  // filtro de vacíos; las secciones en cero aportan 0 al total. Addenda: los
+  // plazos otorgados SÍ suman al total general de gestiones (obs #403).
   const totalGeneral = calcularTotalGeneral(secciones);
   // Pilot feedback: el resumen ejecutivo solo lista módulos CON registros.
   const lineasResumen = secciones
@@ -324,6 +369,7 @@ function crearSeccionesNarrativas(data) {
 module.exports = {
   pluralizar,
   formatearFechaInforme,
+  calcularVencimientoPlazo,
   texto,
   calcularTotalGeneral,
   crearResumenIntroductorio,
@@ -335,6 +381,7 @@ module.exports = {
   crearTextoRelevamiento,
   crearTextoComercio,
   crearTextoVendedor,
+  crearTextoPlazo,
   crearSeccionesNarrativas,
   TITULO_INFORME,
 };

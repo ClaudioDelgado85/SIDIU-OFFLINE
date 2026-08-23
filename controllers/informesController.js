@@ -92,6 +92,16 @@ exports.informeDiario = async (req, res) => {
             ORDER BY v.id ASC
         `, [fecha]);
 
+        // Plazos otorgados (prórrogas de intimaciones, addenda obs #403)
+        const [plazos] = await db.pool.execute(`
+            SELECT p.id, p.fecha_otorgamiento, p.dias, p.motivo, p.usuario,
+                   i.numero_intimacion, i.nombre_apellido
+            FROM plazos_intimacion p
+            JOIN intimaciones i ON i.id = p.intimacion_id
+            WHERE p.fecha_otorgamiento = ?
+            ORDER BY p.fecha_otorgamiento, p.id
+        `, [fecha]);
+
         const data = {
             fecha,
             tareas,
@@ -102,6 +112,7 @@ exports.informeDiario = async (req, res) => {
             relevamientos,
             comercios,
             vendedores,
+            plazos,
             resumen: {
                 total_tareas: tareas.length,
                 total_expedientes: expedientes.length,
@@ -110,7 +121,8 @@ exports.informeDiario = async (req, res) => {
                 total_reclamos: reclamos.length,
                 total_relevamientos: relevamientos.length,
                 total_comercios: comercios.length,
-                total_vendedores: vendedores.length
+                total_vendedores: vendedores.length,
+                total_plazos: plazos.length
             }
         };
 
@@ -192,10 +204,21 @@ exports.exportarDocx = async (req, res) => {
             WHERE v.fecha_relevamiento = ? ORDER BY v.id ASC
         `, [fecha]);
 
+        // Plazos otorgados (prórrogas de intimaciones, addenda obs #403);
+        // mismos campos que en informeDiario para paridad entre handlers.
+        const [plazos] = await db.pool.execute(`
+            SELECT p.id, p.fecha_otorgamiento, p.dias, p.motivo, p.usuario,
+                   i.numero_intimacion, i.nombre_apellido
+            FROM plazos_intimacion p
+            JOIN intimaciones i ON i.id = p.intimacion_id
+            WHERE p.fecha_otorgamiento = ? ORDER BY p.fecha_otorgamiento, p.id
+        `, [fecha]);
+
         const data = {
             fecha,
             tareas, expedientes, intimaciones, infracciones,
             reclamos, relevamientos, comercios, vendedores,
+            plazos,
             resumen: {
                 total_tareas: tareas.length,
                 total_expedientes: expedientes.length,
@@ -204,7 +227,8 @@ exports.exportarDocx = async (req, res) => {
                 total_reclamos: reclamos.length,
                 total_relevamientos: relevamientos.length,
                 total_comercios: comercios.length,
-                total_vendedores: vendedores.length
+                total_vendedores: vendedores.length,
+                total_plazos: plazos.length
             }
         };
 

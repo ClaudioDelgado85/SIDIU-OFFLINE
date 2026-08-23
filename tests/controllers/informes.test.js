@@ -19,13 +19,17 @@ describe('📊 Informes (/api/informes/diario)', () => {
   }
 
   // Limpieza defensiva: borra restos de corridas anteriores (UNIQUE friendly).
+  // Los plazos se borran ANTES que su intimación padre (orden seguro sin
+  // depender de que el PRAGMA foreign_keys esté activo).
   async function limpiarFixtures() {
+    await querySql("DELETE FROM plazos_intimacion WHERE usuario LIKE 'TEST-INFORME-%'");
+    await querySql("DELETE FROM intimaciones WHERE direccion = 'CALLE TEST INFORME 400'");
     await querySql("DELETE FROM tareas_diarias WHERE titulo LIKE 'TEST-INFORME-%'");
     await querySql("DELETE FROM expedientes WHERE numero_expediente LIKE 'TEST-INFORME-%'");
     await querySql("DELETE FROM infracciones WHERE numero_acta LIKE 'TEST-INFORME-%'");
   }
 
-  // Inserta 1 registro en cada uno de 3 módulos y devuelve sus ids.
+  // Inserta 1 registro en cada uno de 3 módulos + intimación con plazo y devuelve sus ids.
   async function crearFixtures() {
     const [catalogo] = await querySql('SELECT id FROM catalogos ORDER BY id LIMIT 1');
     if (!catalogo) throw new Error('No hay catálogos sembrados: no se puede crear la tarea de prueba');
@@ -48,7 +52,26 @@ describe('📊 Informes (/api/informes/diario)', () => {
       [FECHA_FIXTURES, 'TEST QA INFRACTOR', '99999992', `TEST-INFORME-ACTA-${SUFIJO}`, 'CALLE TEST INFORME 300', 'Motivo de prueba automatizada']
     );
 
-    return { tareaId: tarea.insertId, expedienteId: expediente.insertId, actaId: acta.insertId };
+    // Addenda obs #403: intimación padre + prórroga otorgada ese mismo día.
+    const intimacion = await querySql(
+      `INSERT INTO intimaciones (fecha, tipo, nombre_apellido, dni, direccion, plazo_dias, numero_intimacion)
+       VALUES (?, 'general', 'TEST QA INTIMADO', '99999993', 'CALLE TEST INFORME 400', 5, 9001)`,
+      [FECHA_FIXTURES]
+    );
+
+    const plazo = await querySql(
+      `INSERT INTO plazos_intimacion (intimacion_id, fecha_otorgamiento, dias, motivo, usuario)
+       VALUES (?, ?, ?, ?, ?)`,
+      [intimacion.insertId, FECHA_FIXTURES, 10, 'Motivo de prueba automatizada', `TEST-INFORME-PLAZO-${SUFIJO}`]
+    );
+
+    return {
+      tareaId: tarea.insertId,
+      expedienteId: expediente.insertId,
+      actaId: acta.insertId,
+      intimacionId: intimacion.insertId,
+      plazoId: plazo.insertId
+    };
   }
 
   beforeAll(async () => {
@@ -80,10 +103,11 @@ describe('📊 Informes (/api/informes/diario)', () => {
       expect(narrativo).toBeDefined();
 
       // Pilot feedback 2: las secciones en 0 se omiten; el largo debe coincidir
-      // con la cantidad de módulos NO vacíos del payload crudo.
+      // con la cantidad de módulos NO vacíos del payload crudo (9 con addenda).
       const modulosConRegistros = [
         data.tareas, data.expedientes, data.intimaciones, data.infracciones,
         data.reclamos, data.relevamientos, data.comercios, data.vendedores,
+        data.plazos,
       ].filter((arr) => Array.isArray(arr) && arr.length > 0);
       expect(modulosConRegistros.length).toBeGreaterThan(0);
       expect(narrativo.secciones.length).toBe(modulosConRegistros.length);
@@ -107,6 +131,48 @@ describe('📊 Informes (/api/informes/diario)', () => {
       expect(narrativo.secciones.reduce((suma, s) => suma + s.totalSeccion, 0))
         .toBe(narrativo.totalGeneral);
       expect(narrativo.fechaFormateada).toBe('31/12/2099');
+    });
+
+    test('Addenda plazos: payload crudo, resumen y narrativa coherentes', async () => {
+      const res = await request(app)
+        .get(`/api/informes/diario?fecha=${FECHA_FIXTURES}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      const data = res.body.data;
+
+      // Payload crudo: la fila del plazo llega con el JOIN a intimaciones.
+      expect(Array.isArray(data.plazos)).toBe(true);
+      const fila = data.plazos.find((p) => p.usuario === `TEST-INFORME-PLAZO-${SUFIJO}`);
+      expect(fila).toBeDefined();
+      expect(Object.keys(fila)).toEqual(expect.arrayContaining([
+        'id', 'fecha_otorgamiento', 'dias', 'motivo', 'usuario',
+        'numero_intimacion', 'nombre_apellido'
+      ]));
+      expect(Number(fila.dias)).toBe(10);
+      expect(fila.fecha_otorgamiento).toBe(FECHA_FIXTURES);
+      expect(fila.nombre_apellido).toBe('TEST QA INTIMADO');
+      expect(Number(fila.numero_intimacion)).toBe(9001);
+
+      // Resumen numérico: noveno contador alineado con el array crudo.
+      expect(data.resumen.total_plazos).toBe(data.plazos.length);
+
+      // Narrativa: sección presente y coherente con el crudo.
+      const porClave = {};
+      data.seccionesNarrativas.secciones.forEach((s) => { porClave[s.clave] = s; });
+      expect(porClave.plazos).toBeDefined();
+      expect(porClave.plazos.titulo).toBe('Plazos Otorgados');
+      expect(porClave.plazos.totalSeccion).toBe(data.plazos.length);
+      const itemPlazo = porClave.plazos.items.find((item) => item.includes('N° 9001'));
+      expect(itemPlazo).toBeDefined();
+      expect(itemPlazo).toContain('Se otorgó un plazo de 10 días');
+      // Vencimiento = otorgamiento + dias: 2099-12-31 + 10 → 10/01/2100.
+      expect(itemPlazo).toContain('vencimiento al 10/01/2100');
+
+      // R6 enmendado: el total general suma también los plazos.
+      expect(data.seccionesNarrativas.totalGeneral)
+        .toBe(Object.values(porClave).reduce((suma, s) => suma + s.totalSeccion, 0));
     });
 
     test('Los arrays crudos conservan su forma de campos actual (≥3 módulos)', async () => {

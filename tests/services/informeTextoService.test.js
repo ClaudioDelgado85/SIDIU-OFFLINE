@@ -59,6 +59,7 @@ describe('constructores de oraciones con registros incompletos', () => {
       ['relevamiento', svc.crearTextoRelevamiento({ numero_relevamiento: 'RE-1' })],
       ['comercio', svc.crearTextoComercio({ direccion_comercial: 'Belgrano 45' })],
       ['vendedor', svc.crearTextoVendedor({ ubicacion: 'Plaza San Martín' })],
+      ['plazo', svc.crearTextoPlazo({ numero_intimacion: 'INT-1' })],
     ];
 
     casos.forEach(([nombre, oracion]) => {
@@ -238,6 +239,101 @@ describe('secciones en cero se omiten del documento (pilot feedback 2)', () => {
   });
 });
 
+describe('calcularVencimientoPlazo y crearTextoPlazo (addenda obs #403)', () => {
+  test('vencimiento = otorgamiento + dias con aritmética pura de calendario', () => {
+    expect(svc.calcularVencimientoPlazo('2026-08-21', 10)).toBe('31/08/2026');
+    // Cruce de mes y año: 2099-12-31 + 10 → 10/01/2100.
+    expect(svc.calcularVencimientoPlazo('2099-12-31', 10)).toBe('10/01/2100');
+  });
+
+  test('fecha inválida o días no positivos devuelven cadena vacía', () => {
+    expect(svc.calcularVencimientoPlazo('no-es-fecha', 5)).toBe('');
+    expect(svc.calcularVencimientoPlazo(null, 5)).toBe('');
+    expect(svc.calcularVencimientoPlazo('2026-08-21', 0)).toBe('');
+  });
+
+  test('oración completa con motivo y vencimiento calculado', () => {
+    const oracion = svc.crearTextoPlazo({
+      numero_intimacion: 'INT-100',
+      nombre_apellido: 'Juan Pérez',
+      fecha_otorgamiento: '2026-08-21',
+      dias: 10,
+      motivo: 'tramitación de planos',
+    });
+    expect(oracion).toBe(
+      'Se otorgó un plazo de 10 días a la intimación N° INT-100 de Juan Pérez, ' +
+      'con motivo tramitación de planos, con vencimiento al 31/08/2026.'
+    );
+    expect(oracion.match(REGEX_TOKEN_ROTO)).toBeNull();
+  });
+
+  test('sin motivo usa el defecto formal; 1 día queda en singular', () => {
+    const oracion = svc.crearTextoPlazo({
+      numero_intimacion: 'INT-101',
+      nombre_apellido: 'María López',
+      fecha_otorgamiento: '2026-08-21',
+      dias: 1,
+      motivo: null,
+    });
+    expect(oracion).toBe(
+      'Se otorgó un plazo de 1 día a la intimación N° INT-101 de María López, ' +
+      'con motivo sin motivo indicado, con vencimiento al 22/08/2026.'
+    );
+  });
+
+  test('registro sucio: sin tokens rotos ni fechas rotas en la oración', () => {
+    const oracion = svc.crearTextoPlazo({
+      numero_intimacion: null,
+      nombre_apellido: '',
+      fecha_otorgamiento: 'no-es-fecha',
+      dias: '-',
+      motivo: '-',
+    });
+    expect(oracion).toContain('sin número');
+    expect(oracion).toContain('No identificado');
+    expect(oracion).toContain('sin motivo indicado');
+    expect(oracion).toContain('con vencimiento no determinado');
+    expect(oracion.match(REGEX_TOKEN_ROTO)).toBeNull();
+  });
+});
+
+describe('noveno módulo: Plazos Otorgados (addenda obs #403)', () => {
+  test('día con registros incl. un plazo: claves incluyen plazos y totalGeneral los suma', () => {
+    const resultado = svc.crearSeccionesNarrativas({
+      fecha: '2026-08-21',
+      tareas: [{ titulo: 'X', descripcion: 'Y' }],
+      plazos: [
+        { numero_intimacion: 'INT-9', nombre_apellido: 'Contribuyente Prueba', fecha_otorgamiento: '2026-08-21', dias: 10, motivo: 'planos' },
+      ],
+    });
+    expect(resultado.secciones.map((s) => s.clave)).toEqual(['tareas', 'plazos']);
+    const plazos = resultado.secciones.find((s) => s.clave === 'plazos');
+    expect(plazos.titulo).toBe('Plazos Otorgados');
+    expect(plazos.totalSeccion).toBe(1);
+    expect(plazos.items[0]).toContain('Se otorgó un plazo de 10 días');
+    // R6 enmendado: el total general suma LAS 9 secciones.
+    expect(resultado.totalGeneral).toBe(2);
+    expect(resultado.fraseTotalGeneral).toBe('Total general de gestiones: 2');
+    expect(resultado.lineasResumen).toEqual([
+      { etiqueta: 'Tareas', cantidad: 1 },
+      { etiqueta: 'Plazos', cantidad: 1 },
+    ]);
+  });
+
+  test('jornada sin plazos: la sección no aparece y el día vacío sigue siendo []', () => {
+    const resultado = svc.crearSeccionesNarrativas({
+      fecha: '2026-08-21',
+      tareas: [{ titulo: 'X', descripcion: 'Y' }],
+    });
+    expect(resultado.secciones.find((s) => s.clave === 'plazos')).toBeUndefined();
+
+    const vacio = svc.crearSeccionesNarrativas({ fecha: '2026-08-21' });
+    expect(vacio.secciones).toEqual([]);
+    expect(vacio.totalGeneral).toBe(0);
+    expect(vacio.fraseTotalGeneral).toBe('Total general de gestiones: 0');
+  });
+});
+
 describe('sanitización global sobre datos sucios', () => {
   const dataSucia = {
     fecha: '2026-08-21',
@@ -249,6 +345,7 @@ describe('sanitización global sobre datos sucios', () => {
     relevamientos: [{ numero_relevamiento: '', tipo_relevamiento: null, ubicacion: '', responsable_nombre: null, observaciones: '-' }],
     comercios: [{ nombre_propietario: null, direccion_comercial: '', rubro: null, esta_habilitado: 0 }],
     vendedores: [{ nombre_vendedor: null, ubicacion: null, rubro: '', tiene_autorizacion: 0 }],
+    plazos: [{ numero_intimacion: null, nombre_apellido: '', fecha_otorgamiento: null, dias: 0, motivo: '-' }],
   };
 
   function recolectarTextos(narrativa) {
@@ -272,7 +369,7 @@ describe('sanitización global sobre datos sucios', () => {
       expect(seccion.totalSeccion).toBe(1);
       expect(seccion.items).toHaveLength(1);
     });
-    expect(narrativa.totalGeneral).toBe(8);
+    expect(narrativa.totalGeneral).toBe(9);
   });
 });
 

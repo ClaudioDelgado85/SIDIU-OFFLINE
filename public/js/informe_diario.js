@@ -126,6 +126,15 @@ function exportarInformeExcel(data) {
         { header: 'Autorizado', key: (v) => v.tiene_autorizacion ? 'Sí' : 'No' }
     ]);
 
+    addSheet('Plazos', data.plazos, [
+        { header: 'Fecha otorgamiento', key: 'fecha_otorgamiento' },
+        { header: 'Intimación', key: 'numero_intimacion' },
+        { header: 'Contribuyente', key: 'nombre_apellido' },
+        { header: 'Días', key: 'dias' },
+        { header: 'Motivo', key: (p) => p.motivo || '-' },
+        { header: 'Usuario', key: (p) => p.usuario || '-' }
+    ]);
+
     if (wb.SheetNames.length === 0) {
         alert('No hay datos para exportar.');
         return;
@@ -284,7 +293,8 @@ function autoDesmarcarVacios(data) {
         reclamos: data.reclamos,
         relevamientos: data.relevamientos,
         comercios: data.comercios,
-        vendedores: data.vendedores
+        vendedores: data.vendedores,
+        plazos: data.plazos
     };
 
     document.querySelectorAll('.check-modulo input').forEach(cb => {
@@ -305,7 +315,8 @@ function aplicarFiltroModulos() {
         reclamos: 'secReclamos',
         relevamientos: 'secRelevamientos',
         comercios: 'secComercios',
-        vendedores: 'secVendedores'
+        vendedores: 'secVendedores',
+        plazos: 'secPlazos'
     };
 
     document.querySelectorAll('.check-modulo input').forEach(cb => {
@@ -338,15 +349,15 @@ function capitalizarPrimera(str) {
 // el módulo 'actas' del servicio vive en las secciones 'Infracciones' del DOM.
 const SUFIJOS_DOM = { actas: 'Infracciones' };
 
-// Sufijos DOM de los 8 módulos, para limpiar cuerpos entre consultas:
+// Sufijos DOM de los 9 módulos, para limpiar cuerpos entre consultas:
 // como las secciones sin registros ya no se renderizan, sin esta limpieza
 // un contenedor conservaría los registros de la fecha anterior.
 const SUFIJOS_MODULOS = [
     'Tareas', 'Expedientes', 'Intimaciones', 'Infracciones',
-    'Reclamos', 'Relevamientos', 'Comercios', 'Vendedores'
+    'Reclamos', 'Relevamientos', 'Comercios', 'Vendedores', 'Plazos'
 ];
 
-/** Vacía cuerpos y contadores de las 8 secciones antes de renderizar la
+/** Vacía cuerpos y contadores de las 9 secciones antes de renderizar la
  * consulta actual: sin esta limpieza, un módulo que pasa a cero conservaría
  * registros y contador de la fecha anterior. */
 function limpiarCuerposSecciones() {
