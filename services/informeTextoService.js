@@ -28,6 +28,23 @@ const ETIQUETAS_ESTADO_EXPEDIENTE = {
   salida: 'Salida',
 };
 
+// Sub-títulos para agrupación de expedientes por estado (clave → etiqueta legible).
+// Solo se renderizan los grupos que tengan registros (coherente con #401).
+const SUBTITULOS_ESTADO_EXPEDIENTE = {
+  ingreso: 'Expedientes ingresados',
+  en_inspeccion: 'Expedientes en inspección',
+  plazo_otorgado: 'Expedientes con plazo otorgado',
+  salida: 'Expedientes con salida',
+};
+
+// Sub-títulos para agrupación de actas por número de intimación.
+const SUBTITULOS_INTIMACION = {
+  intimacion: 'Intimación N°',
+};
+
+// Orden de presentación de los sub-grupos de expedientes.
+const ORDEN_SUBGRUPOS_EXPEDIENTES = ['ingreso', 'en_inspeccion', 'plazo_otorgado', 'salida'];
+
 // Definición de los 9 módulos del informe, en orden de presentación.
 // `clave` = valores de los checkboxes del filtro; `propiedad` = clave del array crudo en el payload.
 // `genero` concuerda el conector "el cual/la cual ... a continuación" del párrafo resumen.
@@ -163,6 +180,95 @@ function cerrarOracion(oracion) {
 function ubicacionCompuesta(registro, campoDireccion) {
   return texto(registro[campoDireccion], '') ||
     texto(registro.barrio_nombre, 'ubicación no registrada');
+}
+
+/**
+ * Agrupa expedientes por estado y construye la estructura de sub-grupos.
+ * Devuelve un array de grupos con {subtitulo, items, totalSeccion, clave} solo para estados con registros.
+ */
+function agruparExpedientesPorEstado(expedientes) {
+  const lista = Array.isArray(expedientes) ? expedientes : [];
+  const gruposPorEstado = {};
+
+  // Inicializar contenedores por estado
+  ORDEN_SUBGRUPOS_EXPEDIENTES.forEach((estado) => {
+    gruposPorEstado[estado] = [];
+  });
+
+  // Distribuir expedientes en sus grupos
+  lista.forEach((exp) => {
+    const estado = exp.estado || 'ingreso';
+    if (gruposPorEstado[estado]) {
+      gruposPorEstado[estado].push(exp);
+    } else {
+      // Estado desconocido → va a ingreso por defecto
+      gruposPorEstado.ingreso.push(exp);
+    }
+  });
+
+  // Construir array de grupos solo con los que tienen registros
+  const grupos = ORDEN_SUBGRUPOS_EXPEDIENTES
+    .map((estado) => {
+      const itemsEstado = gruposPorEstado[estado];
+      if (itemsEstado.length === 0) return null;
+      // Ordenar por motivo A → Z (ascendente) antes de renderizar
+      const itemsOrdenados = [...itemsEstado].sort((a, b) => {
+        const motivoA = texto(a.motivo, '');
+        const motivoB = texto(b.motivo, '');
+        return motivoA.localeCompare(motivoB);
+      });
+      return {
+        clave: estado,
+        subtitulo: SUBTITULOS_ESTADO_EXPEDIENTE[estado],
+        items: itemsOrdenados.map((registro) => crearTextoExpediente(registro)),
+        totalSeccion: itemsEstado.length,
+      };
+    })
+    .filter((g) => g !== null);
+
+  return grupos;
+}
+
+/**
+ * Agrupa actas por número de intimación y ordena alfabéticamente dentro de cada grupo.
+ * @param {Array} infracciones - Array de actas de infracción con campos numero_intimacion, nombre_apellido, etc.
+ * @returns {Array} Array de grupos con {subtitulo, items, totalSeccion, clave}
+ */
+function agruparActasPorIntimacion(infracciones) {
+  const lista = Array.isArray(infracciones) ? infracciones : [];
+  const gruposPorIntimacion = {};
+
+  // Distribuir actas por número de intimación
+  lista.forEach((acta) => {
+    const numIntimacion = acta.numero_intimacion || '0';
+    if (!gruposPorIntimacion[numIntimacion]) {
+      gruposPorIntimacion[numIntimacion] = [];
+    }
+    gruposPorIntimacion[numIntimacion].push(acta);
+  });
+
+  // Ordenar números de intimación numéricamente (1, 2, 3... no 1, 10, 2)
+  const numerosOrdenados = Object.keys(gruposPorIntimacion).sort((a, b) => Number(a) - Number(b));
+
+  // Construir array de grupos solo con los que tienen registros
+  const grupos = numerosOrdenados.map((numIntimacion) => {
+    const itemsIntimacion = gruposPorIntimacion[numIntimacion];
+    if (itemsIntimacion.length === 0) return null;
+    // Ordenar actas alfabéticamente por nombre del infractor
+    const itemsOrdenados = [...itemsIntimacion].sort((a, b) => {
+      const nombreA = texto(a.nombre_apellido, '');
+      const nombreB = texto(b.nombre_apellido, '');
+      return nombreA.localeCompare(nombreB);
+    });
+    return {
+      clave: numIntimacion,
+      subtitulo: `Intimación N° ${numIntimacion}`,
+      items: itemsIntimacion.map((registro) => crearTextoIntimacion(registro)),
+      totalSeccion: itemsIntimacion.length,
+    };
+  }).filter((g) => g !== null);
+
+  return grupos;
 }
 
 // ── Constructores de oraciones (UNA oración formal por registro) ──────────
@@ -358,10 +464,51 @@ function crearResumenIntroductorio(data) {
  *   totalGeneral, secciones, cierre, firma }. `secciones` omite los módulos sin
  *   registros; `totalGeneral` y `fraseTotalGeneral` se calculan ANTES del filtro,
  *   así que siguen sumando las 9 secciones (R6 enmendado por addenda obs #403).
+ *   Para expedientes: la sección incluye `grupos` (array de sub-grupos por estado)
+ *   en lugar de `items` plano; cada grupo tiene {subtitulo, items, totalSeccion, clave}.
  */
 function crearSeccionesNarrativas(data) {
   const d = data || {};
-  const secciones = MODULOS.map((definicion) => armarSeccion(definicion, d[definicion.propiedad]));
+
+  // Construir secciones base para todas excepto expedientes e intimaciones (que se manejan aparte)
+  const secciones = MODULOS.map((definicion) => {
+    if (definicion.clave === 'expedientes') {
+      // Expedientes: agrupar por estado y devolver estructura con grupos
+      const expedientes = d[definicion.propiedad] || [];
+      const totalSeccion = expedientes.length;
+      const parrafoResumen = totalSeccion > 0
+        ? `Se consigna un total de ${totalSeccion} ${pluralizar(totalSeccion, definicion.singular, definicion.plural)} ${pluralizar(totalSeccion, definicion.participioSingular, definicion.participioPlural)} durante la jornada${conectorDetalle(totalSeccion, definicion.genero)}.`
+        : `No se registraron ${definicion.plural} durante la jornada.`;
+      const grupos = agruparExpedientesPorEstado(expedientes);
+      return {
+        clave: definicion.clave,
+        titulo: definicion.titulo,
+        parrafoResumen,
+        grupos,              // array de {subtitulo, items, totalSeccion, clave}
+        totalSeccion,        // total general de expedientes (para resumen y totalGeneral)
+        textoVacio: definicion.textoVacio,
+      };
+    }
+    if (definicion.clave === 'intimaciones') {
+      // Intimaciones: agrupar por número de intimación y ordenar actas alfabéticamente
+      const infracciones = d[definicion.propiedad] || [];
+      const totalSeccion = infracciones.length;
+      const parrafoResumen = totalSeccion > 0
+        ? `Se consigna un total de ${totalSeccion} ${pluralizar(totalSeccion, definicion.singular, definicion.plural)} ${pluralizar(totalSeccion, definicion.participioSingular, definicion.participioPlural)} durante la jornada${conectorDetalle(totalSeccion, definicion.genero)}.`
+        : `No se registraron ${definicion.plural} durante la jornada.`;
+      const grupos = agruparActasPorIntimacion(infracciones);
+      return {
+        clave: definicion.clave,
+        titulo: definicion.titulo,
+        parrafoResumen,
+        grupos,              // array de {subtitulo, items, totalSeccion, clave}
+        totalSeccion,        // total general de intimaciones (para resumen y totalGeneral)
+        textoVacio: definicion.textoVacio,
+      };
+    }
+    return armarSeccion(definicion, d[definicion.propiedad]);
+  });
+
   // R6: el total general se calcula sobre LAS 9 secciones, antes de cualquier
   // filtro de vacíos; las secciones en cero aportan 0 al total. Addenda: los
   // plazos otorgados SÍ suman al total general de gestiones (obs #403).

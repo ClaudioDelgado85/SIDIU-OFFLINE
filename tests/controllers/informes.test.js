@@ -113,12 +113,17 @@ describe('📊 Informes (/api/informes/diario)', () => {
       expect(narrativo.secciones.length).toBe(modulosConRegistros.length);
 
       // Cada sección conservada tiene la forma del contrato D6.
+      // expedientes usa grupos en lugar de items plano
       narrativo.secciones.forEach((seccion) => {
-        expect(Object.keys(seccion)).toEqual(expect.arrayContaining([
-          'clave', 'titulo', 'parrafoResumen', 'items', 'totalSeccion', 'textoVacio'
-        ]));
+        const clavesBase = ['clave', 'titulo', 'parrafoResumen', 'totalSeccion', 'textoVacio'];
+        if (seccion.clave === 'expedientes' || seccion.clave === 'intimaciones') {
+          expect(Object.keys(seccion)).toEqual(expect.arrayContaining([...clavesBase, 'grupos']));
+          expect(Array.isArray(seccion.grupos)).toBe(true);
+        } else {
+          expect(Object.keys(seccion)).toEqual(expect.arrayContaining([...clavesBase, 'items']));
+          expect(Array.isArray(seccion.items)).toBe(true);
+        }
         expect(typeof seccion.parrafoResumen).toBe('string');
-        expect(Array.isArray(seccion.items)).toBe(true);
         expect(seccion.totalSeccion).toBeGreaterThan(0);
       });
 
@@ -215,6 +220,90 @@ describe('📊 Informes (/api/informes/diario)', () => {
       expect(data.resumen.total_tareas).toBe(data.tareas.length);
       expect(data.resumen.total_expedientes).toBe(data.expedientes.length);
       expect(data.resumen.total_infracciones).toBe(data.infracciones.length);
+    });
+  });
+
+  describe('GET /api/informes/diario — expedientes agrupados por estado', () => {
+    let expedienteIds;
+
+    beforeAll(async () => {
+      await limpiarFixtures();
+      // Insertar 4 expedientes con 3 estados distintos
+      expedienteIds = [];
+      const estados = ['ingreso', 'ingreso', 'en_inspeccion', 'plazo_otorgado'];
+      for (let i = 0; i < 4; i++) {
+        const res = await querySql(
+          `INSERT INTO expedientes (fecha, numero_expediente, nombre_apellido, dni, motivo, direccion, estado)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [FECHA_FIXTURES, `TEST-INFORME-EXP-GRP-${SUFIJO}-${i}`, `TEST GRP CONTRIBUYENTE ${i}`, `9999999${i}`, `Motivo agrupado ${i}`, `CALLE TEST INFORME ${100+i}`, estados[i]]
+        );
+        expedienteIds.push(res.insertId);
+      }
+    });
+
+    afterAll(async () => {
+      await limpiarFixtures();
+    });
+
+    test('Devuelve sección expedientes con grupos y subtítulos correctos', async () => {
+      const res = await request(app)
+        .get(`/api/informes/diario?fecha=${FECHA_FIXTURES}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+
+      const narrativo = res.body.data.seccionesNarrativas;
+      const porClave = {};
+      narrativo.secciones.forEach((s) => { porClave[s.clave] = s; });
+
+      const expedientes = porClave.expedientes;
+      expect(expedientes).toBeDefined();
+      expect(expedientes.grupos).toBeDefined();
+      expect(Array.isArray(expedientes.grupos)).toBe(true);
+      expect(expedientes.grupos.length).toBe(3); // ingreso, en_inspeccion, plazo_otorgado
+
+      // Verificar orden y conteos
+      expect(expedientes.grupos[0].clave).toBe('ingreso');
+      expect(expedientes.grupos[0].subtitulo).toBe('Expedientes ingresados');
+      expect(expedientes.grupos[0].totalSeccion).toBe(2);
+
+      expect(expedientes.grupos[1].clave).toBe('en_inspeccion');
+      expect(expedientes.grupos[1].subtitulo).toBe('Expedientes en inspección');
+      expect(expedientes.grupos[1].totalSeccion).toBe(1);
+
+      expect(expedientes.grupos[2].clave).toBe('plazo_otorgado');
+      expect(expedientes.grupos[2].subtitulo).toBe('Expedientes con plazo otorgado');
+      expect(expedientes.grupos[2].totalSeccion).toBe(1);
+
+      // Total general de la sección
+      expect(expedientes.totalSeccion).toBe(4);
+
+      // totalGeneral del narrativo incluye los 4 expedientes
+      expect(narrativo.totalGeneral).toBeGreaterThanOrEqual(4);
+    });
+
+    test('Sub-títulos presentes en la narrativa para renderizado', async () => {
+      const res = await request(app)
+        .get(`/api/informes/diario?fecha=${FECHA_FIXTURES}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(200);
+      const narrativo = res.body.data.seccionesNarrativas;
+      const porClave = {};
+      narrativo.secciones.forEach((s) => { porClave[s.clave] = s; });
+      const expedientes = porClave.expedientes;
+
+      // Cada grupo tiene items con oraciones formales
+      expedientes.grupos.forEach((grupo) => {
+        expect(grupo.items).toBeDefined();
+        expect(Array.isArray(grupo.items)).toBe(true);
+        expect(grupo.items.length).toBe(grupo.totalSeccion);
+        grupo.items.forEach((item) => {
+          expect(item).toMatch(/^El expediente N°/);
+          expect(item).toContain('cuyo estado actual es');
+        });
+      });
     });
   });
 

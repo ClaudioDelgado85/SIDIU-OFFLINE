@@ -125,13 +125,28 @@ function firmaBlock(firma) {
  * Agrega un módulo narrativo: título → párrafo resumen → ítems numerados →
  * total de sección; módulo vacío → leyenda formal (textoVacio) manteniendo
  * la estructura del documento [R8].
+ * Soporta secciones planas (items[]) y secciones agrupadas (grupos[] con subtitulo).
  */
 function addNarrativeModule(paragraphs, sec) {
   if (!sec) return;
   paragraphs.push(sectionTitle(sec.titulo));
-  if (sec.totalSeccion > 0 && Array.isArray(sec.items) && sec.items.length > 0) {
+  if (sec.totalSeccion > 0) {
     paragraphs.push(paragraph(sec.parrafoResumen, { alignment: AlignmentType.JUSTIFIED, spacing: { before: 120, after: 120 } }));
-    sec.items.forEach((item, indice) => paragraphs.push(numberedLine(`${indice + 1}. ${item}`)));
+    if (Array.isArray(sec.grupos) && sec.grupos.length > 0) {
+      // Sección con sub-grupos (ej. expedientes por estado)
+      let ordinalGlobal = 1;
+      sec.grupos.forEach((grupo) => {
+        // Sub-título del grupo en negrita
+        paragraphs.push(paragraph(grupo.subtitulo, { bold: true, alignment: AlignmentType.JUSTIFIED, spacing: { before: 120, after: 60 } }));
+        (grupo.items || []).forEach((item) => {
+          paragraphs.push(numberedLine(`${ordinalGlobal}. ${item}`));
+          ordinalGlobal++;
+        });
+      });
+    } else if (Array.isArray(sec.items) && sec.items.length > 0) {
+      // Sección plana (formato original)
+      sec.items.forEach((item, indice) => paragraphs.push(numberedLine(`${indice + 1}. ${item}`)));
+    }
     paragraphs.push(summaryLine('Total', sec.totalSeccion));
   } else {
     paragraphs.push(paragraph(sec.textoVacio, { alignment: AlignmentType.JUSTIFIED, spacing: { before: 120, after: 120 } }));

@@ -235,6 +235,18 @@
     letter-spacing: 0.5px;
 }
 
+/* Sub-títulos dentro de secciones agrupadas (ej. expedientes por estado) */
+#informeRender .informe-subtitulo {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--si-text-primary, #0F172A);
+    margin: 14px 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    border-left: 3px solid var(--si-blue, #2563EB);
+    padding-left: 8px;
+}
+
 /* Cierre formal separado del último módulo */
 #informeRender .informe-cierre {
     margin-top: 24px;
@@ -323,14 +335,20 @@
         background: transparent !important;
     }
 
-    /* Integridad al paginar: ítems de lista, encabezados de sección
-       y bloque de firma no se parten entre páginas. [R7] */
+    /* Integridad al paginar: ítems de lista, encabezados de sección,
+       sub-títulos y bloque de firma no se parten entre páginas. [R7] */
     .informe-lista-formal li {
         break-inside: avoid;
         page-break-inside: avoid;
     }
 
     .informe-seccion-header {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        break-after: avoid;
+    }
+
+    .informe-subtitulo {
         break-inside: avoid;
         page-break-inside: avoid;
         break-after: avoid;

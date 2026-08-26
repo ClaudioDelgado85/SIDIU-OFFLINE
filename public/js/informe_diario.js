@@ -374,6 +374,7 @@ function limpiarCuerposSecciones() {
  * párrafo resumen + lista ordenada de items cuando hay registros, o leyenda
  * formal vacía (textoVacio) cuando no los hay. Todo texto interpolado pasa
  * por escaparHtml. [R5]
+ * Soporta secciones planas (items[]) y secciones agrupadas (grupos[] con subtitulo).
  */
 function renderSeccionNarrativa(sec) {
     if (!sec) return;
@@ -387,11 +388,25 @@ function renderSeccionNarrativa(sec) {
     const body = document.getElementById(`body${sufijo}`);
     if (!body) return;
 
-    if (sec.totalSeccion > 0 && Array.isArray(sec.items)) {
-        const items = sec.items.map(item => `<li>${escaparHtml(item)}</li>`).join('');
-        body.innerHTML =
-            `<p class="informe-parrafo-resumen">${escaparHtml(sec.parrafoResumen)}</p>` +
-            `<ol class="informe-lista-formal">${items}</ol>`;
+    if (sec.totalSeccion > 0) {
+        if (Array.isArray(sec.grupos) && sec.grupos.length > 0) {
+            // Sección con sub-grupos (ej. expedientes por estado)
+            let html = `<p class="informe-parrafo-resumen">${escaparHtml(sec.parrafoResumen)}</p>`;
+            sec.grupos.forEach((grupo) => {
+                html += `<h4 class="informe-subtitulo">${escaparHtml(grupo.subtitulo)}</h4>`;
+                const items = (grupo.items || []).map(item => `<li>${escaparHtml(item)}</li>`).join('');
+                html += `<ol class="informe-lista-formal">${items}</ol>`;
+            });
+            body.innerHTML = html;
+        } else if (Array.isArray(sec.items)) {
+            // Sección plana (formato original)
+            const items = sec.items.map(item => `<li>${escaparHtml(item)}</li>`).join('');
+            body.innerHTML =
+                `<p class="informe-parrafo-resumen">${escaparHtml(sec.parrafoResumen)}</p>` +
+                `<ol class="informe-lista-formal">${items}</ol>`;
+        } else {
+            body.innerHTML = `<p class="sin-registros">${escaparHtml(sec.textoVacio || '')}</p>`;
+        }
     } else {
         body.innerHTML = `<p class="sin-registros">${escaparHtml(sec.textoVacio || '')}</p>`;
     }

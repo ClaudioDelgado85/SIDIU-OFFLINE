@@ -378,7 +378,14 @@ describe('sanitización global sobre datos sucios', () => {
   function recolectarTextos(narrativa) {
     const textos = [narrativa.introduccion, narrativa.cierre, narrativa.fraseTotalGeneral];
     narrativa.secciones.forEach((seccion) => {
-      textos.push(seccion.titulo, seccion.parrafoResumen, seccion.textoVacio, ...seccion.items);
+      textos.push(seccion.titulo, seccion.parrafoResumen, seccion.textoVacio);
+      if (seccion.clave === 'expedientes' && Array.isArray(seccion.grupos)) {
+        seccion.grupos.forEach((grupo) => {
+          textos.push(grupo.subtitulo, ...(grupo.items || []));
+        });
+      } else if (Array.isArray(seccion.items)) {
+        textos.push(...seccion.items);
+      }
     });
     return textos;
   }
@@ -394,7 +401,15 @@ describe('sanitización global sobre datos sucios', () => {
     const narrativa = svc.crearSeccionesNarrativas(dataSucia);
     narrativa.secciones.forEach((seccion) => {
       expect(seccion.totalSeccion).toBe(1);
-      expect(seccion.items).toHaveLength(1);
+      // expedientes e intimaciones usan grupos en lugar de items plano
+      if (seccion.clave === 'expedientes' || seccion.clave === 'intimaciones') {
+        expect(seccion.grupos).toBeDefined();
+        expect(Array.isArray(seccion.grupos)).toBe(true);
+        const totalItems = seccion.grupos.reduce((sum, g) => sum + (g.items?.length || 0), 0);
+        expect(totalItems).toBe(1);
+      } else {
+        expect(seccion.items).toHaveLength(1);
+      }
     });
     expect(narrativa.totalGeneral).toBe(9);
   });
@@ -502,5 +517,79 @@ describe('conector "se detallan a continuación" en el párrafo resumen (obs #40
     });
     expect(salida).toContain('cuyo estado actual es Salida.');
     expect(salida).not.toContain('Dio salida');
+  });
+});
+
+describe('expedientes agrupados por estado (sub-títulos)', () => {
+  test('estados mixtos → 3 grupos con subtítulos correctos y conteos', () => {
+    const resultado = svc.crearSeccionesNarrativas({
+      fecha: '2026-08-21',
+      expedientes: [
+        { numero_expediente: 'EX-1', nombre_apellido: 'A', motivo: 'M1', estado: 'ingreso', direccion: 'D1' },
+        { numero_expediente: 'EX-2', nombre_apellido: 'B', motivo: 'M2', estado: 'ingreso', direccion: 'D2' },
+        { numero_expediente: 'EX-3', nombre_apellido: 'C', motivo: 'M3', estado: 'en_inspeccion', direccion: 'D3' },
+        { numero_expediente: 'EX-4', nombre_apellido: 'D', motivo: 'M4', estado: 'plazo_otorgado', direccion: 'D4' },
+      ],
+    });
+    const expedientes = resultado.secciones.find((s) => s.clave === 'expedientes');
+    expect(expedientes).toBeDefined();
+    expect(expedientes.grupos).toHaveLength(3);
+    // Orden: ingreso, en_inspeccion, plazo_otorgado, salida
+    expect(expedientes.grupos[0].clave).toBe('ingreso');
+    expect(expedientes.grupos[0].subtitulo).toBe('Expedientes ingresados');
+    expect(expedientes.grupos[0].totalSeccion).toBe(2);
+    expect(expedientes.grupos[0].items).toHaveLength(2);
+    expect(expedientes.grupos[1].clave).toBe('en_inspeccion');
+    expect(expedientes.grupos[1].subtitulo).toBe('Expedientes en inspección');
+    expect(expedientes.grupos[1].totalSeccion).toBe(1);
+    expect(expedientes.grupos[2].clave).toBe('plazo_otorgado');
+    expect(expedientes.grupos[2].subtitulo).toBe('Expedientes con plazo otorgado');
+    expect(expedientes.grupos[2].totalSeccion).toBe(1);
+    // totalSeccion general = 4
+    expect(expedientes.totalSeccion).toBe(4);
+    // totalGeneral y fraseTotalGeneral no cambian
+    expect(resultado.totalGeneral).toBe(4);
+    expect(resultado.fraseTotalGeneral).toBe('Total general de gestiones: 4');
+  });
+
+  test('todos en un solo estado → 1 grupo', () => {
+    const resultado = svc.crearSeccionesNarrativas({
+      fecha: '2026-08-21',
+      expedientes: [
+        { numero_expediente: 'EX-1', nombre_apellido: 'A', motivo: 'M1', estado: 'salida', direccion: 'D1' },
+        { numero_expediente: 'EX-2', nombre_apellido: 'B', motivo: 'M2', estado: 'salida', direccion: 'D2' },
+        { numero_expediente: 'EX-3', nombre_apellido: 'C', motivo: 'M3', estado: 'salida', direccion: 'D3' },
+      ],
+    });
+    const expedientes = resultado.secciones.find((s) => s.clave === 'expedientes');
+    expect(expedientes.grupos).toHaveLength(1);
+    expect(expedientes.grupos[0].clave).toBe('salida');
+    expect(expedientes.grupos[0].subtitulo).toBe('Expedientes con salida');
+    expect(expedientes.grupos[0].totalSeccion).toBe(3);
+    expect(expedientes.totalSeccion).toBe(3);
+    expect(resultado.totalGeneral).toBe(3);
+  });
+
+  test('día sin expedientes → sección expedientes ausente (coherente con #401)', () => {
+    const resultado = svc.crearSeccionesNarrativas({
+      fecha: '2026-08-21',
+      tareas: [{ titulo: 'X', descripcion: 'Y' }],
+    });
+    expect(resultado.secciones.find((s) => s.clave === 'expedientes')).toBeUndefined();
+    // totalGeneral sigue sumando solo las secciones con registros
+    expect(resultado.totalGeneral).toBe(1);
+    expect(resultado.fraseTotalGeneral).toBe('Total general de gestiones: 1');
+  });
+
+  test('estado desconocido en expediente cae en grupo "ingreso" por defecto', () => {
+    const resultado = svc.crearSeccionesNarrativas({
+      fecha: '2026-08-21',
+      expedientes: [
+        { numero_expediente: 'EX-1', nombre_apellido: 'A', motivo: 'M1', estado: 'estado_invalido', direccion: 'D1' },
+      ],
+    });
+    const expedientes = resultado.secciones.find((s) => s.clave === 'expedientes');
+    expect(expedientes.grupos).toHaveLength(1);
+    expect(expedientes.grupos[0].clave).toBe('ingreso');
   });
 });
