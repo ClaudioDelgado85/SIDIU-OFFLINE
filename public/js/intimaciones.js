@@ -136,7 +136,7 @@ function mostrarIntimaciones() {
                 <span style="color:${item.estado === 'vencida' ? 'var(--si-red)' : item.estado === 'proxima_vencer' ? 'var(--si-amber)' : 'var(--si-green)'}; font-weight:500">
                     ${formatearFecha(item.fecha_vencimiento)}
                 </span>
-                ${item.ultimo_plazo ? `<span class="plazo-badge" title="Plazo otorgado — vence el ${formatearFecha(item.fecha_vencimiento)}">PLAZO</span>` : ''}
+                ${item.ultimo_plazo ? `<span class="plazo-badge" title="otorgado: ${formatearFecha(item.ultimo_plazo.fecha_otorgamiento)}${item.ultimo_plazo.motivo ? ' - ' + item.ultimo_plazo.motivo : ''}">PLAZO</span>` : ''}
             </td>
             <td><span class="estado-badge estado-${item.estado}">${item.estado.replace('_', ' ')}</span></td>
             <td class="col-extra">
@@ -513,8 +513,12 @@ async function cargarHistorialPlazos(id) {
         lista.innerHTML = plazos.map(p => {
             const motivo = p.motivo ? ` — ${escapeHtml(p.motivo)}` : '';
             const usuario = p.usuario ? ` · ${escapeHtml(p.usuario)}` : '';
+            const deOtraIntimacion = Number(p.intimacion_id) !== Number(id);
+            const marcaIntimacion = p.intimacion_numero
+                ? `<span class="historial-plazo-de" style="display:inline-block; padding:1px 6px; margin-left:6px; font-size:10px; font-weight:700; border-radius:3px; ${deOtraIntimacion ? 'background:var(--si-amber, #F59E0B); color:#fff;' : 'background:var(--si-blue, #2563EB); color:#fff;'}">#${p.intimacion_numero}</span>`
+                : '';
             return `<div style="padding:4px 0; border-bottom:1px solid var(--si-border, rgba(0,0,0,0.08));">
-                <strong>${formatearFecha(p.fecha_otorgamiento)}</strong> · ${p.dias}d${motivo}<small style="opacity:0.7">${usuario}</small>
+                <strong>${formatearFecha(p.fecha_otorgamiento)}</strong> · ${p.dias}d${marcaIntimacion}${motivo}<small style="opacity:0.7">${usuario}</small>
             </div>`;
         }).join('');
         contenedor.style.display = 'block';

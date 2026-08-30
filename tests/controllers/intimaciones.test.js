@@ -477,6 +477,117 @@ describe('📋 Intimaciones (/api/intimaciones)', () => {
     });
   });
 
+  // ─── DETALLE POR ID (GET /api/intimaciones/:id) ──────────
+  describe('GET /api/intimaciones/:id', () => {
+    const auth = () => ({ 'Authorization': `Bearer ${token}` });
+    const hoy = () => new Date().toISOString().substring(0, 10);
+    const db = require('../../config/database');
+
+    test('Intimación con grupo: historial de plazos incluye los de las hermanas del grupo', async () => {
+      // Crear intimación #1 (sin grupo)
+      const r1 = await request(app).post('/api/intimaciones')
+        .set(auth())
+        .send({
+          fecha: hoy(),
+          tipo: 'comercio',
+          nombre_apellido: 'TEST HISTORIAL GRUPO',
+          dni: '88888888',
+          direccion: 'CALLE TEST 100',
+          rubro_comercial: 'ALMACEN',
+          plazo_dias: 5
+        });
+      expect(r1.body.success).toBe(true);
+      const id1 = r1.body.data.id;
+
+      // Otorgar plazo a la #1 ANTES de crear la #2 (sino #1 pasa a 'reiterada')
+      const pl1 = await request(app).post(`/api/intimaciones/${id1}/plazo`)
+        .set(auth())
+        .send({ dias: 10, motivo: 'plazo de la primera instancia' });
+      expect(pl1.statusCode).toBe(201);
+
+      // Crear intimación #2 del mismo grupo (usando grupo_id de la #1)
+      const r2 = await request(app).post('/api/intimaciones')
+        .set(auth())
+        .send({
+          fecha: hoy(),
+          tipo: 'comercio',
+          nombre_apellido: 'TEST HISTORIAL GRUPO',
+          dni: '88888888',
+          direccion: 'CALLE TEST 100',
+          rubro_comercial: 'ALMACEN',
+          plazo_dias: 5,
+          grupo_id: r1.body.data.grupo_id
+        });
+      expect(r2.body.success).toBe(true);
+      const id2 = r2.body.data.id;
+
+      // Otorgar plazo a la #2 (es la última del grupo → vigente)
+      const pl2 = await request(app).post(`/api/intimaciones/${id2}/plazo`)
+        .set(auth())
+        .send({ dias: 15, motivo: 'plazo de la segunda instancia' });
+      expect(pl2.statusCode).toBe(201);
+
+      // GET de la #2 debe traer plazos para id1 e id2 (los del grupo).
+      // NOTA: el grupo puede contener intimaciones de runs previos del test suite
+      // (la BD de test no se limpia entre runs), por eso no asumimos longitud exacta.
+      const detalle = await request(app).get(`/api/intimaciones/${id2}`).set(auth());
+      expect(detalle.statusCode).toBe(200);
+      const plazos = detalle.body.data.plazos;
+      expect(plazos.length).toBeGreaterThanOrEqual(2);
+
+      // Cada plazo de este test trae `intimacion_numero` para identificar el origen.
+      // NOTA: numero_intimacion depende del estado del grupo en la BD de test
+      // (puede haber intimaciones de runs previos), así que solo verificamos que
+      // (a) ambos plazos existen y (b) tienen numero distinto entre sí.
+      const plazoDe1 = plazos.find(p => Number(p.intimacion_id) === Number(id1));
+      const plazoDe2 = plazos.find(p => Number(p.intimacion_id) === Number(id2));
+      expect(plazoDe1).toBeDefined();
+      expect(plazoDe1.motivo).toBe('plazo de la primera instancia');
+      expect(typeof plazoDe1.intimacion_numero).toBe('number');
+      expect(plazoDe2).toBeDefined();
+      expect(plazoDe2.motivo).toBe('plazo de la segunda instancia');
+      expect(typeof plazoDe2.intimacion_numero).toBe('number');
+      // Cada plazo debe identificar a qué intimación pertenece (numeros distintos).
+      expect(plazoDe1.intimacion_numero).not.toBe(plazoDe2.intimacion_numero);
+
+      // El estado y fecha_vencimiento se calculan SOLO con plazos de la intimación actual (#2)
+      expect(detalle.body.data.estado).toBe('vigente');
+      const fechaEsperada = new Date(new Date(hoy()).getTime() + 15 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10);
+      expect(detalle.body.data.fecha_vencimiento.substring(0, 10)).toBe(fechaEsperada);
+
+      // Limpieza
+      await request(app).delete(`/api/intimaciones/${id1}`).set(auth());
+      await request(app).delete(`/api/intimaciones/${id2}`).set(auth());
+    });
+
+    test('Intimación sin grupo: historial solo trae plazos de esa intimación (regresión)', async () => {
+      const creada = await request(app).post('/api/intimaciones')
+        .set(auth())
+        .send({
+          fecha: hoy(),
+          tipo: 'comercio',
+          nombre_apellido: 'TEST HISTORIAL SOLO',
+          dni: '77777777',
+          direccion: 'CALLE TEST 200',
+          rubro_comercial: 'KIOSCO',
+          plazo_dias: 3
+        });
+      const id = creada.body.data.id;
+
+      await request(app).post(`/api/intimaciones/${id}/plazo`)
+        .set(auth())
+        .send({ dias: 5, motivo: 'plazo unico' });
+
+      const detalle = await request(app).get(`/api/intimaciones/${id}`).set(auth());
+      expect(detalle.body.data.plazos).toHaveLength(1);
+      expect(detalle.body.data.plazos[0].motivo).toBe('plazo unico');
+      // Sin grupo: intimacion_numero debe ser el de la intimación consultada
+      expect(detalle.body.data.plazos[0].intimacion_numero).toBe(1);
+
+      await request(app).delete(`/api/intimaciones/${id}`).set(auth());
+    });
+  });
+
       // ─── OTORGAR PLAZO (plazos_intimacion) ──────────
   describe('POST /api/intimaciones/:id/plazo', () => {
     const auth = () => ({ 'Authorization': `Bearer ${token}` });

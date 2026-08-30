@@ -780,14 +780,47 @@ exports.obtenerIntimacionPorId = async (req, res) => {
 
     const intimacion = rows[0];
 
-    // Historial de plazos otorgados (R2) — orden fecha_otorgamiento DESC, id DESC
-    const [plazos] = await db.pool.execute(
-      'SELECT * FROM plazos_intimacion WHERE intimacion_id = ? ORDER BY fecha_otorgamiento DESC, id DESC',
-      [id]
-    );
+    // Historial de plazos otorgados del grupo completo (no solo de esta intimación).
+    // Si la intimación pertenece a un grupo, se traen los plazos de TODAS las
+    // intimaciones hermanas; cada plazo se enriquece con `intimacion_numero` para
+    // que el frontend muestre #N y el operador vea la historia completa del caso.
+    // Sin grupo: comportamiento previo intacto (solo plazos de esta intimación).
+    let plazos = [];
+    let intimacionesDelGrupo = [intimacion];
+    if (intimacion.grupo_id) {
+      const [hermanas] = await db.pool.execute(
+        'SELECT id, numero_intimacion FROM intimaciones WHERE grupo_id = ? ORDER BY numero_intimacion ASC',
+        [intimacion.grupo_id]
+      );
+      if (hermanas.length > 0) {
+        intimacionesDelGrupo = hermanas;
+        const idsHermanas = hermanas.map(h => h.id);
+        const numeroPorId = new Map(hermanas.map(h => [h.id, h.numero_intimacion]));
+        const [plazosGrupo] = await db.pool.execute(
+          `SELECT * FROM plazos_intimacion WHERE intimacion_id IN (${idsHermanas.map(() => '?').join(', ')})
+           ORDER BY fecha_otorgamiento DESC, id DESC`,
+          idsHermanas
+        );
+        plazos = plazosGrupo.map(p => ({
+          ...p,
+          intimacion_numero: numeroPorId.get(p.intimacion_id) || null
+        }));
+      }
+    } else {
+      // Sin grupo: solo plazos de esta intimación (orden R2)
+      const [plazosPropios] = await db.pool.execute(
+        'SELECT * FROM plazos_intimacion WHERE intimacion_id = ? ORDER BY fecha_otorgamiento DESC, id DESC',
+        [id]
+      );
+      plazos = plazosPropios.map(p => ({ ...p, intimacion_numero: intimacion.numero_intimacion || null }));
+    }
 
-    // Estado calculado con el vencimiento efectivo (último plazo si existe)
-    const ultimoPlazo = plazos[0] || null;
+    // Estado calculado con el vencimiento efectivo de ESTA intimación (no del grupo).
+    // El `ultimo_plazo` para el cálculo de estado es SOLO el último plazo de esta
+    // intimación (semántica previa intacta); el `plazos` enriquecido es solo para
+    // mostrar el historial completo del caso al operador.
+    const plazosPropiosParaEstado = plazos.filter(p => p.intimacion_id === Number(id));
+    const ultimoPlazo = plazosPropiosParaEstado[0] || null;
     const fechaVenc = fechaVencimientoEfectiva({ ...intimacion, ultimo_plazo: ultimoPlazo });
     const estadoCalculado = calcularEstadoAutomatico({ ...intimacion, ultimo_plazo: ultimoPlazo, fecha_vencimiento_efectiva: fechaVenc });
 
