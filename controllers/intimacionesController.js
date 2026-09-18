@@ -90,7 +90,7 @@ async function cargarUltimoPlazo(intimacionId) {
 // Obtener todas las intimaciones (con filtros y paginación)
 exports.obtenerIntimaciones = async (req, res) => {
   try {
-    const { tipo, estado, numero, dni, nombre, fecha_desde, fecha_hasta, busqueda, page, limit, exportar, con_plazo } = req.query;
+    const { tipo, estado, numero, dni, nombre, fecha_desde, fecha_hasta, busqueda, page, limit, exportar, con_plazo, barrio_id, rubro_comercial } = req.query;
     const conPlazo = con_plazo === '1' ? 1 : (con_plazo === '0' ? 0 : null);
     const esExportacion = exportar === 'true' || exportar === '1';
 
@@ -104,8 +104,18 @@ exports.obtenerIntimaciones = async (req, res) => {
 
     // Aplicar filtros
     if (tipo) {
-      whereClause += ' AND tipo = ?';
+      whereClause += ' AND i.tipo = ?';
       params.push(tipo);
+    }
+
+    if (barrio_id) {
+      whereClause += ' AND i.barrio_id = ?';
+      params.push(barrio_id);
+    }
+
+    if (rubro_comercial) {
+      whereClause += ' AND i.rubro_comercial = ?';
+      params.push(rubro_comercial);
     }
 
     // Nota: El filtro por estado y el filtro por número (total de actas del caso)
@@ -113,37 +123,37 @@ exports.obtenerIntimaciones = async (req, res) => {
     const filtroEstado = estado;
 
     if (fecha_desde) {
-      whereClause += ' AND fecha >= ?';
+      whereClause += ' AND i.fecha >= ?';
       params.push(fecha_desde);
     }
 
     if (fecha_hasta) {
-      whereClause += ' AND fecha <= ?';
+      whereClause += ' AND i.fecha <= ?';
       params.push(fecha_hasta);
     }
 
     // Búsqueda general (dni, nombre, dirección y grupo_id — UPPER para tolerar minúsculas, patrón de expedientes)
     if (busqueda) {
       const dniTerm = busqueda.replace(/[\s.\-]/g, '');
-      whereClause += ` AND (REPLACE(REPLACE(REPLACE(dni, '.', ''), ' ', ''), '-', '') LIKE ? OR nombre_apellido LIKE ? OR direccion LIKE ? OR UPPER(grupo_id) LIKE ?)`;
+      whereClause += ` AND (REPLACE(REPLACE(REPLACE(i.dni, '.', ''), ' ', ''), '-', '') LIKE ? OR i.nombre_apellido LIKE ? OR i.direccion LIKE ? OR UPPER(i.grupo_id) LIKE ?)`;
       params.push(`%${dniTerm}%`, `%${busqueda}%`, `%${busqueda}%`, `%${busqueda.toUpperCase()}%`);
     }
 
     // Filtros específicos
     if (dni && !busqueda) {
       const dniTerm = dni.replace(/[\s.\-]/g, '');
-      whereClause += ' AND REPLACE(REPLACE(REPLACE(dni, \'.\', \'\'), \' \', \'\'), \'-\', \'\') LIKE ?';
+      whereClause += ' AND REPLACE(REPLACE(REPLACE(i.dni, \'.\', \'\'), \' \', \'\'), \'-\', \'\') LIKE ?';
       params.push(`%${dniTerm}%`);
     }
 
     if (nombre && !busqueda) {
-      whereClause += ' AND nombre_apellido LIKE ?';
+      whereClause += ' AND i.nombre_apellido LIKE ?';
       params.push(`%${nombre}%`);
     }
 
     // Query principal SIN paginación para poder filtrar por estado calculado
-    let sql = 'SELECT i.*, c.label AS rubro_comercial_label FROM intimaciones i LEFT JOIN catalogos c ON c.categoria = \'rubro_comercial\' AND c.valor = i.rubro_comercial' + whereClause;
-    sql += ' ORDER BY fecha DESC, id DESC';
+    let sql = 'SELECT i.*, b.nombre AS barrio_nombre, c.label AS rubro_comercial_label FROM intimaciones i LEFT JOIN barrios b ON i.barrio_id = b.id LEFT JOIN catalogos c ON c.categoria = \'rubro_comercial\' AND c.valor = i.rubro_comercial' + whereClause;
+    sql += ' ORDER BY i.fecha DESC, i.id DESC';
 
     const [allIntimaciones] = await db.pool.execute(sql, params);
 
@@ -772,7 +782,14 @@ exports.eliminarIntimacion = async (req, res) => {
 exports.obtenerIntimacionPorId = async (req, res) => {
   try {
     const { id } = req.params;
-    const [rows] = await db.pool.execute('SELECT * FROM intimaciones WHERE id = ?', [id]);
+    const [rows] = await db.pool.execute(
+      `SELECT i.*, b.nombre AS barrio_nombre, c.label AS rubro_comercial_label 
+       FROM intimaciones i 
+       LEFT JOIN barrios b ON i.barrio_id = b.id 
+       LEFT JOIN catalogos c ON c.categoria = 'rubro_comercial' AND c.valor = i.rubro_comercial 
+       WHERE i.id = ?`,
+      [id]
+    );
 
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Intimación no encontrada' });

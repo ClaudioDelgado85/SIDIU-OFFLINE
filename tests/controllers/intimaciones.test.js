@@ -40,6 +40,66 @@ describe('📋 Intimaciones (/api/intimaciones)', () => {
       }
     });
 
+    test('Filtrar por barrio_id funciona correctamente', async () => {
+      // Crear intimación de prueba con barrio_id
+      const resCrear = await request(app)
+        .post('/api/intimaciones')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          tipo: 'general',
+          fecha: '2026-09-18',
+          nombre_apellido: 'Filtro Barrio Test',
+          dni: '99881122',
+          direccion: 'Calle Test 123',
+          barrio_id: 1
+        });
+      expect(resCrear.statusCode).toBe(201);
+      const creadaId = resCrear.body.data.id;
+
+      const res = await request(app)
+        .get('/api/intimaciones?barrio_id=1')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      res.body.data.forEach(item => {
+        expect(Number(item.barrio_id)).toBe(1);
+      });
+
+      // Limpiar
+      await request(app).delete(`/api/intimaciones/${creadaId}`).set('Authorization', `Bearer ${token}`);
+    });
+
+    test('Filtrar por rubro_comercial funciona correctamente', async () => {
+      // Crear intimación de prueba con rubro_comercial
+      const resCrear = await request(app)
+        .post('/api/intimaciones')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          tipo: 'comercio',
+          fecha: '2026-09-18',
+          nombre_apellido: 'Filtro Rubro Test',
+          dni: '99881133',
+          direccion: 'Av Test 456',
+          rubro_comercial: 'kiosco'
+        });
+      expect(resCrear.statusCode).toBe(201);
+      const creadaId = resCrear.body.data.id;
+
+      const res = await request(app)
+        .get('/api/intimaciones?rubro_comercial=kiosco')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      res.body.data.forEach(item => {
+        expect(item.rubro_comercial).toBe('kiosco');
+      });
+
+      // Limpiar
+      await request(app).delete(`/api/intimaciones/${creadaId}`).set('Authorization', `Bearer ${token}`);
+    });
+
     test('Paginación funciona correctamente', async () => {
       const res = await request(app)
         .get('/api/intimaciones?page=1&limit=5')

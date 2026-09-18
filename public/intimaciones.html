@@ -128,6 +128,18 @@
                     </select>
                 </div>
                 <div class="filter-item">
+                    <label>Rubro Comercial</label>
+                    <select id="filterRubroComercial">
+                        <option value="">Todos los rubros</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label>Barrio</label>
+                    <select id="filterBarrio">
+                        <option value="">Todos los barrios</option>
+                    </select>
+                </div>
+                <div class="filter-item">
                     <label>Estado</label>
                     <select id="filterEstado">
                         <option value="">Todos</option>
@@ -137,6 +149,8 @@
                         <option value="cumplida">Cumplida</option>
                     </select>
                 </div>
+            </div>
+            <div class="filter-grid" style="margin-top: 16px;">
                 <div class="filter-item">
                     <label>Plazo</label>
                     <select id="filterConPlazo">
@@ -149,8 +163,6 @@
                     <label>Nro. Intimación</label>
                     <input type="number" id="filterNumero" min="1" step="1" placeholder="Todas" style="width:100%">
                 </div>
-            </div>
-            <div class="filter-grid">
                 <div class="filter-item">
                     <label>Fecha desde</label>
                     <input type="date" id="filterFechaDesde">
@@ -159,7 +171,7 @@
                     <label>Fecha hasta</label>
                     <input type="date" id="filterFechaHasta">
                 </div>
-                <div class="filter-item">
+                <div class="filter-item" style="display: flex; gap: 8px; align-items: flex-end;">
                     <button class="btn-secondary" id="btnAplicarFiltros">Aplicar</button>
                     <button class="btn-text" id="btnLimpiarFiltros">Limpiar</button>
                 </div>

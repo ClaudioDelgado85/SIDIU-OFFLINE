@@ -48,6 +48,8 @@ async function cargarIntimaciones(filtros = null, pagina = 1) {
     try {
         const params = new URLSearchParams();
         if (filtrosActuales.tipo) params.append('tipo', filtrosActuales.tipo);
+        if (filtrosActuales.rubro_comercial) params.append('rubro_comercial', filtrosActuales.rubro_comercial);
+        if (filtrosActuales.barrio_id) params.append('barrio_id', filtrosActuales.barrio_id);
         if (filtrosActuales.estado) params.append('estado', filtrosActuales.estado);
         if (filtrosActuales.numero) params.append('numero', filtrosActuales.numero);
         if (filtrosActuales.fecha_desde) params.append('fecha_desde', filtrosActuales.fecha_desde);
@@ -124,12 +126,18 @@ function mostrarIntimaciones() {
 
         tr.innerHTML = `
             <td>${formatearFecha(item.fecha)}</td>
-            <td><span class="celda-tag">${item.tipo.toUpperCase()}</span></td>
+            <td>
+                <span class="celda-tag">${item.tipo.toUpperCase()}</span>
+                ${item.rubro_comercial_label ? `<div style="font-size:11px; color:var(--si-text-muted); margin-top:2px;">${item.rubro_comercial_label}</div>` : ''}
+            </td>
             <td>
                 <div class="celda-nombre">${item.nombre_apellido}</div>
                 <div class="celda-sub">DNI: ${item.dni}</div>
             </td>
-            <td>${item.direccion}</td>
+            <td>
+                <div>${item.direccion}</div>
+                ${item.barrio_nombre ? `<div class="celda-sub" style="font-size:11px; color:var(--si-text-muted);">📍 ${item.barrio_nombre}</div>` : ''}
+            </td>
             <td style="text-align:center"><span class="${badgeClase}" title="Instancia ${numActual} de ${totalGrupo} (Caso ${item.grupo_id || 'S/N'})">#${numActual}<small style="opacity:0.75">/${totalGrupo}</small></span>${item.grupo_id ? `<small class="celda-grupo-tag" title="Número de caso (grupo)">${item.grupo_id}</small>` : ''}</td>
             <td style="text-align:center">${item.ultimo_plazo ? `${item.ultimo_plazo.dias}d` : `${item.plazo_dias}d`}</td>
             <td>
@@ -401,17 +409,18 @@ function abrirModal(plantilla) {
 
     // Hilo conductor del caso: si esta nueva instancia continúa un grupo,
     // mostrar el identificador del caso y transmitirlo al guardar
-    if (plantilla?.grupo_id) {
+    const grupoIdPlantilla = (plantilla && plantilla.grupo_id) || '';
+    if (grupoIdPlantilla) {
         const modalTitle = document.getElementById('modalTitle');
         if (modalTitle) {
-            modalTitle.insertAdjacentHTML('beforeend', `<span class="modal-caso-tag">🔗 Caso ${plantilla.grupo_id}</span>`);
+            modalTitle.insertAdjacentHTML('beforeend', `<span class="modal-caso-tag">🔗 Caso ${grupoIdPlantilla}</span>`);
         }
     }
-    document.getElementById('formIntimacion').dataset.grupoId = plantilla?.grupo_id || '';
+    document.getElementById('formIntimacion').dataset.grupoId = grupoIdPlantilla;
 
-    cargarSelectBarrios('barrio_id', plantilla?.barrio_id || intimacionEditando?.barrio_id);
+    cargarSelectBarrios('barrio_id', (plantilla && plantilla.barrio_id) || (intimacionEditando && intimacionEditando.barrio_id));
 
-    cargarSelectCatalogo('tipo', 'tipo_intimacion', plantilla?.tipo || intimacionEditando?.tipo || 'general', { incluirVacio: false }).then(() => {
+    cargarSelectCatalogo('tipo', 'tipo_intimacion', (plantilla && plantilla.tipo) || (intimacionEditando && intimacionEditando.tipo) || 'general', { incluirVacio: false }).then(() => {
         if (intimacionEditando) cambiarTipoFormulario(intimacionEditando.tipo);
         else if (plantilla) cambiarTipoFormulario(plantilla.tipo);
     });
@@ -422,7 +431,7 @@ function abrirModal(plantilla) {
             _setTipoObstruccionDesdeEdicion(plantilla.tipo_obstruccion);
         }
     });
-    cargarSelectCatalogo('rubro_comercial', 'rubro_comercial', plantilla?.rubro_comercial || intimacionEditando?.rubro_comercial || null, { incluirVacio: true, textoVacio: '-- Seleccionar rubro --' });
+    cargarSelectCatalogo('rubro_comercial', 'rubro_comercial', (plantilla && plantilla.rubro_comercial) || (intimacionEditando && intimacionEditando.rubro_comercial) || null, { incluirVacio: true, textoVacio: '-- Seleccionar rubro --' });
 
     document.getElementById('tipo_obstruccion').addEventListener('change', (e) => {
         const grupoDetalle = document.getElementById('grupoIntimacionPorDetalle');
@@ -440,7 +449,8 @@ function abrirModal(plantilla) {
     if (selInfraccion) {
         selInfraccion.addEventListener('change', (e) => {
             const numInput = document.getElementById('numero_infraccion');
-            const label = numInput?.closest('.form-group-modal')?.querySelector('label');
+            const parentModal = numInput ? numInput.closest('.form-group-modal') : null;
+            const label = parentModal ? parentModal.querySelector('label') : null;
             if (e.target.value === '1') {
                 numInput.required = true;
                 numInput.style.borderColor = 'var(--si-amber)';
@@ -675,52 +685,59 @@ async function guardarIntimacion(e) {
     e.preventDefault();
     const sesion = verificarAutenticacion();
 
+    const getVal = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value : '';
+    };
+
     // Calcular valor final de tipo_obstruccion (con lógica "Otros")
-    const tipoObstruccionSelect = document.getElementById('tipo_obstruccion').value;
-    const tipoObstruccionDetalle = document.getElementById('tipo_obstruccion_detalle')?.value || '';
+    const tipoObstruccionSelect = getVal('tipo_obstruccion');
+    const tipoObstruccionDetalle = getVal('tipo_obstruccion_detalle');
     const tipoObstruccionFinal = tipoObstruccionSelect === 'otros' ? `Otros: ${tipoObstruccionDetalle} ` : tipoObstruccionSelect;
 
     const formData = {
-        tipo: document.getElementById('tipo').value,
-        fecha: document.getElementById('fecha').value,
-        nombre_apellido: document.getElementById('nombre_apellido').value,
-        dni: document.getElementById('dni').value,
-        direccion: document.getElementById('direccion').value,
+        tipo: getVal('tipo'),
+        fecha: getVal('fecha'),
+        nombre_apellido: getVal('nombre_apellido'),
+        dni: getVal('dni'),
+        direccion: getVal('direccion'),
         tipo_obstruccion: tipoObstruccionFinal,
-        rubro_comercial: document.getElementById('rubro_comercial')?.value || null,
-        plazo_dias: document.getElementById('plazo_dias').value,
+        rubro_comercial: getVal('rubro_comercial') || null,
+        plazo_dias: getVal('plazo_dias'),
         // grupo_id se transmite solo desde el flujo "Siguiente Instancia"
         // (el backend valida pertenencia; en edición/PUT se ignora por allowedFields)
         grupo_id: document.getElementById('formIntimacion').dataset.grupoId || null,
-        observaciones: document.getElementById('observaciones').value,
+        observaciones: getVal('observaciones'),
 
         // Baldios
-        infraccion_realizada: document.getElementById('infraccion_realizada')?.value === '1',
-        propietario_no_ubicado: document.getElementById('propietario_no_ubicado')?.value === '1',
-        numero_infraccion: document.getElementById('numero_infraccion')?.value,
-        fecha_infraccion: document.getElementById('fecha_infraccion')?.value,
+        infraccion_realizada: getVal('infraccion_realizada') === '1',
+        propietario_no_ubicado: getVal('propietario_no_ubicado') === '1',
+        numero_infraccion: getVal('numero_infraccion'),
+        fecha_infraccion: getVal('fecha_infraccion'),
 
         // Vehiculos
-        marca: document.getElementById('marca')?.value,
-        modelo: document.getElementById('modelo')?.value,
-        color: document.getElementById('color')?.value,
-        dominio: document.getElementById('dominio')?.value,
-        lugar_deposito: document.getElementById('lugar_deposito')?.value,
-        fecha_retiro: document.getElementById('fecha_retiro')?.value,
-        barrio_id: document.getElementById('barrio_id').value || null,
+        marca: getVal('marca'),
+        modelo: getVal('modelo'),
+        color: getVal('color'),
+        dominio: getVal('dominio'),
+        lugar_deposito: getVal('lugar_deposito'),
+        fecha_retiro: getVal('fecha_retiro'),
+        barrio_id: getVal('barrio_id') || null,
     };
 
     // Validación frontend: rubro comercial obligatorio para tipo Comercio
     if (formData.tipo === 'comercio' && !formData.rubro_comercial) {
         alert('Debe seleccionar el rubro comercial para intimaciones de tipo Comercio.');
-        document.getElementById('rubro_comercial')?.focus();
+        const elRubro = document.getElementById('rubro_comercial');
+        if (elRubro) elRubro.focus();
         return;
     }
 
     // Validación frontend: si infraccion_realizada = true, numero_infraccion es obligatorio
     if (formData.infraccion_realizada && (!formData.numero_infraccion || formData.numero_infraccion.trim() === '')) {
         alert('Debe ingresar el número de infracción cuando marca "Infracción Realizada".');
-        document.getElementById('numero_infraccion')?.focus();
+        const elNum = document.getElementById('numero_infraccion');
+        if (elNum) elNum.focus();
         return;
     }
 
@@ -937,8 +954,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Cargar filtro tipo desde catálogo
+    // Cargar filtros desde catálogos y barrios
     cargarSelectCatalogo('filterTipo', 'tipo_intimacion', null, { incluirVacio: true, textoVacio: 'Todos' });
+    cargarSelectCatalogo('filterRubroComercial', 'rubro_comercial', null, { incluirVacio: true, textoVacio: 'Todos los rubros' });
+    cargarSelectBarrios('filterBarrio');
 
     // Toggle columnas extra (Infracción + Acciones)
     document.getElementById('btnToggleCols').addEventListener('click', () => {
@@ -972,6 +991,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Obtener TODOS los registros sin paginación
             const params = new URLSearchParams();
             if (filtrosActuales.tipo) params.append('tipo', filtrosActuales.tipo);
+            if (filtrosActuales.rubro_comercial) params.append('rubro_comercial', filtrosActuales.rubro_comercial);
+            if (filtrosActuales.barrio_id) params.append('barrio_id', filtrosActuales.barrio_id);
             if (filtrosActuales.estado) params.append('estado', filtrosActuales.estado);
             if (filtrosActuales.numero) params.append('numero', filtrosActuales.numero);
             if (filtrosActuales.fecha_desde) params.append('fecha_desde', filtrosActuales.fecha_desde);
@@ -996,6 +1017,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 { header: 'Fecha', key: (i) => formatearFecha(i.fecha) },
                 { header: 'Tipo', key: 'tipo' },
                 { header: 'Rubro', key: (i) => i.rubro_comercial_label || '-' },
+                { header: 'Barrio', key: (i) => i.barrio_nombre || '-' },
                 { header: 'Nombre y Apellido', key: 'nombre_apellido' },
                 { header: 'DNI', key: 'dni' },
                 { header: 'Dirección', key: 'direccion' },
@@ -1022,6 +1044,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnAplicarFiltros').addEventListener('click', () => {
         const filtros = {
             tipo: document.getElementById('filterTipo').value,
+            rubro_comercial: document.getElementById('filterRubroComercial').value,
+            barrio_id: document.getElementById('filterBarrio').value,
             estado: document.getElementById('filterEstado').value,
             con_plazo: document.getElementById('filterConPlazo').value,
             numero: document.getElementById('filterNumero').value,
@@ -1033,6 +1057,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btnLimpiarFiltros').addEventListener('click', () => {
         document.getElementById('filterTipo').value = '';
+        document.getElementById('filterRubroComercial').value = '';
+        document.getElementById('filterBarrio').value = '';
         document.getElementById('filterEstado').value = '';
         document.getElementById('filterConPlazo').value = '';
         document.getElementById('filterNumero').value = '';
