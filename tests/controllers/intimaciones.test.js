@@ -100,6 +100,85 @@ describe('📋 Intimaciones (/api/intimaciones)', () => {
       await request(app).delete(`/api/intimaciones/${creadaId}`).set('Authorization', `Bearer ${token}`);
     });
 
+    test('Filtrar por tipo_obstruccion devuelve solo registros con ese valor', async () => {
+      // Crear una intimación con tipo_obstruccion conocido
+      const resCrear = await request(app)
+        .post('/api/intimaciones')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          tipo: 'preventiva',
+          fecha: '2026-09-19',
+          nombre_apellido: 'Filtro Obstruccion Test',
+          dni: '99881144',
+          direccion: 'Av Test 789',
+          tipo_obstruccion: 'Vereda obstruida'
+        });
+      expect(resCrear.statusCode).toBe(201);
+      const creadaId = resCrear.body.data.id;
+
+      const res = await request(app)
+        .get('/api/intimaciones?tipo_obstruccion=Vereda%20obstruida')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      res.body.data.forEach(item => {
+        expect(item.tipo_obstruccion).toBe('Vereda obstruida');
+      });
+
+      // Limpiar
+      await request(app).delete(`/api/intimaciones/${creadaId}`).set('Authorization', `Bearer ${token}`);
+    });
+
+    test('Filtrar por tipo_obstruccion inexistente devuelve array vacío', async () => {
+      const res = await request(app)
+        .get('/api/intimaciones?tipo_obstruccion=ValorQueNoExisteJamas99')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBe(0);
+    });
+
+    test('Filtrar por tipo_obstruccion combinado con tipo funciona correctamente', async () => {
+      const resCrear = await request(app)
+        .post('/api/intimaciones')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          tipo: 'preventiva',
+          fecha: '2026-09-20',
+          nombre_apellido: 'Filtro Combinado Obstruccion',
+          dni: '99881155',
+          direccion: 'Calle Combinada 100',
+          tipo_obstruccion: 'Cartel en vereda'
+        });
+      expect(resCrear.statusCode).toBe(201);
+      const creadaId = resCrear.body.data.id;
+
+      // Mismo tipo_obstruccion + tipo correcto → debe encontrar el registro
+      const resMatch = await request(app)
+        .get('/api/intimaciones?tipo_obstruccion=Cartel%20en%20vereda&tipo=preventiva')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(resMatch.statusCode).toBe(200);
+      expect(resMatch.body.data.length).toBeGreaterThan(0);
+      resMatch.body.data.forEach(item => {
+        expect(item.tipo_obstruccion).toBe('Cartel en vereda');
+        expect(item.tipo).toBe('preventiva');
+      });
+
+      // Mismo tipo_obstruccion + tipo incorrecto → no debe encontrar nada
+      const resMiss = await request(app)
+        .get('/api/intimaciones?tipo_obstruccion=Cartel%20en%20vereda&tipo=definitiva')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(resMiss.statusCode).toBe(200);
+      expect(resMiss.body.data.length).toBe(0);
+
+      // Limpiar
+      await request(app).delete(`/api/intimaciones/${creadaId}`).set('Authorization', `Bearer ${token}`);
+    });
+
     test('Paginación funciona correctamente', async () => {
       const res = await request(app)
         .get('/api/intimaciones?page=1&limit=5')

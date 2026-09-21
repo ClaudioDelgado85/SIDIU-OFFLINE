@@ -90,7 +90,7 @@ async function cargarUltimoPlazo(intimacionId) {
 // Obtener todas las intimaciones (con filtros y paginación)
 exports.obtenerIntimaciones = async (req, res) => {
   try {
-    const { tipo, estado, numero, dni, nombre, fecha_desde, fecha_hasta, busqueda, page, limit, exportar, con_plazo, barrio_id, rubro_comercial } = req.query;
+    const { tipo, estado, numero, dni, nombre, fecha_desde, fecha_hasta, busqueda, page, limit, exportar, con_plazo, barrio_id, rubro_comercial, tipo_obstruccion } = req.query;
     const conPlazo = con_plazo === '1' ? 1 : (con_plazo === '0' ? 0 : null);
     const esExportacion = exportar === 'true' || exportar === '1';
 
@@ -116,6 +116,11 @@ exports.obtenerIntimaciones = async (req, res) => {
     if (rubro_comercial) {
       whereClause += ' AND i.rubro_comercial = ?';
       params.push(rubro_comercial);
+    }
+
+    if (tipo_obstruccion) {
+      whereClause += ' AND i.tipo_obstruccion = ?';
+      params.push(tipo_obstruccion);
     }
 
     // Nota: El filtro por estado y el filtro por número (total de actas del caso)

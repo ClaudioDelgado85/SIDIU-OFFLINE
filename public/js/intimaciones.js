@@ -48,6 +48,7 @@ async function cargarIntimaciones(filtros = null, pagina = 1) {
     try {
         const params = new URLSearchParams();
         if (filtrosActuales.tipo) params.append('tipo', filtrosActuales.tipo);
+        if (filtrosActuales.tipo_obstruccion) params.append('tipo_obstruccion', filtrosActuales.tipo_obstruccion);
         if (filtrosActuales.rubro_comercial) params.append('rubro_comercial', filtrosActuales.rubro_comercial);
         if (filtrosActuales.barrio_id) params.append('barrio_id', filtrosActuales.barrio_id);
         if (filtrosActuales.estado) params.append('estado', filtrosActuales.estado);
@@ -956,6 +957,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cargar filtros desde catálogos y barrios
     cargarSelectCatalogo('filterTipo', 'tipo_intimacion', null, { incluirVacio: true, textoVacio: 'Todos' });
+    cargarSelectCatalogo('filterTipoObstruccion', 'intimacion_por', null, { incluirVacio: true, textoVacio: 'Todas' });
     cargarSelectCatalogo('filterRubroComercial', 'rubro_comercial', null, { incluirVacio: true, textoVacio: 'Todos los rubros' });
     cargarSelectBarrios('filterBarrio');
 
@@ -991,6 +993,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Obtener TODOS los registros sin paginación
             const params = new URLSearchParams();
             if (filtrosActuales.tipo) params.append('tipo', filtrosActuales.tipo);
+            if (filtrosActuales.tipo_obstruccion) params.append('tipo_obstruccion', filtrosActuales.tipo_obstruccion);
             if (filtrosActuales.rubro_comercial) params.append('rubro_comercial', filtrosActuales.rubro_comercial);
             if (filtrosActuales.barrio_id) params.append('barrio_id', filtrosActuales.barrio_id);
             if (filtrosActuales.estado) params.append('estado', filtrosActuales.estado);
@@ -1044,6 +1047,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnAplicarFiltros').addEventListener('click', () => {
         const filtros = {
             tipo: document.getElementById('filterTipo').value,
+            tipo_obstruccion: document.getElementById('filterTipoObstruccion').value,
             rubro_comercial: document.getElementById('filterRubroComercial').value,
             barrio_id: document.getElementById('filterBarrio').value,
             estado: document.getElementById('filterEstado').value,
@@ -1057,6 +1061,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btnLimpiarFiltros').addEventListener('click', () => {
         document.getElementById('filterTipo').value = '';
+        document.getElementById('filterTipoObstruccion').value = '';
         document.getElementById('filterRubroComercial').value = '';
         document.getElementById('filterBarrio').value = '';
         document.getElementById('filterEstado').value = '';
