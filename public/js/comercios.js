@@ -17,17 +17,38 @@
         cargarUsuario();
         cargarBarrios();
         cargarComercios();
-        cargarEstadisticas();
         inicializarEventos();
 
         document.getElementById('btnExportar').addEventListener('click', async () => {
             try {
                 const params = new URLSearchParams();
+                const busqueda = document.getElementById('filtro-busqueda').value;
+                const habilitado = document.getElementById('filtro-habilitado');
+                const barrio = document.getElementById('filtro-barrio');
+                const desde = document.getElementById('filtro-desde');
+                const hasta = document.getElementById('filtro-hasta');
+
+                if (habilitado && habilitado.value !== '') params.append('esta_habilitado', habilitado.value);
+                if (barrio && barrio.value) params.append('barrio_id', barrio.value);
+                if (desde && desde.value) params.append('fecha_desde', desde.value);
+                if (hasta && hasta.value) params.append('fecha_hasta', hasta.value);
                 params.append('limit', '9999');
+
                 const resp = await fetch(`${API_URL}?${params}`, { headers });
                 const data = await resp.json();
                 if (data.success && data.data.length > 0) {
-                    exportarExcel(data.data, [
+                    let registros = data.data;
+                    // Aplicar filtro de búsqueda local si hay texto
+                    if (busqueda) {
+                        const q = busqueda.toLowerCase();
+                        registros = registros.filter(function (r) {
+                            return (r.nombre_propietario || '').toLowerCase().indexOf(q) !== -1 ||
+                                (r.dni_propietario || '').toLowerCase().indexOf(q) !== -1 ||
+                                (r.direccion_comercial || '').toLowerCase().indexOf(q) !== -1 ||
+                                (r.rubro || '').toLowerCase().indexOf(q) !== -1;
+                        });
+                    }
+                    exportarExcel(registros, [
                         { header: 'Fecha', key: (r) => r.fecha_relevamiento ? r.fecha_relevamiento.split('T')[0] : '' },
                         { header: 'Propietario', key: 'nombre_propietario' },
                         { header: 'DNI', key: 'dni_propietario' },
@@ -36,6 +57,7 @@
                         { header: 'Habilitado', key: (r) => r.esta_habilitado ? 'Sí' : 'No' },
                         { header: 'Nº Resolución', key: 'numero_resolucion' },
                         { header: 'Reempadronar', key: (r) => r.necesita_reempadronamiento ? 'Sí' : 'No' },
+                        { header: 'Barrio', key: 'barrio_nombre' },
                         { header: 'Observaciones', key: 'observaciones' }
                     ], 'Comercios', 'Comercios');
                 } else {
@@ -98,21 +120,23 @@
     }
 
     // ==========================================
-    // CARGAR ESTADÍSTICAS
+    // ACTUALIZAR TARJETAS (desde registros filtrados)
     // ==========================================
-    async function cargarEstadisticas() {
-        try {
-            const resp = await fetch(`${API_URL}/estadisticas`, { headers });
-            const data = await resp.json();
-            if (data.success) {
-                const s = data.data;
-                const el = (id) => document.getElementById(id);
-                if (el('statTotal')) el('statTotal').textContent = s.total || 0;
-                if (el('statHabilitados')) el('statHabilitados').textContent = s.habilitados || 0;
-                if (el('statNoHabilitados')) el('statNoHabilitados').textContent = s.no_habilitados || 0;
-                if (el('statReempadronamiento')) el('statReempadronamiento').textContent = s.necesitan_reempadronamiento || 0;
-            }
-        } catch (e) { console.error('Error estadísticas:', e); }
+    function actualizarTarjetas(registros) {
+        var total = registros.length;
+        var habilitados = 0;
+        var noHabilitados = 0;
+        var reempadronar = 0;
+        for (var i = 0; i < registros.length; i++) {
+            var r = registros[i];
+            if (r.esta_habilitado) { habilitados++; } else { noHabilitados++; }
+            if (r.necesita_reempadronamiento) { reempadronar++; }
+        }
+        var el = function (id) { return document.getElementById(id); };
+        if (el('statTotal')) el('statTotal').textContent = total;
+        if (el('statHabilitados')) el('statHabilitados').textContent = habilitados;
+        if (el('statNoHabilitados')) el('statNoHabilitados').textContent = noHabilitados;
+        if (el('statReempadronamiento')) el('statReempadronamiento').textContent = reempadronar;
     }
 
     // ==========================================
@@ -148,6 +172,7 @@
                         (r.rubro || '').toLowerCase().includes(q)
                     );
                 }
+                actualizarTarjetas(registros);
                 renderizarTabla(registros);
             }
         } catch (e) { console.error('Error cargando comercios:', e); }
