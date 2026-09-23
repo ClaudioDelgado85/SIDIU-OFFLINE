@@ -342,16 +342,44 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '/login.html';
     });
 
-    document.getElementById('btnExportar').addEventListener('click', () => {
-        exportarExcel(infracciones, [
-            { header: 'Fecha', key: (i) => formatearFecha(i.fecha) },
-            { header: 'Nº Acta', key: 'numero_acta' },
-            { header: 'Nombre y Apellido', key: 'nombre_apellido' },
-            { header: 'DNI', key: 'dni' },
-            { header: 'Dirección', key: 'direccion' },
-            { header: 'Motivo', key: 'motivo_infraccion' },
-            { header: 'Observaciones', key: 'observaciones' }
-        ], 'Infracciones', 'Infracciones');
+    document.getElementById('btnExportar').addEventListener('click', async () => {
+        try {
+            const sesion = verificarAutenticacion();
+            if (!sesion) return;
+
+            const params = new URLSearchParams();
+            if (filtrosActuales.fecha_desde) params.append('fecha_desde', filtrosActuales.fecha_desde);
+            if (filtrosActuales.fecha_hasta) params.append('fecha_hasta', filtrosActuales.fecha_hasta);
+            const busqueda = document.getElementById('searchInput').value;
+            if (busqueda) params.append('busqueda', busqueda);
+            params.append('exportar', 'true');
+
+            const response = await fetch(`${API_URL}/infracciones?${params.toString()}`, {
+                headers: { 'Authorization': `Bearer ${sesion.token}` }
+            });
+
+            if (!response.ok) throw new Error('Error al obtener datos para exportar');
+            const data = await response.json();
+
+            if (!data.data || data.data.length === 0) {
+                alert('No hay registros para exportar.');
+                return;
+            }
+
+            exportarExcel(data.data, [
+                { header: 'Fecha', key: (i) => formatearFecha(i.fecha) },
+                { header: 'Nº Acta', key: 'numero_acta' },
+                { header: 'Nombre y Apellido', key: 'nombre_apellido' },
+                { header: 'DNI', key: 'dni' },
+                { header: 'Dirección', key: 'direccion' },
+                { header: 'Motivo', key: 'motivo_infraccion' },
+                { header: 'Observaciones', key: 'observaciones' }
+            ], 'Infracciones', 'Infracciones');
+
+        } catch (error) {
+            console.error('Error al exportar:', error);
+            alert('Error al exportar. Intente nuevamente.');
+        }
     });
 
     document.getElementById('btnFiltros').addEventListener('click', () => {

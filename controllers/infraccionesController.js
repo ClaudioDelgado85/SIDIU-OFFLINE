@@ -6,7 +6,8 @@ const db = require('../config/database');
 // Obtener todas las infracciones (con filtros y paginación)
 exports.obtenerInfracciones = async (req, res) => {
     try {
-        const { dni, nombre, numero_acta, fecha_desde, fecha_hasta, busqueda, page, limit } = req.query;
+        const { dni, nombre, numero_acta, fecha_desde, fecha_hasta, busqueda, page, limit, exportar } = req.query;
+        const esExportacion = exportar === 'true' || exportar === '1';
 
         // Configuración de paginación
         const currentPage = parseInt(page) || 1;
@@ -58,7 +59,9 @@ exports.obtenerInfracciones = async (req, res) => {
         // Query principal
         let sql = 'SELECT * FROM infracciones' + whereClause;
         sql += ' ORDER BY fecha DESC, id DESC';
-        sql += ` LIMIT ${parseInt(recordsPerPage)} OFFSET ${parseInt(offset)}`;
+        if (!esExportacion) {
+            sql += ` LIMIT ${parseInt(recordsPerPage)} OFFSET ${parseInt(offset)}`;
+        }
 
         const [infracciones] = await db.pool.execute(sql, params);
 
