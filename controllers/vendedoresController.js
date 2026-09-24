@@ -6,7 +6,8 @@ const db = require('../config/database');
 // ==========================================
 const obtenerVendedores = async (req, res) => {
     try {
-        const { rubro, tiene_autorizacion, pago_canon, barrio_id, fecha_desde, fecha_hasta, page = 1, limit = 50, busqueda } = req.query;
+        const { rubro, tiene_autorizacion, pago_canon, barrio_id, fecha_desde, fecha_hasta, page = 1, limit = 50, busqueda, exportar } = req.query;
+        const esExportacion = exportar === 'true' || exportar === '1';
 
         let query = 'SELECT v.*, b.nombre AS barrio_nombre FROM vendedores_ambulantes v LEFT JOIN barrios b ON v.barrio_id = b.id WHERE 1=1';
         const params = [];
@@ -46,8 +47,11 @@ const obtenerVendedores = async (req, res) => {
         const total = countResult[0].total;
 
         // Paginación
-        const offset = (page - 1) * limit;
-        query += ` ORDER BY v.fecha_relevamiento DESC, v.id DESC LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
+        query += ' ORDER BY v.fecha_relevamiento DESC, v.id DESC';
+        if (!esExportacion) {
+            const offset = (page - 1) * limit;
+            query += ` LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
+        }
 
         const rows = await db.query(query, params);
 

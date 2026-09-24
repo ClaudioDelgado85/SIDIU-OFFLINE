@@ -29,7 +29,23 @@
         document.getElementById('btnExportar').addEventListener('click', async () => {
             try {
                 const params = new URLSearchParams();
-                params.append('limit', '9999');
+                
+                // Obtener valores de filtros actuales de la pantalla
+                const busqueda = document.getElementById('filtro-busqueda').value.trim();
+                const autorizacion = document.getElementById('filtro-autorizacion');
+                const canon = document.getElementById('filtro-canon');
+                const barrio = document.getElementById('filtro-barrio');
+                const desde = document.getElementById('filtro-desde');
+                const hasta = document.getElementById('filtro-hasta');
+
+                if (busqueda) params.append('busqueda', busqueda);
+                if (autorizacion && autorizacion.value !== '') params.append('tiene_autorizacion', autorizacion.value);
+                if (canon && canon.value !== '') params.append('pago_canon', canon.value);
+                if (barrio && barrio.value) params.append('barrio_id', barrio.value);
+                if (desde && desde.value) params.append('fecha_desde', desde.value);
+                if (hasta && hasta.value) params.append('fecha_hasta', hasta.value);
+                params.append('exportar', 'true');
+
                 const resp = await fetch(`${API_URL}?${params}`, { headers });
                 const data = await resp.json();
                 if (data.success && data.data.length > 0) {
